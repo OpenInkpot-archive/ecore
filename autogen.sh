@@ -1,11 +1,6 @@
 #!/bin/sh
 # Run this to generate all the initial makefiles, etc.
 
-abort () {
-    echo "$1 not found or command failed. Aborting!"
-    exit 1
-}
-
 srcdir=`dirname $0`
 PKG_NAME="libecore"
 
@@ -111,7 +106,7 @@ do
 	  echo "Creating $dr/aclocal.m4 ..."
 	  test -r $dr/aclocal.m4 || touch $dr/aclocal.m4
 	  echo "Running gettextize...  Ignore non-fatal messages."
-	  echo "no" | gettextize --force --copy || abort "gettextize"
+	  echo "no" | gettextize --force --copy
 	  echo "Making $dr/aclocal.m4 writable ..."
 	  test -r $dr/aclocal.m4 && chmod u+w $dr/aclocal.m4
         fi
@@ -120,24 +115,24 @@ do
 	echo "Creating $dr/aclocal.m4 ..."
 	test -r $dr/aclocal.m4 || touch $dr/aclocal.m4
 	echo "Running gettextize...  Ignore non-fatal messages."
-	echo "no" | gettextize --force --copy || abort "gettextize"
+	echo "no" | gettextize --force --copy
 	echo "Making $dr/aclocal.m4 writable ..."
 	test -r $dr/aclocal.m4 && chmod u+w $dr/aclocal.m4
       fi
       if grep "^AM_PROG_LIBTOOL" configure.in >/dev/null; then
 	echo "Running libtoolize..."
-	libtoolize --force --copy || abort "libtoolize"
+	libtoolize --force --copy
       fi
       echo "Running aclocal $aclocalinclude ..."
-      aclocal $aclocalinclude || abort "aclocal"
+      aclocal $aclocalinclude
       if grep "^AM_CONFIG_HEADER" configure.in >/dev/null; then
 	echo "Running autoheader..."
-	autoheader || abort "autoheader"
+	autoheader
       fi
       echo "Running automake --gnu $am_opt ..."
-      automake --add-missing --gnu $am_opt || abort "automake"
+      automake --add-missing --gnu $am_opt
       echo "Running autoconf ..."
-      autoconf || abort "autoconf"
+      autoconf
     )
   fi
 done
@@ -147,7 +142,7 @@ done
 if test x$NOCONFIGURE = x; then
   echo Running $srcdir/configure $conf_flags "$@" ...
   $srcdir/configure $conf_flags "$@" \
-  && echo Now type \`make\' to compile $PKG_NAME || abort "configure"
+  && echo Now type \`make\' to compile $PKG_NAME
 else
   echo Skipping configure process.
 fi

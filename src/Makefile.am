@@ -1,12 +1,8 @@
 ## Process this file with automake to produce Makefile.in
 
-INCLUDES = @x_cflags@ 
+SUBDIRS = lib bin
 
-lib_LTLIBRARIES = libecore.la
-include_HEADERS = \
-Ecore.h
-
-libecore_la_SOURCES = \
+EXTRA_DIST = \
 	e_ev_filter.c \
 	e_ev_signal.c \
 	e_ev_x.c \
@@ -14,6 +10,3 @@ libecore_la_SOURCES = \
 	e_ipc.c \
 	e_util.c \
 	e_x.c
-
-libecore_la_LIBADD = @x_ldflags@ @x_libs@ -lm
-libecore_la_LDFLAGS = -version-info 0:2:0

@@ -1,6 +1,6 @@
 # this is NOT relocatable, unless you alter the patch!
 %define	name	ecore
-%define	ver	0.0.2
+%define	ver	1.0.0_pre4
 %define	rel	1
 %define prefix  /usr
 
@@ -31,16 +31,18 @@ Ecore development files
 %setup -q
 
 %build
-if [ -e ./configure ]
-then
-  ./configure --prefix=%{prefix}
-else
-  ./autogen.sh --prefix=%{prefix}
-fi
+./configure \
+--prefix=%{prefix} \
+--enable-ecore-x \
+--enable-ecore-evas \
+--enable-ecore-job \
+--enable-ecore-con \
+--enable-ecore-ipc
+
 make
 
 %install
-make prefix=$RPM_BUILD_ROOT%{prefix} install
+make DESTDIR=$RPM_BUILD_ROOT install
 
 %post
 /sbin/ldconfig
@@ -53,11 +55,18 @@ rm -rf $RPM_BUILD_ROOT
 
 %files
 %defattr(-,root,root)
-%{prefix}/lib/libecore.so.*
+%attr(755,root,root) %{prefix}/lib/libecore*.so.*
+%{prefix}/lib/libecore*.la
+%attr(755,root,root) %{prefix}/bin/ecore_*
+%{prefix}/share/ecore
 
 %files devel
 %defattr(-,root,root)
-%{prefix}/lib/libecore.so
-%{prefix}/lib/libecore.*a
-%{prefix}/include/Ecore.h
-%{prefix}/bin/ecore-config
+%attr(755,root,root) %{prefix}/lib/libecore*.so
+%attr(755,root,root) %{prefix}/lib/libecore*.a
+%attr(755,root,root) %{prefix}/bin/ecore-config
+%{prefix}/include/Ecore*.h
+%doc AUTHORS
+%doc COPYING
+%doc README
+%doc ecore_docs.tar.gz

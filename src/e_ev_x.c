@@ -71,9 +71,9 @@ ecore_event_x_init(void)
   int                 i, shape_event_id, current_lock;
 
   shape_event_id = max_event_id = ecore_event_shape_get_id();
-  if (shape_event_id < SelectionRequest)
+  if (shape_event_id < LASTEvent)
     {
-       max_event_id = SelectionRequest;
+       max_event_id = LASTEvent;
        fprintf(stderr, "ERROR: No shape extension! This is BAD!\n");
     }
   event_translator = NEW_PTR(max_event_id + 1);
@@ -200,7 +200,6 @@ ecore_event_key_down_free(void *event)
 
   e = (Ecore_Event_Key_Down *) event;
   IF_FREE(e->key);
-  IF_FREE(e->symbol);
   IF_FREE(e->compose);
   FREE(e);
 }
@@ -212,7 +211,6 @@ ecore_event_key_up_free(void *event)
 
   e = (Ecore_Event_Key_Up *) event;
   IF_FREE(e->key);
-  IF_FREE(e->symbol);
   IF_FREE(e->compose);
   FREE(e);
 }
@@ -306,12 +304,11 @@ ecore_event_x_handle_keypress(XEvent * xevent)
     val = XLookupString((XKeyEvent *) xevent, buf, sizeof(buf), &sym, &stat);
     if (val > 0)
       {
-        buf[val] = 0;
-        e->compose = strdup(buf);
+	buf[val] = 0;
+	e->compose = strdup(buf);
       }
     else
       e->compose = NULL;
-    e->symbol = ecore_key_get_string_from_keysym(sym);
   }
   ecore_add_event(ECORE_EVENT_KEY_DOWN, e, ecore_event_key_down_free);
 }
@@ -345,12 +342,11 @@ ecore_event_x_handle_keyrelease(XEvent * xevent)
     val = XLookupString((XKeyEvent *) xevent, buf, sizeof(buf), &sym, &stat);
     if (val > 0)
       {
-        buf[val] = 0;
-        e->compose = strdup(buf);
+	buf[val] = 0;
+	e->compose = strdup(buf);
       }
     else
       e->compose = NULL;
-    e->symbol = ecore_key_get_string_from_keysym(sym);
   }
   ecore_add_event(ECORE_EVENT_KEY_UP, e, ecore_event_key_up_free);
 }

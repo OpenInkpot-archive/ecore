@@ -951,21 +951,10 @@ ecore_key_get_string_from_keycode(KeyCode keycode)
 {
   char               *str;
 
-  if (!disp) return strdup("");
+   if (!disp) return strdup("");
   str = XKeysymToString(ecore_key_get_keysym_from_keycode(keycode));
   if (!str)
     return strdup("");
-  return strdup(str);
-}
-
-char		  *
-ecore_key_get_string_from_keysym(KeySym keysym)
-{
-  char		     *str;
-
-  if(keysym == NoSymbol) return strdup("");
-  str = XKeysymToString(keysym);
-  if(!str) str="(no name)";
   return strdup(str);
 }
 
