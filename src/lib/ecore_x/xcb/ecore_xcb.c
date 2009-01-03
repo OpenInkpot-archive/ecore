@@ -1300,7 +1300,7 @@ ecore_x_pointer_mapping_get(unsigned char *map,
 {
    xcb_get_pointer_mapping_reply_t *reply;
    int i;
-   uint8_t tmp;
+   uint8_t *tmp;
 
    reply = _ecore_xcb_reply_get();
    if (!reply) return 0;
