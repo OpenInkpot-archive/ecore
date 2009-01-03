@@ -288,3 +288,15 @@ ecore_x_window_shape_events_select(Ecore_X_Window dest_win,
      xcb_shape_select_input(_ecore_xcb_conn, dest_win, on ? 1 : 0);
 #endif /* ECORE_XCB_SHAPE */
 }
+
+EAPI void
+ecore_x_window_shape_input_mask_set(Ecore_X_Window win, Ecore_X_Pixmap mask)
+{
+#ifdef ECORE_XCB_SHAPE
+#ifdef ShapeInput
+   xcb_shape_mask(_ecore_xcb_conn, XCB_SHAPE_SO_SET, XCB_SHAPE_SK_INPUT, win, 0, 0, mask);
+#else
+   xcb_shape_mask(_ecore_xcb_conn, XCB_SHAPE_SO_SET, XCB_SHAPE_SK_BOUNDING, win, 0, 0, mask);
+#endif
+#endif /* ECORE_XCB_SHAPE */
+}

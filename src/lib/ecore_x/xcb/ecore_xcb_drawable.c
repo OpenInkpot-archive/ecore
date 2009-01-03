@@ -23,6 +23,8 @@ ecore_x_drawable_geometry_get_prefetch(Ecore_X_Drawable drawable)
 {
    xcb_get_geometry_cookie_t cookie;
 
+   if (drawable == 0) drawable = ((xcb_screen_t *)_ecore_xcb_screen)->root;
+
    cookie = xcb_get_geometry_unchecked(_ecore_xcb_conn, drawable);
    _ecore_xcb_cookie_cache(cookie.sequence);
 }

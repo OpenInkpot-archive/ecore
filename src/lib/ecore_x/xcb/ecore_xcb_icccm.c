@@ -731,6 +731,9 @@ ecore_x_icccm_title_set(Ecore_X_Window window,
 /*				&xprop); */
 /* #endif */
 
+	if(!title)
+		return;
+
   xcb_change_property(_ecore_xcb_conn, XCB_PROP_MODE_REPLACE, window,
                       ECORE_X_ATOM_WM_NAME, ECORE_X_ATOM_STRING, 8,
                       strlen(title), title);
@@ -1015,6 +1018,10 @@ ecore_x_icccm_name_class_set(Ecore_X_Window window,
    char *s;
    int   length_name;
    int   length_class;
+
+   if(!(class && name))
+      return;
+
 
    length_name = strlen(name);
    length_class = strlen(class);

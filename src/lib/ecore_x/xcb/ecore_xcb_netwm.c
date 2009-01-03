@@ -585,6 +585,11 @@ ecore_x_netwm_client_active_set(Ecore_X_Window root,
                                   &window, 1);
 }
 
+EAPI void
+ecore_x_netwm_client_active_request(Ecore_X_Window root, Ecore_X_Window win, int type, Ecore_X_Window current_win)
+{
+}
+
 /**
  * Set the _NET_WM_NAME property.
  * @param window The widow to activate.
