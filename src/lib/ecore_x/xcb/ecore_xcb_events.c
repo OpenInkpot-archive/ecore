@@ -192,58 +192,86 @@ _ecore_x_event_free_selection_notify(void *data __UNUSED__, void *ev)
    free(e);
 }
 
+#define _key_info(a, b) \
+{ \ 
+	e->keyname = strdup((a)); \
+	e->keysymbol = strdup(e->keyname); \
+	e->key_compose = ecore_txt_convert(nl_langinfo(CODESET), "UTF-8", (b)); \
+	break; \
+}
+
+#define _get_key_hack(a) \
+   switch((a)) { \
+	   case 10: \
+		   _key_info("KP_1", "1"); \
+	   case 11: \
+		   _key_info("KP_2", "2"); \
+	   case 12: \
+		   _key_info("KP_3", "3"); \
+	   case 13: \
+		   _key_info("KP_4", "4"); \
+	   case 14: \
+		   _key_info("KP_5", "5"); \
+	   case 15: \
+		   _key_info("KP_6", "6"); \
+	   case 16: \
+		   _key_info("KP_7", "7"); \
+	   case 17: \
+		   _key_info("KP_8", "8"); \
+	   case 18: \
+		   _key_info("KP_9", "9"); \
+	   case 19: \
+		   _key_info("KP_0", "0"); \
+	   case 36: \
+		   _key_info("Return", "\r"); \
+	   case 9: \
+		   _key_info("Escape", NULL); \
+	   case 111: \
+		   _key_info("Up", NULL); \
+	   case 116: \
+		   _key_info("Down", NULL); \
+	   case 86: \
+		   _key_info("KP_Add", "+"); \
+	   case 82: \
+		   _key_info("KP_Substract", "-"); \
+	   case 124: \
+		   _key_info("Power", "NULL"); \
+	   case 67: \
+		   _key_info("F1", NULL); \
+	   case 68: \
+		   _key_info("F2", NULL); \
+	   case 119: \
+		   _key_info("Delete", NULL); \
+	   case 113: \
+		   _key_info("Left", NULL); \
+	   case 114: \
+		   _key_info("Right", NULL); \
+	   case 64: \
+		   _key_info("Alt_L", "NULL"); \
+       default: return; \
+   }
+
 /* FIXME: handle this event */
 void
 _ecore_x_event_handle_key_press(xcb_generic_event_t *event)
 {
    xcb_key_press_event_t  *ev;
-/*    Ecore_X_Event_Key_Down *e; */
-/*    char                   *keyname; */
-/*    int                     val; */
-/*    char                    buf[256]; */
-/*    KeySym                  sym; */
-/*    XComposeStatus          status; */
+   Ecore_X_Event_Key_Down *e;
 
    ev = (xcb_key_press_event_t *)event;
-/*    e = calloc(1, sizeof(Ecore_X_Event_Key_Down)); */
-/*    if (!e) return; */
-/*    keyname = XKeysymToString(XKeycodeToKeysym(xevent->xkey.display,  */
-/*					      xevent->xkey.keycode, 0)); */
-/*    if (!keyname) */
-/*      { */
-/*	snprintf(buf, sizeof(buf), "Keycode-%i", xevent->xkey.keycode); */
-/*	keyname = buf; */
-/*      } */
-/*    e->keyname = strdup(keyname); */
-/*    if (!e->keyname) */
-/*      { */
-/*	free(e); */
-/*	return; */
-/*      } */
-/*    val = XLookupString((XKeyEvent *)xevent, buf, sizeof(buf), &sym, &status); */
-/*    if (val > 0) */
-/*      { */
-/*	buf[val] = 0; */
-/*	e->key_compose = ecore_txt_convert(nl_langinfo(CODESET), "UTF-8", buf); */
-/*      } */
-/*    else e->key_compose = NULL; */
-/*    keyname = XKeysymToString(sym); */
-/*    if (keyname) e->keysymbol = strdup(keyname); */
-/*    else e->keysymbol = strdup(e->keyname); */
-/*    if (!e->keysymbol) */
-/*      { */
-/*	if (e->keyname) free(e->keyname); */
-/*	if (e->key_compose) free(e->key_compose); */
-/*	free(e); */
-/*	return; */
-/*      } */
-/*    if (xevent->xkey.subwindow) e->win = xevent->xkey.subwindow; */
-/*    else e->win = xevent->xkey.window; */
-/*    e->event_win = xevent->xkey.window; */
-/*    e->time = xevent->xkey.time; */
-/*    e->modifiers = xevent->xkey.state; */
-/*    _ecore_x_event_last_time = e->time; */
-/*    ecore_event_add(ECORE_X_EVENT_KEY_DOWN, e, _ecore_x_event_free_key_down, NULL); */
+
+   e = calloc(1, sizeof(Ecore_X_Event_Key_Down));
+   if (!e) return;
+
+   _get_key_hack(ev->detail);
+
+   if (ev->child) e->win = ev->child;
+   else e->win = ev->event;
+   e->event_win = ev->event;
+   e->time = ev->time;
+   e->modifiers = ev->state;
+   _ecore_xcb_event_last_time = e->time;
+   ecore_event_add(ECORE_X_EVENT_KEY_DOWN, e, _ecore_x_event_free_key_down, NULL);
 }
 
 /* FIXME: handle this event */
@@ -251,53 +279,22 @@ void
 _ecore_x_event_handle_key_release(xcb_generic_event_t *event)
 {
    xcb_key_release_event_t *ev;
-/*    Ecore_X_Event_Key_Up    *e; */
-/*    char                   *keyname; */
-/*    int                     val; */
-/*    char                    buf[256]; */
-/*    KeySym                  sym; */
-/*    XComposeStatus          status; */
+   Ecore_X_Event_Key_Up    *e;
 
    ev = (xcb_key_release_event_t *)event;
-/*    e = calloc(1, sizeof(Ecore_X_Event_Key_Up)); */
-/*    if (!e) return; */
-/*    keyname = XKeysymToString(XKeycodeToKeysym(xevent->xkey.display,  */
-/*					      xevent->xkey.keycode, 0)); */
-/*    if (!keyname) */
-/*      { */
-/*	snprintf(buf, sizeof(buf), "Keycode-%i", xevent->xkey.keycode); */
-/*	keyname = buf; */
-/*      } */
-/*    e->keyname = strdup(keyname); */
-/*    if (!e->keyname) */
-/*      { */
-/*	free(e); */
-/*	return; */
-/*      } */
-/*    val = XLookupString((XKeyEvent *)xevent, buf, sizeof(buf), &sym, &status); */
-/*    if (val > 0) */
-/*      { */
-/*	buf[val] = 0; */
-/*	e->key_compose = ecore_txt_convert("ISO8859-1", "UTF-8", buf); */
-/*      } */
-/*    else e->key_compose = NULL; */
-/*    keyname = XKeysymToString(sym); */
-/*    if (keyname) e->keysymbol = strdup(keyname); */
-/*    else e->keysymbol = strdup(e->keyname); */
-/*    if (!e->keysymbol) */
-/*      { */
-/*	if (e->keyname) free(e->keyname); */
-/*	if (e->key_compose) free(e->key_compose); */
-/*	free(e); */
-/*	return; */
-/*      } */
-/*    if (xevent->xkey.subwindow) e->win = xevent->xkey.subwindow; */
-/*    else e->win = xevent->xkey.window; */
-/*    e->event_win = xevent->xkey.window; */
-/*    e->time = xevent->xkey.time; */
-/*    e->modifiers = xevent->xkey.state; */
-/*    _ecore_x_event_last_time = e->time; */
-/*    ecore_event_add(ECORE_X_EVENT_KEY_UP, e, _ecore_x_event_free_key_up, NULL); */
+
+   e = calloc(1, sizeof(Ecore_X_Event_Key_Up));
+   if (!e) return; 
+
+   _get_key_hack(ev->detail);
+
+   if (ev->child) e->win = ev->child;
+   else e->win = ev->event;
+   e->event_win = ev->event;
+   e->time = ev->time;
+   e->modifiers = ev->state;
+   _ecore_xcb_event_last_time = e->time; 
+   ecore_event_add(ECORE_X_EVENT_KEY_UP, e, _ecore_x_event_free_key_up, NULL); 
 }
 
 void
