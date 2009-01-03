@@ -287,6 +287,22 @@ _ecore_evas_constructor_software_x11(int x, int y, int w, int h, const char *ext
 }
 #endif
 
+#ifdef BUILD_ECORE_EVAS_SOFTWARE_XCB
+static Ecore_Evas *
+_ecore_evas_constructor_software_xcb(int x, int y, int w, int h, const char *extra_options)
+{
+   unsigned int parent = 0;
+   char *disp_name = NULL;
+   Ecore_Evas *ee;
+
+   _ecore_evas_parse_extra_options_x(extra_options, &disp_name, &parent);
+   ee = ecore_evas_software_x11_new(disp_name, parent, x, y, w, h);
+   free(disp_name);
+
+   return ee;
+}
+#endif
+
 #ifdef BUILD_ECORE_EVAS_XRENDER_X11
 static Ecore_Evas *
 _ecore_evas_constructor_xrender_x11(int x, int y, int w, int h, const char *extra_options)
@@ -488,7 +504,7 @@ static const struct ecore_evas_engine _engines[] = {
   {"opengl_x11", _ecore_evas_constructor_opengl_x11},
 #endif
 #ifdef BUILD_ECORE_EVAS_SOFTWARE_XCB
-  {"software_xcb", _ecore_evas_constructor_software_x11},
+  {"software_xcb", _ecore_evas_constructor_software_xcb},
 #endif
 #ifdef BUILD_ECORE_EVAS_XRENDER_XCB
   {"xrender_xcb", _ecore_evas_constructor_xrender_x11},
