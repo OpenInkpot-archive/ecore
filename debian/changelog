@@ -1,3 +1,9 @@
+ecore (0.9.9.050-20090103-1) unstable; urgency=low
+
+  * OI build
+
+ -- Alexander Kerner <lunohod@openinkpot.org>  Sun, 04 Jan 2009 00:17:37 +0100
+
 ecore (0.9.9.050-1) unstable; urgency=low
 
   * a SVN release.
