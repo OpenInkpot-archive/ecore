@@ -11,7 +11,7 @@ These routines are used for Ecore Library interaction
 @image latex ecore_big.eps width=5cm
 @image html  ecore.png
 
-@version 1.0.0
+@version @PACKAGE_VERSION@
 @author Carsten Haitzler <raster\@rasterman.com>
 @author Tom Gilbert <tom\@linuxbrit.co.uk>
 @author Burra <burra\@colorado.edu>
@@ -46,7 +46,7 @@ gcc *.c \
 -I/usr/local/include -I/usr/X11R6/include \
 -L/usr/local/lib -L/usr/X11R6/lib \
 -lecore -lecore_evas -lecore_x -lecore_fb -lecore_job \
-`evas-config --cflags --libs`
+`pkg-config evas --cflags --libs`
 @endverbatim
 
 @section install How is it installed?
