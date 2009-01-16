@@ -233,7 +233,7 @@ _ecore_x_event_free_selection_notify(void *data __UNUSED__, void *ev)
 	   case 86: \
 		   _key_info("KP_Add", "+"); \
 	   case 82: \
-		   _key_info("KP_Substract", "-"); \
+		   _key_info("KP_Subtract", "-"); \
 	   case 124: \
 		   _key_info("Power", "NULL"); \
 	   case 67: \
