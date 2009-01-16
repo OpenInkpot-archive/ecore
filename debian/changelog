@@ -1,3 +1,10 @@
+ecore (0.9.9.050-20090116-1) unstable; urgency=low
+
+  * merged with upstream
+  * fixed typo in key handler
+
+ -- Alexander Kerner <lunohod@openinkpot.org>  Fri, 16 Jan 2009 17:47:06 +0000
+
 ecore (0.9.9.050-20090103-1) unstable; urgency=low
 
   * OI build
