@@ -1,3 +1,9 @@
+ecore (0.9.9.050-20090116-3) asimov; urgency=low
+
+  * workarounds for broken XCB API
+
+ -- Alexander Kerner <lunohod@openinkpot.org>  Sun, 15 Mar 2009 17:08:53 +0100
+
 ecore (0.9.9.050-20090116-2) asimov; urgency=low
 
   * fixed dependencies
