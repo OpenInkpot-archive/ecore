@@ -1,3 +1,11 @@
+ecore (0.9.9.050-20090116-2) asimov; urgency=low
+
+  * fixed dependencies
+  * removed debian/shlibs.local
+  * unstable -> asimov
+
+ -- Alexander Kerner <lunohod@openinkpot.org>  Sun, 15 Mar 2009 13:31:08 +0100
+
 ecore (0.9.9.050-20090116-1) unstable; urgency=low
 
   * merged with upstream
