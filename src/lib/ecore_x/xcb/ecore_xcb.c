@@ -796,11 +796,13 @@ ecore_x_killall(Ecore_X_Window root)
         reply = xcb_query_tree_reply(_ecore_xcb_conn, cookie, NULL);
         if (reply)
           {
-            xcb_window_iterator_t iter;
+            xcb_window_t *wins = NULL;
+            int i, tree_c_len;
 
-            iter = xcb_query_tree_children_iterator(reply);
-            for (; iter.rem; xcb_window_next(&iter))
-               xcb_kill_client(_ecore_xcb_conn, *iter.data);
+            wins = xcb_query_tree_children(reply);
+            tree_c_len = xcb_query_tree_children_length(reply);
+            for(i = 0; i < tree_c_len; i++)
+               xcb_kill_client(_ecore_xcb_conn, wins[i]);
             free(reply);
           }
      }
@@ -888,6 +890,8 @@ _ecore_xcb_key_mask_get(xcb_keysym_t sym)
    xcb_key_symbols_t                *symbols;
    xcb_keysym_t                      sym2;
    int                               i, j;
+   xcb_keycode_t *keycodes = NULL;
+   int mod_keys_len;
    const int                         masks[8] =
      {
         XCB_MOD_MASK_SHIFT,
@@ -911,13 +915,13 @@ _ecore_xcb_key_mask_get(xcb_keysym_t sym)
         return 0;
      }
 
-   iter = xcb_get_modifier_mapping_keycodes_iterator(reply);
-
-   for (i = 0; iter.rem; xcb_keycode_next(&iter), i++)
+   keycodes = xcb_get_modifier_mapping_keycodes(reply);
+   mod_keys_len = xcb_get_modifier_mapping_keycodes_length(reply);
+   for(i = 0; i < mod_keys_len; i++)
      {
        for (j = 0; j < 8; j++)
          {
-            sym2 = xcb_key_symbols_get_keysym(symbols, *iter.data, j);
+            sym2 = xcb_key_symbols_get_keysym(symbols, keycodes[i], j);
             if (sym2 != 0) break;
          }
        if (sym2 == sym)
