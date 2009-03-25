@@ -202,6 +202,8 @@ _ecore_x_event_free_selection_notify(void *data __UNUSED__, void *ev)
 
 #define _get_key_hack(a) \
    switch((a)) { \
+	   case 9: \
+		   _key_info("Escape", NULL); \
 	   case 10: \
 		   _key_info("KP_1", "1"); \
 	   case 11: \
@@ -224,30 +226,38 @@ _ecore_x_event_free_selection_notify(void *data __UNUSED__, void *ev)
 		   _key_info("KP_0", "0"); \
 	   case 36: \
 		   _key_info("Return", "\r"); \
-	   case 9: \
-		   _key_info("Escape", NULL); \
-	   case 111: \
-		   _key_info("Up", NULL); \
-	   case 116: \
-		   _key_info("Down", NULL); \
-	   case 86: \
-		   _key_info("KP_Add", "+"); \
+	   case 64: \
+		   _key_info("Alt_L", "NULL"); \
+	   case 65: \
+			_key_info("space", " "); \
 	   case 82: \
 		   _key_info("KP_Subtract", "-"); \
-	   case 124: \
-		   _key_info("Power", "NULL"); \
-	   case 67: \
-		   _key_info("F1", NULL); \
-	   case 68: \
-		   _key_info("F2", NULL); \
+	   case 86: \
+		   _key_info("KP_Add", "+"); \
 	   case 119: \
 		   _key_info("Delete", NULL); \
+	   case 111: \
+		   _key_info("Up", NULL); \
+	   case 112: \
+		   _key_info("Prior", NULL); \
 	   case 113: \
 		   _key_info("Left", NULL); \
 	   case 114: \
 		   _key_info("Right", NULL); \
-	   case 64: \
-		   _key_info("Alt_L", "NULL"); \
+	   case 116: \
+		   _key_info("Down", NULL); \
+	   case 117: \
+		   _key_info("Next", NULL); \
+	   case 124: \
+		   _key_info("XF86PowerOff", NULL); \
+	   case 147: \
+		   _key_info("Menu", NULL); \
+	   case 161: \
+		   _key_info("XF86RotateWindows", NULL); \
+	   case 172: \
+		   _key_info("XF86AudioPlay", NULL); \
+	   case 225: \
+		   _key_info("XF86Search", NULL); \
        default: return; \
    }
 
