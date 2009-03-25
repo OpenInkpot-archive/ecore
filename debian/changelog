@@ -1,3 +1,9 @@
+ecore (0.9.9.050-20090116-4) asimov; urgency=low
+
+  * Added keycodes for n516
+
+ -- Alexander Kerner <lunohod@openinkpot.org>  Wed, 25 Mar 2009 21:34:58 +0100
+
 ecore (0.9.9.050-20090116-3) asimov; urgency=low
 
   * workarounds for broken XCB API
