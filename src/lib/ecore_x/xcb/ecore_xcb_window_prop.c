@@ -794,11 +794,11 @@ EAPI int
 ecore_x_window_prop_protocol_isset(Ecore_X_Window      window,
                                    Ecore_X_WM_Protocol protocol)
 {
-   Ecore_X_Atom *protos;
-   Ecore_X_Atom  proto;
-   uint32_t      protos_count;
-   uint32_t      i;
-   uint8_t       ret = 0;
+   xcb_get_property_cookie_t     cookie;
+   xcb_get_wm_protocols_reply_t *protos;
+   Ecore_X_Atom                  proto;
+   uint32_t                      i;
+   uint8_t                       ret = 0;
 
    /* check for invalid values */
    if (protocol >= ECORE_X_WM_PROTOCOL_NUM)
@@ -806,11 +806,12 @@ ecore_x_window_prop_protocol_isset(Ecore_X_Window      window,
 
    proto = _ecore_xcb_atoms_wm_protocols[protocol];
 
-   if (!xcb_get_wm_protocols(_ecore_xcb_conn, window, &protos_count, &protos))
-	return ret;
+   cookie = xcb_get_wm_protocols(_ecore_xcb_conn, window, ECORE_X_ATOM_WM_PROTOCOLS);
+   if (!xcb_get_wm_protocols_reply(_ecore_xcb_conn, cookie, protos, NULL))
+       return ret;
 
-   for (i = 0; i < protos_count; i++)
-	if (protos[i] == proto)
+   for (i = 0; i < protos->atoms_len; i++)
+	if (protos->atoms[i] == proto)
 	  {
 	     ret = 1;
 	     break;
@@ -837,35 +838,36 @@ EAPI Ecore_X_WM_Protocol *
 ecore_x_window_prop_protocol_list_get(Ecore_X_Window window,
                                       int           *num_ret)
 {
-   Ecore_X_WM_Protocol *prot_ret = NULL;
-   Ecore_X_Atom        *protos;
-   uint32_t             protos_count;
+   Ecore_X_WM_Protocol          *prot_ret = NULL;
+   xcb_get_property_cookie_t     cookie;
+   xcb_get_wm_protocols_reply_t *protos;
    uint32_t             i;
 
-   if (!xcb_get_wm_protocols(_ecore_xcb_conn, window, &protos_count, &protos))
-     return NULL;
+   cookie = xcb_get_wm_protocols(_ecore_xcb_conn, window, ECORE_X_ATOM_WM_PROTOCOLS);
+   if (!xcb_get_wm_protocols_reply(_ecore_xcb_conn, cookie, protos, NULL))
+       return NULL;
 
-   if ((!protos) || (protos_count <= 0)) return NULL;
+   if ((!protos) || (protos->atoms_len == 0)) return NULL;
 
-   prot_ret = calloc(1, protos_count * sizeof(Ecore_X_WM_Protocol));
+   prot_ret = calloc(1, protos->atoms_len * sizeof(Ecore_X_WM_Protocol));
    if (!prot_ret)
      {
 	free(protos);
 	return NULL;
      }
-   for (i = 0; i < protos_count; i++)
+   for (i = 0; i < protos->atoms_len; i++)
      {
 	Ecore_X_WM_Protocol j;
 
 	prot_ret[i] = -1;
 	for (j = 0; j < ECORE_X_WM_PROTOCOL_NUM; j++)
 	  {
-	     if (_ecore_xcb_atoms_wm_protocols[j] == protos[i])
+	     if (_ecore_xcb_atoms_wm_protocols[j] == protos->atoms[i])
 	       prot_ret[i] = j;
 	  }
      }
    free(protos);
-   *num_ret = protos_count;
+   *num_ret = protos->atoms_len;
 
    return prot_ret;
 }

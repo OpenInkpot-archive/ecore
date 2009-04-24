@@ -308,7 +308,7 @@ AC_MSG_CHECKING(whether ecore_x with XCB backend is to be built)
 AC_MSG_RESULT($want_ecore_x_xcb)
 
 if test "x$want_ecore_x_xcb" = "xyes" ; then
-  PKG_CHECK_MODULES(XCB, xcb xcb-icccm xcb-image xcb-keysyms,
+  PKG_CHECK_MODULES(XCB, xcb xcb-icccm >= 0.3.0 xcb-image xcb-keysyms,
     [ have_ecore_x_xcb="yes" ],
     [ have_ecore_x_xcb="no" ])
 
