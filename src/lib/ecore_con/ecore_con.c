@@ -187,7 +187,6 @@ ecore_con_server_add(Ecore_Con_Type compl_type, const char *name, int port,
    if ((type == ECORE_CON_LOCAL_USER) || (type == ECORE_CON_LOCAL_SYSTEM) ||
        (type == ECORE_CON_LOCAL_ABSTRACT))
      {
-	const char *homedir;
 	struct stat st;
 	mode_t mask;
 	int socket_unix_len;
@@ -197,15 +196,20 @@ ecore_con_server_add(Ecore_Con_Type compl_type, const char *name, int port,
 
 	if (type == ECORE_CON_LOCAL_USER)
 	  {
-	     homedir = getenv("HOME");
-	     if (!homedir) homedir = getenv("TMP");
-	     if (!homedir) homedir = "/tmp";
+	     char* user = getenv("USER");
+	     if(!user) user = getenv("LOGNAME");
+	     if(!user)
+	       {
+		  char* uidbuf[10];
+		  printf(uidbuf, "%d", getuid());
+		  user = uidbuf;
+	       }
 	     mask = S_IRUSR | S_IWUSR | S_IXUSR;
-	     snprintf(buf, sizeof(buf), "%s/.ecore", homedir);
+	     snprintf(buf, sizeof(buf), "/tmp/.ecore_service-%s", user);
 	     if (stat(buf, &st) < 0) mkdir(buf, mask);
-	     snprintf(buf, sizeof(buf), "%s/.ecore/%s", homedir, name);
+	     snprintf(buf, sizeof(buf), "/tmp/.ecore_service-%s/%s", user, name);
 	     if (stat(buf, &st) < 0) mkdir(buf, mask);
-	     snprintf(buf, sizeof(buf), "%s/.ecore/%s/%i", homedir, name, port);
+	     snprintf(buf, sizeof(buf), "/tmp/.ecore_service-%s/%s/%i", user, name, port);
 	     mask = S_IRGRP | S_IWGRP | S_IXGRP | S_IROTH | S_IWOTH | S_IXOTH;
 	  }
 	else if (type == ECORE_CON_LOCAL_SYSTEM)
@@ -362,15 +366,19 @@ ecore_con_server_connect(Ecore_Con_Type compl_type, const char *name, int port,
    if ((type == ECORE_CON_LOCAL_USER) || (type == ECORE_CON_LOCAL_SYSTEM) ||
        (type == ECORE_CON_LOCAL_ABSTRACT))
      {
-	const char *homedir;
 	int socket_unix_len;
 
 	if (type == ECORE_CON_LOCAL_USER)
 	  {
-	     homedir = getenv("HOME");
-	     if (!homedir) homedir = getenv("TMP");
-	     if (!homedir) homedir = "/tmp";
-	     snprintf(buf, sizeof(buf), "%s/.ecore/%s/%i", homedir, name, port);
+	     char* user = getenv("USER");
+	     if(!user) user = getenv("LOGNAME");
+	     if(!user)
+	       {
+		  char* uidbuf[10];
+		  printf(uidbuf, "%d", getuid());
+		  user = uidbuf;
+	       }
+	     snprintf(buf, sizeof(buf), "/tmp/.ecore_service-%s/%s/%i", user, name, port);
 	  }
 	else if (type == ECORE_CON_LOCAL_SYSTEM)
 	  {
