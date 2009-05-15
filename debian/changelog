@@ -1,3 +1,12 @@
+ecore (0.9.9.050-20090116-5) asimov; urgency=low
+
+  [ Mikhail Gusarov ]
+  * Move ECORE_CON_LOCAL_USER sockets to /tmp
+  * Update to new xcb-util release (changes in xcb-icccm constants and API)
+  * Access xcb_{wm,size}_hints_t fields directly, as accessors/mutators removed from xcb-icccm
+
+ -- Alexander Kerner <lunohod@openinkpot.org>  Fri, 15 May 2009 14:43:14 +0000
+
 ecore (0.9.9.050-20090116-4+b1) asimov; urgency=low
 
   * Rebuild with new toolchain.
