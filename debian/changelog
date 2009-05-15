@@ -1,3 +1,9 @@
+ecore (0.9.9.050-20090116-6) asimov; urgency=low
+
+  * rebuild because of soname changes in the xcb-util
+
+ -- Alexander Kerner <lunohod@openinkpot.org>  Fri, 15 May 2009 22:16:11 +0200
+
 ecore (0.9.9.050-20090116-5) asimov; urgency=low
 
   [ Mikhail Gusarov ]
