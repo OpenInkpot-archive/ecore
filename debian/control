@@ -6,7 +6,7 @@ Build-Depends: debhelper (>= 6), cdbs, cdbs-embedded, libeet-dev, libevas-dev, l
 Standards-Version: 3.7.3
 Homepage: http://www.enlightenment.org
 XCS-Cross-Host-Build-Depends: debhelper (>= 5), cdbs, cdbs-embedded, automake, libtool, pkg-config
-XCS-Cross-Build-Depends: libeet-dev, libevas-dev, libxcb1-dev, libjpeg62-dev, libxcb-icccm0-dev, libxcb-image0-dev, libxcb-keysyms0-dev, libxcb-composite0-dev, libxcb-damage0-dev, libxcb-dpms0-dev, libxcb-randr0-dev, libxcb-render0-dev, libxcb-screensaver0-dev, libxcb-shape0-dev, libxcb-sync0-dev, libxcb-xfixes0-dev, libxcb-xinerama0-dev, libxcb-xprint0-dev, libxcb-xtest0-dev
+XCS-Cross-Build-Depends: libeet-dev, libevas-dev, libxcb1-dev, libjpeg62-dev, libxcb-icccm1-dev, libxcb-image0-dev, libxcb-keysyms0-dev, libxcb-composite0-dev, libxcb-damage0-dev, libxcb-dpms0-dev, libxcb-randr0-dev, libxcb-render0-dev, libxcb-screensaver0-dev, libxcb-shape0-dev, libxcb-sync0-dev, libxcb-xfixes0-dev, libxcb-xinerama0-dev, libxcb-xprint0-dev, libxcb-xtest0-dev
 XS-Vcs-Git: http://git.openinkpot.org/ecore.git
 XS-Vcs-Browser: http://git.openinkpot.org/ecore.git
 
