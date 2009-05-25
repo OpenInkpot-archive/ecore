@@ -1,3 +1,10 @@
+ecore (0.9.9.050-20090116-7) asimov; urgency=low
+
+  [ Mikhail Gusarov ]
+  * Add ecore_x_io_handler_set to XCB backend
+
+ -- Alexander Kerner <lunohod@openinkpot.org>  Mon, 25 May 2009 21:52:58 +0200
+
 ecore (0.9.9.050-20090116-6) asimov; urgency=low
 
   * rebuild because of soname changes in the xcb-util
