@@ -200,6 +200,30 @@ _ecore_x_event_free_selection_notify(void *data __UNUSED__, void *ev)
 	break; \
 }
 
+
+char *get_rotated_key(char *r0, char *r90, char *r180, char *r270)
+{
+	Ecore_X_Randr_Rotation r;
+	Ecore_X_Window root;
+	root = ecore_x_window_root_first_get();
+	ecore_x_randr_get_screen_info_prefetch(root);
+	ecore_x_randr_get_screen_info_fetch();
+	r = ecore_x_randr_screen_rotation_get(root);
+
+	switch(r) {
+		case ECORE_X_RANDR_ROT_0:
+			return r0;
+		case ECORE_X_RANDR_ROT_90:
+			return r90;
+		case ECORE_X_RANDR_ROT_180:
+			return r180;
+		case ECORE_X_RANDR_ROT_270:
+			return r270;
+		default:
+			return r0;
+	}
+}
+
 #define _get_key_hack(a) \
    switch((a)) { \
 	   case 9: \
@@ -237,17 +261,29 @@ _ecore_x_event_free_selection_notify(void *data __UNUSED__, void *ev)
 	   case 119: \
 		   _key_info("Delete", NULL); \
 	   case 111: \
-		   _key_info("Up", NULL); \
+		   _key_info( \
+				   get_rotated_key("Up", "Right", "Down", "Left"), \
+				   NULL); \
 	   case 112: \
-		   _key_info("Prior", NULL); \
+		   _key_info( \
+				   get_rotated_key("Prior", "Prior", "Next", "Prior"), \
+				   NULL); \
 	   case 113: \
-		   _key_info("Left", NULL); \
+		   _key_info( \
+				   get_rotated_key("Left", "Up", "Right", "Down"), \
+				   NULL); \
 	   case 114: \
-		   _key_info("Right", NULL); \
+		   _key_info( \
+				   get_rotated_key("Right", "Down", "Left", "Up"), \
+				   NULL); \
 	   case 116: \
-		   _key_info("Down", NULL); \
+		   _key_info( \
+				   get_rotated_key("Down", "Left", "Up", "Right"), \
+				   NULL); \
 	   case 117: \
-		   _key_info("Next", NULL); \
+		   _key_info( \
+				   get_rotated_key("Next", "Next", "Prior", "Next"), \
+				   NULL); \
 	   case 124: \
 		   _key_info("XF86PowerOff", NULL); \
 	   case 147: \
