@@ -1,3 +1,9 @@
+ecore (0.9.9.050-20090116-8) asimov; urgency=low
+
+  * remap cursor keys for rotated screen
+
+ -- Alexander Kerner <lunohod@openinkpot.org>  Mon, 15 Jun 2009 17:53:43 +0200
+
 ecore (0.9.9.050-20090116-7) asimov; urgency=low
 
   [ Mikhail Gusarov ]
