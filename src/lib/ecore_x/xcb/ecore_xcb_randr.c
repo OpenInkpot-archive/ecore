@@ -286,8 +286,8 @@ ecore_x_randr_current_screen_size_get(Ecore_X_Window root __UNUSED__)
    sizes = xcb_randr_get_screen_info_sizes(reply);
    if (size_index < reply->nSizes)
      {
-        ret.width = sizes[size_index].mwidth;
-        ret.height = sizes[size_index].mheight;
+        ret.width = sizes[size_index].width;
+        ret.height = sizes[size_index].height;
      }
 #endif /* ECORE_XCB_RANDR */
 
