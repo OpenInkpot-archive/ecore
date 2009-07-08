@@ -713,6 +713,7 @@ struct _Ecore_X_Event_Screen_Change
 {
    Ecore_X_Window win, root;
    int            width, height;
+   Ecore_X_Randr_Rotation        rotation;
 };
 
 struct _Ecore_X_Event_Window_Delete_Request

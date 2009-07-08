@@ -105,7 +105,7 @@ ecore_x_randr_events_select(Ecore_X_Window window,
 {
 #ifdef ECORE_XCB_RANDR
      xcb_randr_select_input(_ecore_xcb_conn, window,
-                            on ? XCB_RANDR_SCREEN_CHANGE_NOTIFY : 0);
+                            on ? XCB_RANDR_NOTIFY_MASK_SCREEN_CHANGE : 0);
      return 1;
 #else
    return 0;
