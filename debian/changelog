@@ -1,3 +1,9 @@
+ecore (0.9.9.050-20090116-10) asimov; urgency=low
+
+  * ecore_x_randr_current_screen_size_get should return size in pixel
+
+ -- Alexander Kerner <lunohod@openinkpot.org>  Thu, 09 Jul 2009 01:57:49 +0200
+
 ecore (0.9.9.050-20090116-9) asimov; urgency=low
 
   * xcb randr fixes
