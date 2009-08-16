@@ -1913,7 +1913,7 @@ _ecore_x_event_handle_client_message(xcb_generic_event_t *event)
      }
    else if ((ev->type == ECORE_X_ATOM_WM_CHANGE_STATE)
 	    && (ev->format == 32)
-	    && (ev->data.data32[0] == XCB_WM_ICONIC_STATE))
+	    && (ev->data.data32[0] == XCB_WM_STATE_ICONIC))
      {
 	Ecore_X_Event_Window_State_Request *e;
 

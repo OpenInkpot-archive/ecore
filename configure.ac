@@ -466,6 +466,10 @@ if test "x$want_ecore_x_xcb" = "xyes" ; then
     [ have_ecore_x_xcb="no" ])
 
   if test "x$have_ecore_x_xcb" = "xyes" ; then
+    PKG_CHECK_EXISTS([xcb-icccm >= 0.3],
+      [],
+      [ AC_DEFINE(ECORE_XCB_ICCCM02, 1, [xcb-icccm < 0.2]) ])
+
     PKG_CHECK_MODULES(XCB_COMPOSITE, xcb-composite,
       [ have_ecore_x_xcb_composite="yes"
         AC_DEFINE(ECORE_XCB_COMPOSITE, 1, [Build support for XCB composite]) ],

@@ -44,13 +44,13 @@ static int _ecore_x_icccm_size_hints_get (const void       *reply,
           xcb_get_property_value((xcb_get_property_reply_t *)reply),
           ((xcb_get_property_reply_t *)reply)->value_len);
 
-   s = (XCB_SIZE_US_POSITION_HINT  | XCB_SIZE_US_SIZE_HINT   |
-        XCB_SIZE_P_POSITION_HINT   | XCB_SIZE_P_SIZE_HINT    |
-        XCB_SIZE_P_MIN_SIZE_HINT   | XCB_SIZE_P_MAX_SIZE_HINT |
-        XCB_SIZE_P_RESIZE_INC_HINT | XCB_SIZE_P_ASPECT_HINT);
+   s = (XCB_SIZE_HINT_US_POSITION  | XCB_SIZE_HINT_US_SIZE   |
+        XCB_SIZE_HINT_P_POSITION   | XCB_SIZE_HINT_P_SIZE    |
+        XCB_SIZE_HINT_P_MIN_SIZE   | XCB_SIZE_HINT_P_MAX_SIZE |
+        XCB_SIZE_HINT_P_RESIZE_INC | XCB_SIZE_HINT_P_ASPECT);
 
    if (((xcb_get_property_reply_t *)reply)->value_len >= 18) /* NumPropSizeElements = 18 (ICCCM version 1) */
-      s |= (XCB_SIZE_BASE_SIZE_HINT | XCB_SIZE_P_WIN_GRAVITY_HINT);
+      s |= (XCB_SIZE_HINT_BASE_SIZE | XCB_SIZE_HINT_P_WIN_GRAVITY);
    else
      {
         xcb_size_hints_set_base_size(hints, 0, 0);
@@ -76,11 +76,11 @@ ecore_x_icccm_state_set(Ecore_X_Window            window,
    uint32_t c[2];
 
    if (state == ECORE_X_WINDOW_STATE_HINT_WITHDRAWN)
-      c[0] = XCB_WM_WITHDRAWN_STATE;
+      c[0] = XCB_WM_STATE_WITHDRAWN;
    else if (state == ECORE_X_WINDOW_STATE_HINT_NORMAL)
-      c[0] = XCB_WM_NORMAL_STATE;
+      c[0] = XCB_WM_STATE_NORMAL;
    else if (state == ECORE_X_WINDOW_STATE_HINT_ICONIC)
-      c[0] = XCB_WM_ICONIC_STATE;
+      c[0] = XCB_WM_STATE_ICONIC;
    c[1] = 0;
    xcb_change_property(_ecore_xcb_conn, XCB_PROP_MODE_REPLACE, window,
                        ECORE_X_ATOM_WM_STATE, ECORE_X_ATOM_WM_STATE, 32,
@@ -146,13 +146,13 @@ ecore_x_icccm_state_get(Ecore_X_Window window __UNUSED__)
 
    prop = (uint8_t *)xcb_get_property_value(reply);
    switch (prop[0]) {
-   case XCB_WM_WITHDRAWN_STATE:
+   case XCB_WM_STATE_WITHDRAWN:
      hint = ECORE_X_WINDOW_STATE_HINT_WITHDRAWN;
      break;
-   case XCB_WM_NORMAL_STATE:
+   case XCB_WM_STATE_NORMAL:
      hint = ECORE_X_WINDOW_STATE_HINT_NORMAL;
      break;
-   case XCB_WM_ICONIC_STATE:
+   case XCB_WM_STATE_ICONIC:
      hint = ECORE_X_WINDOW_STATE_HINT_ICONIC;
      break;
    default:
@@ -352,9 +352,19 @@ ecore_x_icccm_hints_get(Ecore_X_Window             window __UNUSED__,
 			Ecore_X_Window            *window_group,
                         int                       *is_urgent)
 {
+#ifdef ECORE_XCB_ICCCM02
    xcb_wm_hints_t           *hints;
+#else
+   xcb_wm_hints_t            hints;
+#endif
    xcb_get_property_reply_t *reply;
-   uint32_t                  flags;
+   int32_t                   hints_flags;
+   uint32_t                  hints_input;
+   int32_t                   hints_initial_state;
+   xcb_pixmap_t              hints_icon_pixmap;
+   xcb_pixmap_t              hints_icon_mask;
+   xcb_window_t              hints_icon_window;
+   xcb_window_t              hints_window_group;
 
    if (accepts_focus)
       *accepts_focus = 1;
@@ -380,54 +390,70 @@ ecore_x_icccm_hints_get(Ecore_X_Window             window __UNUSED__,
        (reply->format != 32))
       return 0;
 
+#ifdef ECORE_XCB_ICCCM02
    hints = xcb_alloc_wm_hints();
    if (!hints)
       return 0;
 
    memcpy(hints, xcb_get_property_value(reply), reply->value_len);
+   hints_flags = xcb_wm_hints_get_flags(hints);
+   hints_input = xcb_wm_hints_get_input(hints);
+   hints_initial_state = xcb_wm_hints_get_initial_state(hints);
+   hints_icon_pixmap = xcb_wm_hints_get_icon_pixmap(hints);
+   hints_icon_mask = xcb_wm_hints_get_icon_mask(hints);
+   hints_icon_window = xcb_wm_hints_get_icon_window(hints);
+   hints_window_group = xcb_wm_hints_get_icon_group(hints);
+   free(hints);
+#else
+   memcpy(&hints, xcb_get_property_value(reply), reply->value_len);
+   hints_flags = hints.flags;
+   hints_input = hints.input;
+   hints_initial_state = hints.initial_state;
+   hints_icon_pixmap = hints.icon_pixmap;
+   hints_icon_mask = hints.icon_mask;
+   hints_icon_window = hints.icon_window;
+   hints_window_group = hints.window_group;
+#endif
 
-   flags = xcb_wm_hints_get_flags(hints);
-   if ((flags & XCB_WM_INPUT_HINT) && (accepts_focus))
+   if ((hints_flags & XCB_WM_HINT_INPUT) && (accepts_focus))
      {
-        if (xcb_wm_hints_get_input(hints))
+        if(hints_input)
            *accepts_focus = 1;
         else
            *accepts_focus = 0;
      }
-   if ((flags & XCB_WM_STATE_HINT) && (initial_state))
+   if ((hints_flags & XCB_WM_HINT_STATE) && (initial_state))
      {
-       if (xcb_wm_hints_get_initial_state(hints) == XCB_WM_WITHDRAWN_STATE)
+       if (hints_initial_state == XCB_WM_STATE_WITHDRAWN)
            *initial_state = ECORE_X_WINDOW_STATE_HINT_WITHDRAWN;
-        else if (xcb_wm_hints_get_initial_state(hints) == XCB_WM_NORMAL_STATE)
+        else if (hints_initial_state == XCB_WM_STATE_NORMAL)
            *initial_state = ECORE_X_WINDOW_STATE_HINT_NORMAL;
-        else if (xcb_wm_hints_get_initial_state(hints) == XCB_WM_ICONIC_STATE)
+        else if (hints_initial_state == XCB_WM_STATE_ICONIC)
            *initial_state = ECORE_X_WINDOW_STATE_HINT_ICONIC;
      }
-   if ((flags & XCB_WM_ICON_PIXMAP_HINT) && (icon_pixmap))
+   if ((hints_flags & XCB_WM_HINT_ICON_PIXMAP) && (icon_pixmap))
      {
-        *icon_pixmap = xcb_wm_hints_get_icon_pixmap(hints);
+        *icon_pixmap = hints_icon_pixmap;
      }
-   if ((flags & XCB_WM_ICON_MASK_HINT) && (icon_mask))
+   if ((hints_flags & XCB_WM_HINT_ICON_MASK) && (icon_mask))
      {
-        *icon_mask = xcb_wm_hints_get_icon_mask(hints);
+        *icon_mask = hints_icon_mask;
      }
-   if ((flags & XCB_WM_ICON_WINDOW_HINT) && (icon_window))
+   if ((hints_flags & XCB_WM_HINT_ICON_WINDOW) && (icon_window))
      {
-        *icon_window = xcb_wm_hints_get_icon_window(hints);
+        *icon_window = hints_icon_window;
      }
-   if ((flags & XCB_WM_WINDOW_GROUP_HINT) && (window_group))
+   if ((hints_flags & XCB_WM_HINT_WINDOW_GROUP) && (window_group))
      {
         if (reply->value_len < XCB_NUM_WM_HINTS_ELEMENTS)
            *window_group = 0;
         else
-           *window_group = xcb_wm_hints_get_window_group(hints);
+           *window_group = hints_window_group;
      }
-   if ((flags & XCB_WM_X_URGENCY_HINT) && (is_urgent))
+   if ((hints_flags & XCB_WM_HINT_X_URGENCY) && (is_urgent))
      {
         *is_urgent = 1;
      }
-
-   free(hints);
 
    return 1;
 }
@@ -499,12 +525,22 @@ ecore_x_icccm_size_pos_hints_set(Ecore_X_Window  window,
 				 double          min_aspect,
                                  double          max_aspect)
 {
-   xcb_size_hints_t         *hint;
    xcb_get_property_reply_t *reply;
-
+#ifdef ECORE_XCB_ICCCM02
+   xcb_size_hints_t         *hint;
    hint = xcb_alloc_size_hints();
    if (!hint)
       return;
+#else
+   xcb_size_hints_t          hint;
+
+#define xcb_size_hints_set_flags(a, b) a.flags = b
+#define xcb_size_hints_set_win_gravity(a, b) a.win_gravity = b
+#define xcb_size_hints_set_min_size(a, b, c) a.min_width = b; a.min_height = c
+#define xcb_size_hints_set_max_size(a, b, c) a.max_width = b; a.max_height = c
+#define xcb_size_hints_set_base_size(a, b, c) a.base_width = b; a.base_height = c
+#define xcb_size_hints_set_resize_inc(a, b, c) a.width_inc = b; a.height_inc = c
+#endif
 
    reply = _ecore_xcb_reply_get();
    if (!reply                                      ||
@@ -518,7 +554,7 @@ ecore_x_icccm_size_pos_hints_set(Ecore_X_Window  window,
    xcb_size_hints_set_flags(hint, 0);
    if (request_pos)
      {
-       xcb_size_hints_set_flags(hint, XCB_SIZE_US_POSITION_HINT);
+       xcb_size_hints_set_flags(hint, XCB_SIZE_HINT_US_POSITION);
      }
    if (gravity != ECORE_X_GRAVITY_NW)
      {
@@ -542,15 +578,30 @@ ecore_x_icccm_size_pos_hints_set(Ecore_X_Window  window,
      }
    if ((min_aspect > 0.0) || (max_aspect > 0.0))
      {
-	xcb_size_hints_set_aspect(hint,
+	xcb_size_hints_set_aspect(
+#ifdef ECORE_XCB_ICCCM02
+            hint,
+#else
+            &hint,
+#endif
                                   (int32_t)(min_aspect * 10000),
                                   10000,
                                   (int32_t)(max_aspect * 10000),
                                   10000);
      }
-   xcb_set_wm_normal_hints(_ecore_xcb_conn, window, hint);
 
+#ifdef ECORE_XCB_ICCCM02
+   xcb_set_wm_normal_hints(_ecore_xcb_conn, window, hint);
    free(hint);
+#else
+   xcb_set_wm_normal_hints(_ecore_xcb_conn, window, &hint);
+#undef xcb_size_hints_set_flags
+#undef xcb_size_hints_set_win_gravity
+#undef xcb_size_hints_set_min_size
+#undef xcb_size_hints_set_max_size
+#undef xcb_size_hints_set_base_size
+#undef xcb_size_hints_set_resize_inc
+#endif
 }
 
 /**
@@ -629,21 +680,21 @@ ecore_x_icccm_size_pos_hints_get(Ecore_X_Window   window __UNUSED__,
      return 0;
 
    flags = xcb_size_hints_get_flags(hint);
-     if ((flags & XCB_SIZE_US_POSITION_HINT) || (flags & XCB_SIZE_P_POSITION_HINT))
+     if ((flags & XCB_SIZE_HINT_US_POSITION) || (flags & XCB_SIZE_HINT_P_POSITION))
      {
 	if (request_pos)
 	   *request_pos = 1;
      }
-   if (flags & XCB_SIZE_P_WIN_GRAVITY_HINT)
+   if (flags & XCB_SIZE_HINT_P_WIN_GRAVITY)
      {
 	if (gravity)
 	   *gravity = xcb_size_hints_get_win_gravity(hint);
      }
-   if (flags & XCB_SIZE_P_MIN_SIZE_HINT)
+   if (flags & XCB_SIZE_HINT_P_MIN_SIZE)
      {
 	xcb_size_hints_get_min_size(hint, &minw, &minh);
      }
-   if (flags & XCB_SIZE_P_MAX_SIZE_HINT)
+   if (flags & XCB_SIZE_HINT_P_MAX_SIZE)
      {
 	xcb_size_hints_get_max_size(hint, &maxw, &maxh);
 	if (maxw < minw)
@@ -651,7 +702,7 @@ ecore_x_icccm_size_pos_hints_get(Ecore_X_Window   window __UNUSED__,
 	if (maxh < minh)
 	   maxh = minh;
      }
-   if (flags & XCB_SIZE_BASE_SIZE_HINT)
+   if (flags & XCB_SIZE_HINT_BASE_SIZE)
      {
 	xcb_size_hints_get_base_size(hint, &basew, &baseh);
 	if (basew > minw)
@@ -659,7 +710,7 @@ ecore_x_icccm_size_pos_hints_get(Ecore_X_Window   window __UNUSED__,
 	if (baseh > minh)
 	   minh = baseh;
      }
-   if (flags & XCB_SIZE_P_RESIZE_INC_HINT)
+   if (flags & XCB_SIZE_HINT_P_RESIZE_INC)
      {
 	xcb_size_hints_get_increase(hint, &stepx, &stepy);
 	if (stepx < 1)
@@ -667,7 +718,7 @@ ecore_x_icccm_size_pos_hints_get(Ecore_X_Window   window __UNUSED__,
 	if (stepy < 1)
 	   stepy = 1;
      }
-   if (flags & XCB_SIZE_P_ASPECT_HINT)
+   if (flags & XCB_SIZE_HINT_P_ASPECT)
      {
         int32_t min_aspect_num;
         int32_t min_aspect_den;
@@ -1902,7 +1953,7 @@ ecore_x_icccm_iconic_request_send(Ecore_X_Window window,
    ev.sequence = 0;
    ev.window = window;
    ev.type = ECORE_X_ATOM_WM_CHANGE_STATE;
-   ev.data.data32[0] = XCB_WM_ICONIC_STATE;
+   ev.data.data32[0] = XCB_WM_STATE_ICONIC;
 
    xcb_send_event(_ecore_xcb_conn, 0, root,
                   XCB_EVENT_MASK_SUBSTRUCTURE_NOTIFY | XCB_EVENT_MASK_SUBSTRUCTURE_REDIRECT,
