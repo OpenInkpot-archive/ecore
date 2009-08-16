@@ -2,6 +2,8 @@
  * vim:ts=8:sw=3:sts=8:noexpandtab:cino=>5n-3f0^-2{2
  */
 
+#include <string.h>
+
 #include "ecore_xcb_private.h"
 
 
@@ -153,6 +155,8 @@ _ecore_x_atom_init(xcb_intern_atom_cookie_t *atom_cookies)
    FETCH_ATOM("_NET_WM_ACTION_FULLSCREEN");
    FETCH_ATOM("_NET_WM_ACTION_CHANGE_DESKTOP");
    FETCH_ATOM("_NET_WM_ACTION_CLOSE");
+   FETCH_ATOM("_NET_WM_ACTION_ABOVE");
+   FETCH_ATOM("_NET_WM_ACTION_BELOW");
 
    FETCH_ATOM("_NET_WM_STRUT");
    FETCH_ATOM("_NET_WM_STRUT_PARTIAL");
@@ -330,6 +334,8 @@ _ecore_x_atom_init_finalize(xcb_intern_atom_cookie_t *atom_cookies)
    FETCH_ATOM_FINALIZE(ECORE_X_ATOM_NET_WM_ACTION_FULLSCREEN);
    FETCH_ATOM_FINALIZE(ECORE_X_ATOM_NET_WM_ACTION_CHANGE_DESKTOP);
    FETCH_ATOM_FINALIZE(ECORE_X_ATOM_NET_WM_ACTION_CLOSE);
+   FETCH_ATOM_FINALIZE(ECORE_X_ATOM_NET_WM_ACTION_ABOVE);
+   FETCH_ATOM_FINALIZE(ECORE_X_ATOM_NET_WM_ACTION_BELOW);
 
    FETCH_ATOM_FINALIZE(ECORE_X_ATOM_NET_WM_STRUT);
    FETCH_ATOM_FINALIZE(ECORE_X_ATOM_NET_WM_STRUT_PARTIAL);
@@ -414,4 +420,64 @@ ecore_x_atom_get(const char *name __UNUSED__)
    if (!reply) return XCB_NONE;
 
    return reply->atom;
+}
+
+
+/**
+ * Sends the GetAtomName request.
+ * @param atom Atom to get the name from.
+ * @ingroup Ecore_X_Atom_Group
+ */
+EAPI void
+ecore_x_get_atom_name_prefetch(Ecore_X_Atom atom)
+{
+   xcb_get_atom_name_cookie_t cookie;
+
+   cookie = xcb_get_atom_name_unchecked(_ecore_xcb_conn, atom);
+   _ecore_xcb_cookie_cache(cookie.sequence);
+}
+
+/**
+ * Gets the reply of the GetAtomName request sent by ecore_x_get_atom_name_prefetch().
+ * @ingroup Ecore_X_Atom_Group
+ */
+EAPI void
+ecore_x_get_atom_name_fetch(void)
+{
+   xcb_get_atom_name_cookie_t cookie;
+   xcb_get_atom_name_reply_t *reply;
+
+   cookie.sequence = _ecore_xcb_cookie_get();
+   reply = xcb_get_atom_name_reply(_ecore_xcb_conn, cookie, NULL);
+   _ecore_xcb_reply_cache(reply);
+}
+
+/**
+ * Retrieves the name of the given atom.
+ * @param  atom Unused.
+ * @return      The name of the atom.
+ *
+ * To use this function, you must call before, and in order,
+ * ecore_x_get_atom_name_prefetch(), which sends the GetAtomName request,
+ * then ecore_x_get_atom_name_fetch(), which gets the reply.
+ * @ingroup Ecore_X_Atom_Group
+ */
+EAPI char *
+ecore_x_atom_name_get(Ecore_X_Atom atom)
+{
+   xcb_get_atom_name_reply_t *reply;
+   char                      *name;
+   int                        length;
+
+   reply = _ecore_xcb_reply_get();
+   if (!reply) return NULL;
+
+   length = xcb_get_atom_name_name_length(reply);
+   name = (char *)malloc(sizeof(char) * (length + 1));
+   if (!name) return NULL;
+
+   memcpy(name, xcb_get_atom_name_name(reply), length);
+   name[length] = '\0';
+
+   return name;
 }

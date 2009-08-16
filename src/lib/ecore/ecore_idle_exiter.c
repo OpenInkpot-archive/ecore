@@ -1,3 +1,13 @@
+/*
+ * vim:ts=8:sw=3:sts=8:noexpandtab:cino=>5n-3f0^-2{2
+ */
+
+#ifdef HAVE_CONFIG_H
+# include <config.h>
+#endif
+
+#include <stdlib.h>
+
 #include "ecore_private.h"
 #include "Ecore.h"
 
@@ -22,7 +32,7 @@ ecore_idle_exiter_add(int (*func) (void *data), const void *data)
    ECORE_MAGIC_SET(ie, ECORE_MAGIC_IDLE_EXITER);
    ie->func = func;
    ie->data = (void *)data;
-   idle_exiters = _ecore_list2_append(idle_exiters, ie);
+   idle_exiters = (Ecore_Idle_Exiter *) eina_inlist_append(EINA_INLIST_GET(idle_exiters), EINA_INLIST_GET(ie));
    return ie;
 }
 
@@ -50,12 +60,10 @@ ecore_idle_exiter_del(Ecore_Idle_Exiter *idle_exiter)
 void
 _ecore_idle_exiter_shutdown(void)
 {
-   while (idle_exiters)
+   Ecore_Idle_Exiter *ie;
+   while ((ie = idle_exiters))
      {
-	Ecore_Idle_Exiter *ie;
-
-	ie = idle_exiters;
-	idle_exiters = _ecore_list2_remove(idle_exiters, ie);
+	idle_exiters = (Ecore_Idle_Exiter *) eina_inlist_remove(EINA_INLIST_GET(idle_exiters), EINA_INLIST_GET(idle_exiters));
 	ECORE_MAGIC_SET(ie, ECORE_MAGIC_NONE);
 	free(ie);
      }
@@ -65,13 +73,10 @@ _ecore_idle_exiter_shutdown(void)
 void
 _ecore_idle_exiter_call(void)
 {
-   Ecore_List2 *l;
+   Ecore_Idle_Exiter *ie;
 
-   for (l = (Ecore_List2 *)idle_exiters; l; l = l->next)
+   EINA_INLIST_FOREACH(idle_exiters, ie)
      {
-	Ecore_Idle_Exiter *ie;
-
-	ie = (Ecore_Idle_Exiter *)l;
 	if (!ie->delete_me)
 	  {
 	     if (!ie->func(ie->data)) ecore_idle_exiter_del(ie);
@@ -79,15 +84,15 @@ _ecore_idle_exiter_call(void)
      }
    if (idle_exiters_delete_me)
      {
-	for (l = (Ecore_List2 *)idle_exiters; l;)
+	Ecore_Idle_Exiter *l;
+	for (l = idle_exiters; l;)
 	  {
-	     Ecore_Idle_Exiter *ie;
+	     ie = l;
 
-	     ie = (Ecore_Idle_Exiter *)l;
-	     l = l->next;
+	     l = (Ecore_Idle_Exiter *) EINA_INLIST_GET(l)->next;
 	     if (ie->delete_me)
 	       {
-		  idle_exiters = _ecore_list2_remove(idle_exiters, ie);
+		  idle_exiters = (Ecore_Idle_Exiter *) eina_inlist_remove(EINA_INLIST_GET(idle_exiters), EINA_INLIST_GET(ie));
 		  ECORE_MAGIC_SET(ie, ECORE_MAGIC_NONE);
 		  free(ie);
 	       }

@@ -1,3 +1,13 @@
+/*
+ * vim:ts=8:sw=3:sts=8:noexpandtab:cino=>5n-3f0^-2{2
+ */
+
+#ifdef HAVE_CONFIG_H
+# include <config.h>
+#endif
+
+#include <stdlib.h>
+
 #include "ecore_private.h"
 #include "Ecore.h"
 
@@ -88,8 +98,7 @@ static int
 _ecore_poller_cb_timer(void *data __UNUSED__)
 {
    int i;
-   Ecore_List2 *l;
-   Ecore_Poller *poller;
+   Ecore_Poller *poller, *l;
    int changes = 0;
 
    at_tick++;
@@ -113,9 +122,8 @@ _ecore_poller_cb_timer(void *data __UNUSED__)
 	 * tick interval, so run all pollers hooked to that counter */
 	if (poller_counters[i] == 0)
 	  {
-	     for (l = (Ecore_List2 *)pollers[i]; l; l = l->next)
+	     EINA_INLIST_FOREACH(pollers[i], poller)
 	       {
-		  poller = (Ecore_Poller *)l;
 		  if (!poller->delete_me)
 		    {
 		       if (!poller->func(poller->data))
@@ -138,13 +146,13 @@ _ecore_poller_cb_timer(void *data __UNUSED__)
 	/* FIXME: walk all pollers and remove deleted ones */
 	for (i = 0; i < 15; i++)
 	  {
-             for (l = (Ecore_List2 *)pollers[i]; l;)
+             for (l = pollers[i]; l;)
 	       {
-                  poller = (Ecore_Poller *)l;
-		  l = l->next;
+                  poller = l;
+		  l = (Ecore_Poller *) EINA_INLIST_GET(l)->next;
 		  if (poller->delete_me)
 		    {
-		       pollers[poller->ibit] = _ecore_list2_remove(pollers[poller->ibit], poller);
+		       pollers[i] = (Ecore_Poller *) eina_inlist_remove(EINA_INLIST_GET(pollers[i]), EINA_INLIST_GET(poller));
 		       free(poller);
 		       poller_delete_count--;
 		       changes++;
@@ -201,7 +209,7 @@ ecore_poller_poll_interval_set(Ecore_Poller_Type type __UNUSED__, double poll_ti
 }
 
 /**
- * Gets the time between ticks (in seconds) for the fiven ticker clock.
+ * Gets the time between ticks (in seconds) for the given ticker clock.
  * @param   type The ticker type to query
  * @return  The time in seconds between ticks of the ticker clock
  * @ingroup Ecore_Poller_Group
@@ -287,7 +295,7 @@ ecore_poller_add(Ecore_Poller_Type type __UNUSED__, int interval, int (*func) (v
    poller->ibit = ibit;
    poller->func = func;
    poller->data = (void *)data;
-   pollers[poller->ibit] = _ecore_list2_prepend(pollers[poller->ibit], poller);
+   pollers[poller->ibit] = (Ecore_Poller *) eina_inlist_prepend(EINA_INLIST_GET(pollers[poller->ibit]), EINA_INLIST_GET(poller));
    if (poller_walking)
      just_added_poller++;
    else
@@ -327,7 +335,7 @@ ecore_poller_del(Ecore_Poller *poller)
      }
    /* not in loop so safe - delete immediately */
    data = poller->data;
-   pollers[poller->ibit] = _ecore_list2_remove(pollers[poller->ibit], poller);
+   pollers[poller->ibit] = (Ecore_Poller *) eina_inlist_remove(EINA_INLIST_GET(pollers[poller->ibit]), EINA_INLIST_GET(poller));
    free(poller);
    _ecore_poller_next_tick_eval();
    return data;
@@ -337,16 +345,13 @@ void
 _ecore_poller_shutdown(void)
 {
    int i;
-   Ecore_List2 *l;
    Ecore_Poller *poller;
 
    for (i = 0; i < 15; i++)
      {
-	for (l = (Ecore_List2 *)pollers[i]; l;)
+	while ((poller = pollers[i]))
 	  {
-	     poller = (Ecore_Poller *)l;
-	     l = l->next;
-	     pollers[poller->ibit] = _ecore_list2_remove(pollers[poller->ibit], poller);
+	     pollers[i] = (Ecore_Poller *) eina_inlist_remove(EINA_INLIST_GET(pollers[i]), EINA_INLIST_GET(pollers[i]));
 	     free(poller);
 	  }
      }

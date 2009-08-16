@@ -2,7 +2,10 @@
  * vim:ts=8:sw=3:sts=8:noexpandtab:cino=>5n-3f0^-2{2
  */
 
-#include "Ecore.h"
+#include <string.h>
+
+#include <Ecore.h>
+
 #include "ecore_xcb_private.h"
 #include "Ecore_X_Atoms.h"
 
@@ -306,7 +309,7 @@ ecore_x_window_override_argb_new(Ecore_X_Window parent,
  * @ingroup Ecore_X_Window_Destroy_Group
  */
 EAPI void
-ecore_x_window_del(Ecore_X_Window window)
+ecore_x_window_free(Ecore_X_Window window)
 {
    /* sorry sir, deleting the root window doesn't sound like
     * a smart idea.
@@ -576,7 +579,7 @@ ecore_x_window_lower(Ecore_X_Window window)
 }
 
 /**
- * @defgroup Evas_X_Window_Change_Properties_Group X Window Change Property Functions
+ * @defgroup Ecore_X_Window_Change_Properties_Group X Window Change Property Functions
  *
  * Functions that change window properties.
  */
@@ -1450,8 +1453,8 @@ _ecore_x_window_at_xy_get(Ecore_X_Window  base,
    int16_t                            win_y;
    uint16_t                           win_width;
    uint16_t                           win_height;
-   xcb_window_t *wins = NULL;
-   int i, tree_c_len;
+   xcb_window_t                      *wins = NULL;
+   int                                i, tree_c_len;
 
    cookie_get_window_attributes = xcb_get_window_attributes_unchecked(_ecore_xcb_conn, base);
    cookie_get_geometry = xcb_get_geometry_unchecked(_ecore_xcb_conn, base);

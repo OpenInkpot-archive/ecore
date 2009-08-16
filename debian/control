@@ -2,30 +2,28 @@ Source: ecore
 Section: gui
 Priority: optional
 Maintainer: Alexander Kerner <lunohod@openinkpot.org>
-Build-Depends: debhelper (>= 6), cdbs, cdbs-embedded, libeet-dev, libevas-dev, libssl-dev, libcurl4-openssl-dev, libxcursor-dev, libxss-dev, libxrender-dev, libxinerama-dev, libxrandr-dev, libxext-dev, libxp-dev, libxcomposite-dev, libjpeg62-dev, libxdamage-dev, automake, libtool, pkg-config
-Standards-Version: 3.7.3
-Homepage: http://www.enlightenment.org
-XCS-Cross-Host-Build-Depends: debhelper (>= 5), cdbs, cdbs-embedded, automake, libtool, pkg-config
-XCS-Cross-Build-Depends: libeet-dev, libevas-dev, libxcb1-dev, libjpeg62-dev, libxcb-icccm1-dev, libxcb-image0-dev, libxcb-keysyms1-dev, libxcb-composite0-dev, libxcb-damage0-dev, libxcb-dpms0-dev, libxcb-randr0-dev, libxcb-render0-dev, libxcb-screensaver0-dev, libxcb-shape0-dev, libxcb-sync0-dev, libxcb-xfixes0-dev, libxcb-xinerama0-dev, libxcb-xprint0-dev, libxcb-xtest0-dev
+Uploaders: Mikhail Gusarov <dottedmag@dottedmag.net>
+Standards-Version: 3.8.2
+Homepage: http://enlightenment.org
 XS-Vcs-Git: http://git.openinkpot.org/ecore.git
 XS-Vcs-Browser: http://git.openinkpot.org/ecore.git
+Build-Depends: debhelper (>= 6), cdbs, automake, pkg-config, libtool, libeina-dev (>= 0.0.2.062-1), libeet-dev (>= 1.0.0), libevas-dev (>= 0.9.9.062-1), libjpeg62-dev, libxcb1-dev, libxcb-icccm1-dev | libxcb-icccm0-dev, libxcb-image0-dev, libxcb-keysyms1-dev | libxcb-keysyms0-dev, libxcb-composite0-dev, libxcb-damage0-dev, libxcb-dpms0-dev, libxcb-randr0-dev, libxcb-render0-dev, libxcb-screensaver0-dev, libxcb-shape0-dev, libxcb-sync0-dev, libxcb-xfixes0-dev, libxcb-xinerama0-dev, libxcb-xtest0-dev
+XCS-Cross-Host-Build-Depends: debhelper (>= 6), cdbs, cdbs-embedded, automake, pkg-config, libtool
+XCS-Cross-Build-Depends: libeina-dev (>= 0.0.2.062-1), libeet-dev (>= 1.0.0), libevas-dev (>= 0.9.9.062-1), libjpeg62-dev, libxcb1-dev, libxcb-icccm1-dev | libxcb-icccm0-dev, libxcb-image0-dev, libxcb-keysyms1-dev | libxcb-keysyms0-dev, libxcb-composite0-dev, libxcb-damage0-dev, libxcb-dpms0-dev, libxcb-randr0-dev, libxcb-render0-dev, libxcb-screensaver0-dev, libxcb-shape0-dev, libxcb-sync0-dev, libxcb-xfixes0-dev, libxcb-xinerama0-dev, libxcb-xtest0-dev
 
-Package: libecore0
+Package: libecore-svn-03
 Architecture: any
-Provides: libecore
-Depends: ${shlibs:Depends}, libecore-bin
+Depends: ${misc:Depends}, ${shlibs:Depends}
 Description: Core abstraction layer for enlightenment DR 0.17
  This is the core event abstraction layer and X abstraction layer that makes
  doing selections, Xdnd, general X stuff, and event loops, timeouts and idle
  handlers fast, optimized, and convenient. It's a separate library so anyone
  can make use of the work put into Ecore to make this job easy for
  applications.
- 
-Package: libecore-con0
+
+Package: libecore-con-svn-03
 Architecture: any
-Section: gui
-Depends: ${shlibs:Depends}
-Provides: libecore-con
+Depends: ${misc:Depends}, ${shlibs:Depends}
 Description: Ecore Connection Library
  This is the core event abstraction layer and X abstraction layer that makes
  doing selections, Xdnd, general X stuff, and event loops, timeouts and idle
@@ -34,12 +32,10 @@ Description: Ecore Connection Library
  applications.
  .
  This package contains the Ecore Connection Library.
- 
-Package: libecore-config0
+
+Package: libecore-config-svn-03
 Architecture: any
-Section: gui
-Depends: ${shlibs:Depends}
-Provides: libecore-config
+Depends: ${misc:Depends}, ${shlibs:Depends}
 Description: Ecore Enlightened Property Library
  This is the core event abstraction layer and X abstraction layer that makes
  doing selections, Xdnd, general X stuff, and event loops, timeouts and idle
@@ -48,12 +44,10 @@ Description: Ecore Enlightened Property Library
  applications.
  .
  This package contains the Enlightened Property Library.
- 
-Package: libecore-evas0
+
+Package: libecore-evas-svn-03
 Architecture: any
-Section: gui
-Depends: ${shlibs:Depends}
-Provides: libecore-evas
+Depends: ${misc:Depends}, ${shlibs:Depends}
 Description: Ecore Evas Wrapper Library
  This is the core event abstraction layer and X abstraction layer that makes
  doing selections, Xdnd, general X stuff, and event loops, timeouts and idle
@@ -63,11 +57,21 @@ Description: Ecore Evas Wrapper Library
  .
  This package contains the Ecore Evas wrapper functions.
  
-Package: libecore-file0
+Package: libecore-fb-svn-03
 Architecture: any
-Section: gui
-Depends: ${shlibs:Depends}
-Provides: libecore-file
+Depends: ${misc:Depends}, ${shlibs:Depends}
+Description: Ecore frame buffer system functions
+ This is the core event abstraction layer and X abstraction layer that makes
+ doing selections, Xdnd, general X stuff, and event loops, timeouts and idle
+ handlers fast, optimized, and convenient. It's a separate library so anyone
+ can make use of the work put into Ecore to make this job easy for
+ applications.
+ .
+ This package contains the Ecore frame buffer system functions.
+
+Package: libecore-file-svn-03
+Architecture: any
+Depends: ${misc:Depends}, ${shlibs:Depends}
 Description: Ecore File Library
  This is the core event abstraction layer and X abstraction layer that makes
  doing selections, Xdnd, general X stuff, and event loops, timeouts and idle
@@ -76,41 +80,35 @@ Description: Ecore File Library
  applications.
  .
  This package contains the Ecore File Library.
- 
-Package: libecore-imf0
+
+Package: libecore-imf-svn-03
 Architecture: any
-Section: gui
-Depends: ${shlibs:Depends}, libecore-imf-evas0
-Provides: libecore-imf
-Description: Ecore Input Method Framework module 
+Depends: ${misc:Depends}, ${shlibs:Depends}
+Description: Ecore Input Method Framework module
  This is the core event abstraction layer and X abstraction layer that makes
  doing selections, Xdnd, general X stuff, and event loops, timeouts and idle
  handlers fast, optimized, and convenient. It's a separate library so anyone
  can make use of the work put into Ecore to make this job easy for
  applications.
  .
- This package contains the Ecore Input Method Framework module.
- 
-Package: libecore-imf-evas0
+ This package contains the Ecore Input Method Framework module, and the Evas
+ helper functions for it.
+
+Package: libecore-input-svn-03
 Architecture: any
-Section: gui
-Depends: ${shlibs:Depends}
-Provides: libecore-imf-evas
-Description: Evas helpers for the Ecore Input Method Framework
+Depends: ${misc:Depends}, ${shlibs:Depends}
+Description: Ecore input functions
  This is the core event abstraction layer and X abstraction layer that makes
  doing selections, Xdnd, general X stuff, and event loops, timeouts and idle
  handlers fast, optimized, and convenient. It's a separate library so anyone
  can make use of the work put into Ecore to make this job easy for
  applications.
  .
- This package contains the Evas helper functions for the Ecore Input Method
- Framework module.
- 
-Package: libecore-ipc0
+ This package contains the Ecore Input Library.
+
+Package: libecore-ipc-svn-03
 Architecture: any
-Section: gui
-Depends: ${shlibs:Depends}
-Provides: libecore-ipc
+Depends: ${misc:Depends}, ${shlibs:Depends}
 Description: Ecore inter-process communication functions
  This is the core event abstraction layer and X abstraction layer that makes
  doing selections, Xdnd, general X stuff, and event loops, timeouts and idle
@@ -119,12 +117,10 @@ Description: Ecore inter-process communication functions
  applications.
  .
  This package contains the Ecore inter-process communication functions.
- 
-Package: libecore-job0
+
+Package: libecore-job-svn-03
 Architecture: any
-Section: gui
-Depends: ${shlibs:Depends}
-Provides: libecore-job
+Depends: ${misc:Depends}, ${shlibs:Depends}
 Description: Ecore job dealing functions
  This is the core event abstraction layer and X abstraction layer that makes
  doing selections, Xdnd, general X stuff, and event loops, timeouts and idle
@@ -133,12 +129,10 @@ Description: Ecore job dealing functions
  applications.
  .
  This package contains functions for dealing with Ecore jobs.
- 
-Package: libecore-txt0
+
+Package: libecore-txt-svn-03
 Architecture: any
-Section: gui
-Depends: ${shlibs:Depends}
-Provides: libecore-txt
+Depends: ${misc:Depends}, ${shlibs:Depends}
 Description: Ecore text encoding conversion functions
  This is the core event abstraction layer and X abstraction layer that makes
  doing selections, Xdnd, general X stuff, and event loops, timeouts and idle
@@ -147,12 +141,10 @@ Description: Ecore text encoding conversion functions
  applications.
  .
  This package contains the Ecore text encoding conversion functions.
- 
-Package: libecore-x0
+
+Package: libecore-x-svn-03
 Architecture: any
-Section: gui
-Depends: ${shlibs:Depends}
-Provides: libecore-x
+Depends: ${misc:Depends}, ${shlibs:Depends}
 Description: Ecore functions for dealing with the X Windows System
  This is the core event abstraction layer and X abstraction layer that makes
  doing selections, Xdnd, general X stuff, and event loops, timeouts and idle
@@ -162,36 +154,25 @@ Description: Ecore functions for dealing with the X Windows System
  .
  This package contains the Ecore wrapper and convenience functions for using
  the X Windows System.
- 
-Package: libecore0-all
-Architecture: any
-Section: gui
-Depends: libecore0 (= ${Source-Version}), libecore-config0, libecore-con0, libecore-evas0, libecore-file0, libecore-imf0, libecore-ipc0, libecore-job0, libecore-txt0, libecore-x0
-Provides: libecore-all
-Description: Virtual package providing all available Ecore modules.
- This is the core event abstraction layer and X abstraction layer that makes
- doing selections, Xdnd, general X stuff, and event loops, timeouts and idle
- handlers fast, optimized, and convenient. It's a separate library so anyone
- can make use of the work put into Ecore to make this job easy for
- applications.
- .
- This virtual package provides all available Ecore modules.
 
 Package: libecore-dev
 Architecture: any
 Section: libdevel
 Suggests: libecore-doc
-Depends: libecore0 (= ${binary:Version}),
-         libecore-con0 (= ${binary:Version}),
-         libecore-config0 (= ${binary:Version}),
-         libecore-evas0 (= ${binary:Version}),
-         libecore-file0 (= ${binary:Version}),
-         libecore-imf0 (= ${binary:Version}),
-         libecore-ipc0 (= ${binary:Version}),
-         libecore-job0 (= ${binary:Version}),
-         libecore-txt0 (= ${binary:Version}),
-         libecore-x0 (= ${binary:Version}),
-         libeet-dev, libevas-dev
+Depends: ${misc:Depends},
+         libecore-svn-03 (= ${binary:Version}),
+         libecore-con-svn-03 (= ${binary:Version}),
+         libecore-config-svn-03 (= ${binary:Version}),
+         libecore-evas-svn-03 (= ${binary:Version}),
+         libecore-fb-svn-03 (= ${binary:Version}),
+         libecore-file-svn-03 (= ${binary:Version}),
+         libecore-imf-svn-03 (= ${binary:Version}),
+         libecore-input-svn-03 (= ${binary:Version}),
+         libecore-ipc-svn-03 (= ${binary:Version}),
+         libecore-job-svn-03 (= ${binary:Version}),
+         libecore-txt-svn-03 (= ${binary:Version}),
+         libecore-x-svn-03 (= ${binary:Version}),
+         libeet-dev, libevas-dev (>= 0.9.9.60), libeina-dev
 Description: Ecore headers and static libraries
  This is the core event abstraction layer and X abstraction layer that makes
  doing selections, Xdnd, general X stuff, and event loops, timeouts and idle
@@ -203,8 +184,7 @@ Description: Ecore headers and static libraries
 
 Package: libecore-bin
 Architecture: any
-Section: gui
-Depends: ${shlibs:Depends}
+Depends: ${misc:Depends}, ${shlibs:Depends}
 Description: Tools that support Ecore
  This is the core event abstraction layer and X abstraction layer that makes
  doing selections, Xdnd, general X stuff, and event loops, timeouts and idle
@@ -219,8 +199,8 @@ Package: libecore-dbg
 Architecture: any
 Section: debug
 Priority: extra
-Depends: libecore0 (= ${binary:Version})
-Description:  Core abstraction layer for enlightenment DR 0.17
+Depends: ${misc:Depends}, libecore-svn-03 (= ${binary:Version})
+Description: Debugging symbols for libecore
  This is the core event abstraction layer and X abstraction layer that makes
  doing selections, Xdnd, general X stuff, and event loops, timeouts and idle
  handlers fast, optimized, and convenient. It's a separate library so anyone

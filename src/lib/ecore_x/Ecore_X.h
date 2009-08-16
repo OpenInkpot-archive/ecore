@@ -66,6 +66,12 @@ typedef void         Ecore_X_Connection;
 typedef void         Ecore_X_Screen;
 typedef Ecore_X_ID   Ecore_X_Sync_Counter;
 typedef Ecore_X_ID   Ecore_X_Sync_Alarm;
+typedef void         Ecore_X_XRegion;
+
+typedef Ecore_X_ID     Ecore_X_Randr_Output;
+typedef Ecore_X_ID     Ecore_X_Randr_Crtc;
+typedef Ecore_X_ID     Ecore_X_Randr_Mode;
+typedef unsigned short Ecore_X_Randr_Size_ID;
 
 #ifdef __cplusplus
 extern "C" {
@@ -80,6 +86,37 @@ typedef struct _Ecore_X_Icon {
    unsigned int  width, height;
    unsigned int *data;
 } Ecore_X_Icon;
+
+typedef enum _Ecore_X_GC_Value_Mask {
+   ECORE_X_GC_VALUE_MASK_FUNCTION = (1L << 0),
+   ECORE_X_GC_VALUE_MASK_PLANE_MASK = (1L << 1),
+   ECORE_X_GC_VALUE_MASK_FOREGROUND = (1L << 2),
+   ECORE_X_GC_VALUE_MASK_BACKGROUND = (1L << 3),
+   ECORE_X_GC_VALUE_MASK_LINE_WIDTH = (1L << 4),
+   ECORE_X_GC_VALUE_MASK_LINE_STYLE = (1L << 5),
+   ECORE_X_GC_VALUE_MASK_CAP_STYLE = (1L << 6),
+   ECORE_X_GC_VALUE_MASK_JOIN_STYLE = (1L << 7),
+   ECORE_X_GC_VALUE_MASK_FILL_STYLE = (1L << 8),
+   ECORE_X_GC_VALUE_MASK_FILL_RULE = (1L << 9),
+   ECORE_X_GC_VALUE_MASK_TILE = (1L << 10),
+   ECORE_X_GC_VALUE_MASK_STIPPLE = (1L << 11),
+   ECORE_X_GC_VALUE_MASK_TILE_STIPPLE_ORIGIN_X = (1L << 12),
+   ECORE_X_GC_VALUE_MASK_TILE_STIPPLE_ORIGIN_Y = (1L << 13),
+   ECORE_X_GC_VALUE_MASK_FONT = (1L << 14),
+   ECORE_X_GC_VALUE_MASK_SUBWINDOW_MODE = (1L << 15),
+   ECORE_X_GC_VALUE_MASK_GRAPHICS_EXPOSURES = (1L << 16),
+   ECORE_X_GC_VALUE_MASK_CLIP_ORIGIN_X = (1L << 17),
+   ECORE_X_GC_VALUE_MASK_CLIP_ORIGIN_Y = (1L << 18),
+   ECORE_X_GC_VALUE_MASK_CLIP_MASK = (1L << 19),
+   ECORE_X_GC_VALUE_MASK_DASH_OFFSET = (1L << 20),
+   ECORE_X_GC_VALUE_MASK_DASH_LIST = (1L << 21),
+   ECORE_X_GC_VALUE_MASK_ARC_MODE = (1L << 22)
+} Ecore_X_GC_Value_Mask;
+
+typedef enum _Ecore_X_Composite_Update_Type {
+   ECORE_X_COMPOSITE_UPDATE_AUTOMATIC,
+   ECORE_X_COMPOSITE_UPDATE_MANUAL
+} Ecore_X_Composite_Update_Type;
 
 typedef enum _Ecore_X_Window_State {
     /** The window is iconified. */
@@ -137,6 +174,21 @@ typedef enum _Ecore_X_Randr_Rotation {
    ECORE_X_RANDR_FLIP_Y = (1 << 5)
 } Ecore_X_Randr_Rotation;
 
+typedef enum _Ecore_X_Randr_Connection {
+  ECORE_X_RANDR_CONNECTED = 0,
+  ECORE_X_RANDR_DISCONNECTED = 1,
+  ECORE_X_RANDR_UNKNOWN_CONNECTION = 2
+} Ecore_X_Randr_Connection;
+
+typedef enum _Ecore_X_Render_Subpixel_Order {
+   ECORE_X_RENDER_SUBPIXEL_ORDER_UNKNOWN = 0,
+   ECORE_X_RENDER_SUBPIXEL_ORDER_HORIZONTAL_RGB = 1,
+   ECORE_X_RENDER_SUBPIXEL_ORDER_HORIZONTAL_BGR = 2,
+   ECORE_X_RENDER_SUBPIXEL_ORDER_VERTICAL_RGB = 3,
+   ECORE_X_RENDER_SUBPIXEL_ORDER_VERTICAL_BGR = 4,
+   ECORE_X_RENDER_SUBPIXEL_ORDER_NONE = 5
+} Ecore_X_Render_Subpixel_Order;
+
 #define ECORE_X_SELECTION_TARGET_TARGETS "TARGETS"
 #define ECORE_X_SELECTION_TARGET_TEXT "TEXT"
 #define ECORE_X_SELECTION_TARGET_COMPOUND_TEXT "COMPOUND_TEXT"
@@ -156,7 +208,8 @@ typedef enum _Ecore_X_Selection {
    ECORE_X_SELECTION_PRIMARY,
    ECORE_X_SELECTION_SECONDARY,
    ECORE_X_SELECTION_XDND,
-   ECORE_X_SELECTION_CLIPBOARD
+   ECORE_X_SELECTION_CLIPBOARD,
+   ECORE_X_SELECTION_OTHER
 } Ecore_X_Selection;
 
 typedef enum _Ecore_X_Event_Mode
@@ -226,14 +279,8 @@ typedef enum _Ecore_X_Shape_Type
    ECORE_X_SHAPE_CLIP
 } Ecore_X_Shape_Type;
 
-typedef struct _Ecore_X_Event_Key_Down                 Ecore_X_Event_Key_Down;
-typedef struct _Ecore_X_Event_Key_Up                   Ecore_X_Event_Key_Up;
-typedef struct _Ecore_X_Event_Mouse_Button_Down        Ecore_X_Event_Mouse_Button_Down;
-typedef struct _Ecore_X_Event_Mouse_Button_Up          Ecore_X_Event_Mouse_Button_Up;
-typedef struct _Ecore_X_Event_Mouse_Move               Ecore_X_Event_Mouse_Move;
 typedef struct _Ecore_X_Event_Mouse_In                 Ecore_X_Event_Mouse_In;
 typedef struct _Ecore_X_Event_Mouse_Out                Ecore_X_Event_Mouse_Out;
-typedef struct _Ecore_X_Event_Mouse_Wheel              Ecore_X_Event_Mouse_Wheel;
 typedef struct _Ecore_X_Event_Window_Focus_In          Ecore_X_Event_Window_Focus_In;
 typedef struct _Ecore_X_Event_Window_Focus_Out         Ecore_X_Event_Window_Focus_Out;
 typedef struct _Ecore_X_Event_Window_Keymap            Ecore_X_Event_Window_Keymap;
@@ -273,6 +320,9 @@ typedef struct _Ecore_X_Event_Screensaver_Notify       Ecore_X_Event_Screensaver
 typedef struct _Ecore_X_Event_Sync_Counter             Ecore_X_Event_Sync_Counter;
 typedef struct _Ecore_X_Event_Sync_Alarm               Ecore_X_Event_Sync_Alarm;
 typedef struct _Ecore_X_Event_Screen_Change            Ecore_X_Event_Screen_Change;
+typedef struct _Ecore_X_Event_Randr_Crtc_Change        Ecore_X_Event_Randr_Crtc_Change;
+typedef struct _Ecore_X_Event_Randr_Output_Change       Ecore_X_Event_Randr_Output_Change;
+typedef struct _Ecore_X_Event_Randr_Output_Property_Notify Ecore_X_Event_Randr_Output_Property_Notify;
 
 typedef struct _Ecore_X_Event_Window_Delete_Request                Ecore_X_Event_Window_Delete_Request;
 typedef struct _Ecore_X_Event_Window_Prop_Title_Change             Ecore_X_Event_Window_Prop_Title_Change;
@@ -291,80 +341,6 @@ typedef struct _Ecore_X_Event_Ping                       Ecore_X_Event_Ping;
 typedef struct _Ecore_X_Event_Desktop_Change             Ecore_X_Event_Desktop_Change;
 
 typedef struct _Ecore_X_Event_Startup_Sequence           Ecore_X_Event_Startup_Sequence;
-
-struct _Ecore_X_Event_Key_Down
-{
-   char   *keyname;
-   char   *keysymbol;
-   char   *key_compose;
-   int     modifiers;
-   int	   same_screen;
-   Ecore_X_Window  win;
-   Ecore_X_Window  event_win;
-   Ecore_X_Window  root_win;
-   Ecore_X_Time    time;
-};
-
-struct _Ecore_X_Event_Key_Up
-{
-   char   *keyname;
-   char   *keysymbol;
-   char   *key_compose;
-   int     modifiers;
-   int	   same_screen;
-   Ecore_X_Window  win;
-   Ecore_X_Window  event_win;
-   Ecore_X_Window  root_win;
-   Ecore_X_Time    time;
-};
-
-struct _Ecore_X_Event_Mouse_Button_Down
-{
-   int     button;
-   int     modifiers;
-   int     x, y;
-   int	   same_screen;
-   struct {
-      int  x, y;
-   } root;
-   Ecore_X_Window  win;
-   Ecore_X_Window  event_win;
-   Ecore_X_Window  root_win;
-   Ecore_X_Time    time;
-   unsigned int    double_click : 1;
-   unsigned int    triple_click : 1;
-};
-
-struct _Ecore_X_Event_Mouse_Button_Up
-{
-   int     button;
-   int     modifiers;
-   int     x, y;
-   int	   same_screen;
-   struct {
-      int  x, y;
-   } root;
-   Ecore_X_Window  win;
-   Ecore_X_Window  event_win;
-   Ecore_X_Window  root_win;
-   Ecore_X_Time    time;
-   unsigned int    double_click : 1;
-   unsigned int    triple_click : 1;
-};
-
-struct _Ecore_X_Event_Mouse_Move
-{
-   int     modifiers;
-   int     x, y;
-   int	   same_screen;
-   struct {
-      int  x, y;
-   } root;
-   Ecore_X_Window  win;
-   Ecore_X_Window  event_win;
-   Ecore_X_Window  root_win;
-   Ecore_X_Time    time;
-};
 
 struct _Ecore_X_Event_Mouse_In
 {
@@ -396,24 +372,6 @@ struct _Ecore_X_Event_Mouse_Out
    Ecore_X_Event_Mode		mode;
    Ecore_X_Event_Detail		detail;
    Ecore_X_Time                 time;
-};
-
-struct _Ecore_X_Event_Mouse_Wheel
-{
-   int direction; /* 0 = default up/down wheel FIXME: more wheel types */
-   int z; /* ...,-2,-1 = down, 1,2,... = up */
-   int modifiers;
-   int x, y;
-   int same_screen;
-
-   struct {
-      int x, y;
-   } root;
-
-   Ecore_X_Window win;
-   Ecore_X_Window event_win;
-   Ecore_X_Window root_win;
-   Ecore_X_Time   time;
 };
 
 struct _Ecore_X_Event_Window_Focus_In
@@ -568,6 +526,7 @@ struct _Ecore_X_Event_Selection_Clear
 {
    Ecore_X_Window    win;
    Ecore_X_Selection selection;
+   Ecore_X_Atom      atom;
    Ecore_X_Time      time;
 };
 
@@ -586,6 +545,7 @@ struct _Ecore_X_Event_Selection_Notify
    Ecore_X_Window             win;
    Ecore_X_Time               time;
    Ecore_X_Selection          selection;
+   Ecore_X_Atom               atom;
    char                      *target;
    void                      *data;
 };
@@ -711,8 +671,49 @@ struct _Ecore_X_Event_Sync_Alarm
 
 struct _Ecore_X_Event_Screen_Change
 {
-   Ecore_X_Window win, root;
-   int            width, height;
+   Ecore_X_Window                win;
+   Ecore_X_Window                root;
+   int                           width;
+   int                           height;
+   Ecore_X_Time                  time;
+   Ecore_X_Time                  config_time;
+   int                           mm_width;   /* in millimeters */
+   int                           mm_height;  /* in millimeters */
+   Ecore_X_Randr_Rotation        rotation;
+   Ecore_X_Render_Subpixel_Order subpixel_order;
+   Ecore_X_Randr_Size_ID         size_id;
+};
+
+struct _Ecore_X_Event_Randr_Crtc_Change
+{
+   Ecore_X_Window                win;
+   Ecore_X_Randr_Crtc            crtc;
+   Ecore_X_Randr_Mode            mode;
+   Ecore_X_Randr_Rotation        rotation;
+   int                           x;
+   int                           y;
+   int                           width;
+   int                           height;
+};
+
+struct _Ecore_X_Event_Randr_Output_Change
+{
+   Ecore_X_Window                win;
+   Ecore_X_Randr_Output          output;
+   Ecore_X_Randr_Crtc            crtc;
+   Ecore_X_Randr_Mode            mode;
+   Ecore_X_Randr_Rotation        rotation;
+   Ecore_X_Randr_Connection      connection;
+   Ecore_X_Render_Subpixel_Order subpixel_order;
+};
+
+struct _Ecore_X_Event_Randr_Output_Property_Notify
+{
+   Ecore_X_Window                win;
+   Ecore_X_Randr_Output          output;
+   Ecore_X_Atom                  property;
+   Ecore_X_Time                  time;
+   int                           state; /* NewValue, Deleted */
 };
 
 struct _Ecore_X_Event_Window_Delete_Request
@@ -819,14 +820,14 @@ struct _Ecore_X_Event_Desktop_Change
    int                         source;
 };
 
-EAPI extern int ECORE_X_EVENT_KEY_DOWN;
-EAPI extern int ECORE_X_EVENT_KEY_UP;
-EAPI extern int ECORE_X_EVENT_MOUSE_BUTTON_DOWN;
-EAPI extern int ECORE_X_EVENT_MOUSE_BUTTON_UP;
-EAPI extern int ECORE_X_EVENT_MOUSE_MOVE;
+EAPI extern int ECORE_X_EVENT_ANY; /**< low level event dependent on
+				        backend in use, if Xlib will be XEvent,
+					if XCB will be xcb_generic_event_t.
+
+					@warning avoid using it.
+				   */
 EAPI extern int ECORE_X_EVENT_MOUSE_IN;
 EAPI extern int ECORE_X_EVENT_MOUSE_OUT;
-EAPI extern int ECORE_X_EVENT_MOUSE_WHEEL;
 EAPI extern int ECORE_X_EVENT_WINDOW_FOCUS_IN;
 EAPI extern int ECORE_X_EVENT_WINDOW_FOCUS_OUT;
 EAPI extern int ECORE_X_EVENT_WINDOW_KEYMAP;
@@ -856,6 +857,9 @@ EAPI extern int ECORE_X_EVENT_SCREENSAVER_NOTIFY;
 EAPI extern int ECORE_X_EVENT_SYNC_COUNTER;
 EAPI extern int ECORE_X_EVENT_SYNC_ALARM;
 EAPI extern int ECORE_X_EVENT_SCREEN_CHANGE;
+EAPI extern int ECORE_X_EVENT_RANDR_CRTC_CHANGE;
+EAPI extern int ECORE_X_EVENT_RANDR_OUTPUT_CHANGE;
+EAPI extern int ECORE_X_EVENT_RANDR_OUTPUT_PROPERTY_NOTIFY;
 EAPI extern int ECORE_X_EVENT_DAMAGE_NOTIFY;
 
 EAPI extern int ECORE_X_EVENT_WINDOW_DELETE_REQUEST;
@@ -886,11 +890,6 @@ EAPI extern int ECORE_X_EVENT_XDND_STATUS;
 EAPI extern int ECORE_X_EVENT_XDND_LEAVE;
 EAPI extern int ECORE_X_EVENT_XDND_DROP;
 EAPI extern int ECORE_X_EVENT_XDND_FINISHED;
-
-EAPI extern int ECORE_X_MODIFIER_SHIFT;
-EAPI extern int ECORE_X_MODIFIER_CTRL;
-EAPI extern int ECORE_X_MODIFIER_ALT;
-EAPI extern int ECORE_X_MODIFIER_WIN;
 
 EAPI extern int ECORE_X_LOCK_SCROLL;
 EAPI extern int ECORE_X_LOCK_NUM;
@@ -979,7 +978,9 @@ typedef enum _Ecore_X_Action {
     ECORE_X_ACTION_MAXIMIZE_VERT,
     ECORE_X_ACTION_FULLSCREEN,
     ECORE_X_ACTION_CHANGE_DESKTOP,
-    ECORE_X_ACTION_CLOSE
+    ECORE_X_ACTION_CLOSE,
+    ECORE_X_ACTION_ABOVE,
+    ECORE_X_ACTION_BELOW
 } Ecore_X_Action;
 
 typedef enum _Ecore_X_Window_Configure_Mask {
@@ -1078,7 +1079,7 @@ EAPI void             ecore_x_dnd_type_get_prefetch(Ecore_X_Window window);
 EAPI void             ecore_x_dnd_type_get_fetch(void);
 EAPI int              ecore_x_dnd_type_isset(Ecore_X_Window win, const char *type);
 EAPI void             ecore_x_dnd_type_set(Ecore_X_Window win, const char *type, int on);
-EAPI void             ecore_x_dnd_types_set(Ecore_X_Window win, char **types, unsigned int num_types);
+EAPI void             ecore_x_dnd_types_set(Ecore_X_Window win, const char **types, unsigned int num_types);
 EAPI void             ecore_x_dnd_actions_set(Ecore_X_Window win, Ecore_X_Atom *actions, unsigned int num_actions);
 EAPI void             ecore_x_dnd_begin_prefetch(Ecore_X_Window source);
 EAPI void             ecore_x_dnd_begin_fetch(void);
@@ -1103,7 +1104,7 @@ EAPI void             ecore_x_window_configure(Ecore_X_Window win,
 					       Ecore_X_Window sibling,
 					       int stack_mode);
 EAPI void             ecore_x_window_cursor_set(Ecore_X_Window win, Ecore_X_Cursor c);
-EAPI void             ecore_x_window_del(Ecore_X_Window win);
+EAPI void             ecore_x_window_free(Ecore_X_Window win);
 EAPI void             ecore_x_window_ignore_set(Ecore_X_Window win, int ignore);
 EAPI Ecore_X_Window  *ecore_x_window_ignore_list(int *num);
 
@@ -1259,13 +1260,13 @@ EAPI void               ecore_x_window_shape_events_select(Ecore_X_Window win, i
 EAPI void               ecore_x_window_shape_input_mask_set(Ecore_X_Window win, Ecore_X_Pixmap mask);
 
 EAPI Ecore_X_Pixmap   ecore_x_pixmap_new(Ecore_X_Window win, int w, int h, int dep);
-EAPI void             ecore_x_pixmap_del(Ecore_X_Pixmap pmap);
+EAPI void             ecore_x_pixmap_free(Ecore_X_Pixmap pmap);
 EAPI void             ecore_x_pixmap_paste(Ecore_X_Pixmap pmap, Ecore_X_Drawable dest, Ecore_X_GC gc, int sx, int sy, int w, int h, int dx, int dy);
 EAPI void             ecore_x_pixmap_geometry_get(Ecore_X_Pixmap pmap, int *x, int *y, int *w, int *h);
 EAPI int              ecore_x_pixmap_depth_get(Ecore_X_Pixmap pmap);
 
-EAPI Ecore_X_GC       ecore_x_gc_new(Ecore_X_Drawable draw);
-EAPI void             ecore_x_gc_del(Ecore_X_GC gc);
+EAPI Ecore_X_GC       ecore_x_gc_new(Ecore_X_Drawable draw, Ecore_X_GC_Value_Mask value_mask, const unsigned int *value_list);
+EAPI void             ecore_x_gc_free(Ecore_X_GC gc);
 
 EAPI int              ecore_x_client_message32_send(Ecore_X_Window win, Ecore_X_Atom type, Ecore_X_Event_Mask mask, long d0, long d1, long d2, long d3, long d4);
 EAPI int              ecore_x_client_message8_send(Ecore_X_Window win, Ecore_X_Atom type, const void *data, int len);
@@ -1278,6 +1279,7 @@ EAPI void            ecore_x_drawable_geometry_get_fetch(void);
 EAPI void            ecore_x_drawable_geometry_get(Ecore_X_Drawable d, int *x, int *y, int *w, int *h);
 EAPI int             ecore_x_drawable_border_width_get(Ecore_X_Drawable d);
 EAPI int             ecore_x_drawable_depth_get(Ecore_X_Drawable d);
+EAPI void            ecore_x_drawable_rectangle_fill(Ecore_X_Drawable d, Ecore_X_GC gc, int x, int y, int width, int height);
 
 EAPI int  ecore_x_cursor_color_supported_get(void);
 EAPI Ecore_X_Cursor ecore_x_cursor_new(Ecore_X_Window win, int *pixels, int w, int h, int hot_x, int hot_y);
@@ -1299,7 +1301,10 @@ EAPI void            ecore_x_atom_get_prefetch(const char *name);
 EAPI void            ecore_x_atom_get_fetch(void);
 EAPI Ecore_X_Atom    ecore_x_atom_get(const char *name);
 EAPI void            ecore_x_atoms_get(const char **names, int num, Ecore_X_Atom *atoms);
-       
+EAPI void            ecore_x_get_atom_name_prefetch(Ecore_X_Atom atom);
+EAPI void            ecore_x_get_atom_name_fetch(void);
+EAPI char           *ecore_x_atom_name_get(Ecore_X_Atom atom);
+
 
 
 EAPI void            ecore_x_icccm_init(void);
@@ -1615,6 +1620,19 @@ EAPI void ecore_x_pointer_xy_get_prefetch(Ecore_X_Window window);
 EAPI void ecore_x_pointer_xy_get_fetch(void);
 EAPI void ecore_x_pointer_xy_get(Ecore_X_Window win, int *x, int *y);
 
+/* ecore_x_region.c */
+EAPI Ecore_X_XRegion *ecore_x_xregion_new();
+EAPI void             ecore_x_xregion_free(Ecore_X_XRegion *region);
+EAPI int              ecore_x_xregion_set(Ecore_X_XRegion *region, Ecore_X_GC gc);
+EAPI void             ecore_x_xregion_translate(Ecore_X_XRegion *region, int x, int y);
+EAPI int              ecore_x_xregion_intersect(Ecore_X_XRegion *dst, Ecore_X_XRegion *r1, Ecore_X_XRegion *r2);
+EAPI int              ecore_x_xregion_union(Ecore_X_XRegion *dst, Ecore_X_XRegion *r1, Ecore_X_XRegion *r2);
+EAPI int              ecore_x_xregion_union_rect(Ecore_X_XRegion *dst, Ecore_X_XRegion *src, Ecore_X_Rectangle *rect);
+EAPI int              ecore_x_xregion_subtract(Ecore_X_XRegion *dst, Ecore_X_XRegion *r1, Ecore_X_XRegion *r2);
+EAPI int              ecore_x_xregion_is_empty(Ecore_X_XRegion *region);
+EAPI int              ecore_x_xregion_point_contain(Ecore_X_XRegion *region, int x, int y);
+EAPI int              ecore_x_xregion_rect_contain(Ecore_X_XRegion *region, Ecore_X_Rectangle *rect);
+
 /* ecore_x_sync.c */
 EAPI Ecore_X_Sync_Alarm ecore_x_sync_alarm_new(Ecore_X_Sync_Counter counter);
 EAPI int                ecore_x_sync_alarm_free(Ecore_X_Sync_Alarm alarm);
@@ -1632,7 +1650,7 @@ struct _Ecore_X_Screen_Refresh_Rate
    int rate;
 };
 
-EAPI int                     ecore_x_randr_query();
+EAPI int                     ecore_x_randr_query(void);
 EAPI int                     ecore_x_randr_events_select(Ecore_X_Window win, int on);
 EAPI void                    ecore_x_randr_get_screen_info_prefetch(Ecore_X_Window window);
 EAPI void                    ecore_x_randr_get_screen_info_fetch(void);
@@ -1664,7 +1682,7 @@ EAPI Ecore_X_Region ecore_x_region_new_from_bitmap(Ecore_X_Pixmap bitmap);
 EAPI Ecore_X_Region ecore_x_region_new_from_window(Ecore_X_Window win, Ecore_X_Region_Type type);
 EAPI Ecore_X_Region ecore_x_region_new_from_gc(Ecore_X_GC gc);
 EAPI Ecore_X_Region ecore_x_region_new_from_picture(Ecore_X_Picture picture);
-EAPI void           ecore_x_region_del(Ecore_X_Region region);
+EAPI void           ecore_x_region_free(Ecore_X_Region region);
 EAPI void           ecore_x_region_set(Ecore_X_Region region, Ecore_X_Rectangle *rects, int num);
 EAPI void           ecore_x_region_copy(Ecore_X_Region dest, Ecore_X_Region source);
 EAPI void           ecore_x_region_combine(Ecore_X_Region dest, Ecore_X_Region source1, Ecore_X_Region source2);
@@ -1683,6 +1701,11 @@ EAPI void           ecore_x_region_picture_clip_set(Ecore_X_Region region, Ecore
 
 /* XComposite Extension Support */
 EAPI int               ecore_x_composite_query(void);
+EAPI void              ecore_x_composite_redirect_window(Ecore_X_Window win, Ecore_X_Composite_Update_Type type);
+EAPI void              ecore_x_composite_redirect_subwindows(Ecore_X_Window win, Ecore_X_Composite_Update_Type type);
+EAPI void              ecore_x_composite_unredirect_window(Ecore_X_Window win, Ecore_X_Composite_Update_Type type);
+EAPI void              ecore_x_composite_unredirect_subwindows(Ecore_X_Window win, Ecore_X_Composite_Update_Type type);
+EAPI Ecore_X_Pixmap    ecore_x_composite_name_window_pixmap_get(Ecore_X_Window win);
 
 /* XDamage Extension Support */
 typedef Ecore_X_ID  Ecore_X_Damage;
@@ -1708,7 +1731,7 @@ typedef struct _Ecore_X_Event_Damage  Ecore_X_Event_Damage;
 
 EAPI int               ecore_x_damage_query(void);
 EAPI Ecore_X_Damage    ecore_x_damage_new(Ecore_X_Drawable d, Ecore_X_Damage_Report_Level level);
-EAPI void              ecore_x_damage_del(Ecore_X_Damage damage);
+EAPI void              ecore_x_damage_free(Ecore_X_Damage damage);
 EAPI void              ecore_x_damage_subtract(Ecore_X_Damage damage, Ecore_X_Region repair, Ecore_X_Region parts);
 
 EAPI int               ecore_x_screen_is_composited(int screen);

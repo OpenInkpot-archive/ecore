@@ -143,6 +143,14 @@ typedef struct _Ecore_X_DND_Target
    int will_accept;
 } Ecore_X_DND_Target;
 
+extern int ECORE_X_MODIFIER_SHIFT;
+extern int ECORE_X_MODIFIER_CTRL; 
+extern int ECORE_X_MODIFIER_ALT; 
+extern int ECORE_X_MODIFIER_WIN; 
+ 
+extern int ECORE_X_LOCK_SCROLL; 
+extern int ECORE_X_LOCK_NUM; 
+extern int ECORE_X_LOCK_CAPS; 
 
 extern Ecore_X_Connection *_ecore_xcb_conn;
 extern Ecore_X_Screen     *_ecore_xcb_screen;
@@ -165,6 +173,7 @@ extern Ecore_X_Window      _ecore_xcb_private_window;
 
 void _ecore_x_error_handler_init(void);
 
+void _ecore_x_event_handle_any_event          (xcb_generic_event_t *event);
 void _ecore_x_event_handle_key_press          (xcb_generic_event_t *event);
 void _ecore_x_event_handle_key_release        (xcb_generic_event_t *event);
 void _ecore_x_event_handle_button_press       (xcb_generic_event_t *event);
@@ -235,7 +244,7 @@ extern Ecore_X_Atom ECORE_X_ATOM_WINDOW;
 extern Ecore_X_Atom ECORE_X_ATOM_E_FRAME_SIZE;
 extern Ecore_X_Atom ECORE_X_ATOM_WM_SIZE_HINTS;
 
-#define ECORE_X_ATOMS_COUNT 115
+#define ECORE_X_ATOMS_COUNT 117
 
 void _ecore_x_atom_init          (xcb_intern_atom_cookie_t *);
 void _ecore_x_atom_init_finalize (xcb_intern_atom_cookie_t *);
@@ -320,5 +329,34 @@ void _ecore_x_sync_magic_send(int val, Ecore_X_Window swin);
 void _ecore_x_window_grab_remove(Ecore_X_Window win);
 void _ecore_x_key_grab_remove(Ecore_X_Window win);
 
+/* XCB compatibility stuff */
+
+/* There has been API break in xcb-util 0.3, and xcb-util 0.2 is still quite
+   widespread. Let's make both work with ecore */
+#ifdef ECORE_XCB_ICCCM02
+
+/* Renamed macros */
+#define XCB_SIZE_HINT_BASE_SIZE XCB_SIZE_BASE_SIZE_HINT
+#define XCB_SIZE_HINT_P_ASPECT XCB_SIZE_P_ASPECT_HINT
+#define XCB_SIZE_HINT_P_MAX_SIZE XCB_SIZE_P_MAX_SIZE_HINT
+#define XCB_SIZE_HINT_P_MIN_SIZE XCB_SIZE_P_MIN_SIZE_HINT
+#define XCB_SIZE_HINT_P_POSITION XCB_SIZE_P_POSITION_HINT
+#define XCB_SIZE_HINT_P_RESIZE_INC XCB_SIZE_P_RESIZE_INC_HINT
+#define XCB_SIZE_HINT_P_SIZE XCB_SIZE_P_SIZE_HINT
+#define XCB_SIZE_HINT_P_WIN_GRAVITY XCB_SIZE_P_WIN_GRAVITY_HINT
+#define XCB_SIZE_HINT_US_POSITION XCB_SIZE_US_POSITION_HINT
+#define XCB_SIZE_HINT_US_SIZE XCB_SIZE_US_SIZE_HINT
+#define XCB_WM_HINT_ICON_MASK XCB_WM_ICON_MASK_HINT
+#define XCB_WM_HINT_ICON_PIXMAP XCB_WM_ICON_PIXMAP_HINT
+#define XCB_WM_HINT_ICON_WINDOW XCB_WM_ICON_WINDOW_HINT
+#define XCB_WM_HINT_INPUT XCB_WM_INPUT_HINT
+#define XCB_WM_HINT_STATE XCB_WM_STATE_HINT
+#define XCB_WM_HINT_WINDOW_GROUP XCB_WM_WINDOW_GROUP_HINT
+#define XCB_WM_HINT_X_URGENCY XCB_WM_X_URGENCY_HINT
+#define XCB_WM_STATE_ICONIC XCB_WM_ICONIC_STATE
+#define XCB_WM_STATE_NORMAL XCB_WM_NORMAL_STATE
+#define XCB_WM_STATE_WITHDRAWN XCB_WM_WITHDRAWN_STATE
+
+#endif
 
 #endif /* __ECORE_XCB_PRIVATE_H__*/

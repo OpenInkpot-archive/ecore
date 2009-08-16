@@ -1,10 +1,17 @@
 /*
  * vim:ts=8:sw=3:sts=8:noexpandtab:cino=>5n-3f0^-2{2
  */
+
 /*
  * _NET_WM... aka Extended Window Manager Hint (EWMH) functions.
  */
-#include "config.h"
+
+#ifdef HAVE_CONFIG_H
+# include <config.h>
+#endif
+
+#include <string.h>
+
 #include "Ecore.h"
 #include "Ecore_Data.h"
 #include "ecore_x_private.h"
@@ -893,6 +900,10 @@ _ecore_x_netwm_action_atom_get(Ecore_X_Action action)
 	 return ECORE_X_ATOM_NET_WM_ACTION_CHANGE_DESKTOP;
       case ECORE_X_ACTION_CLOSE:
 	 return ECORE_X_ATOM_NET_WM_ACTION_CLOSE;
+      case ECORE_X_ACTION_ABOVE:
+	 return ECORE_X_ATOM_NET_WM_ACTION_ABOVE;
+      case ECORE_X_ACTION_BELOW:
+	 return ECORE_X_ATOM_NET_WM_ACTION_BELOW;
       default:
 	 return 0;
      }

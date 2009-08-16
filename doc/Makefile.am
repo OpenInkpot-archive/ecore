@@ -10,7 +10,7 @@ doc-clean:
 	rm -rf html/ latex/ man/ xml/ $(PACKAGE_DOCNAME).tar*
 
 doc: all doc-clean
-	$(DOXYGEN)
+	$(efl_doxygen)
 	cp img/* html/
 	rm -rf $(PACKAGE_DOCNAME).tar*
 	mkdir -p $(PACKAGE_DOCNAME)/doc
@@ -29,4 +29,4 @@ doc:
 
 endif
 
-EXTRA_DIST = Doxyfile img e.css head.html foot.html ecore.dox.in
+EXTRA_DIST = Doxyfile $(wildcard img/*.*) e.css head.html foot.html ecore.dox.in

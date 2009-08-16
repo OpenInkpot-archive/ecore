@@ -6,8 +6,14 @@
 # include <config.h>
 #endif
 
+#include <stdlib.h>
+
 #ifdef HAVE_SYS_TIME_H
 # include <sys/time.h>
+#endif
+
+#ifdef HAVE_EVIL
+# include <Evil.h>
 #endif
 
 #include "Ecore.h"
@@ -28,13 +34,17 @@
 EAPI double
 ecore_time_get(void)
 {
-#ifdef HAVE_GETTIMEOFDAY
+#ifdef HAVE_EVIL
+  return evil_time_get();
+#else
+# ifdef HAVE_GETTIMEOFDAY
    struct timeval      timev;
 
    gettimeofday(&timev, NULL);
    return (double)timev.tv_sec + (((double)timev.tv_usec) / 1000000);
-#else
-# error "Your platform isn't supported yet"
+# else
+#  error "Your platform isn't supported yet"
+# endif
 #endif
 }
 
@@ -45,7 +55,7 @@ double _ecore_loop_time = -1.0;
  *
  * This gets the time (since Jan 1st, 1970, 12:00AM) that the main loop ceased
  * waiting for timouts and/or events to come in or for signals or any other
- * interrupt source. This should be considered a reference point fo all
+ * interrupt source. This should be considered a reference point for all
  * time based activity that should calculate its timepoint from the return
  * of ecore_loop_time_get(). use this UNLESS you absolutely must get the
  * current actual timepoint - then use ecore_time_get(). If this is called

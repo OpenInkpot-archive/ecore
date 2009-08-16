@@ -24,6 +24,7 @@ MAINTAINERCLEANFILES = Makefile.in aclocal.m4 config.guess \
 		       ecore-x.pc \
 		       ecore-win32.pc \
 		       ecore-sdl.pc \
+		       ecore-input.pc \
 		       ecore-quartz.pc \
 		       ecore-wince.pc \
 		       ecore.pc \
@@ -56,6 +57,7 @@ EXTRA_DIST = AUTHORS COPYING COPYING-PLAIN \
 	     ecore-win32.pc.in \
 	     ecore-sdl.pc.in \
 	     ecore-quartz.pc.in \
+	     ecore-input.pc.in \
 	     ecore-wince.pc.in \
 	     ecore.spec.in ecore.spec
 
@@ -89,6 +91,10 @@ endif
 
 if BUILD_ECORE_IMF_EVAS
 pimfevas = ecore-imf-evas.pc
+endif
+
+if BUILD_ECORE_INPUT
+pinput = ecore-input.pc
 endif
 
 if BUILD_ECORE_IPC
@@ -130,8 +136,8 @@ endif
 pkgconfigdir = $(libdir)/pkgconfig
 pkgconfig_DATA = \
 	ecore.pc $(pcon) $(pconfig) $(pdfb) $(pevas) \
-	$(pfb) $(pfile) $(pimf) $(pimfevas) $(pipc) $(pjob) $(ptxt) \
-	$(px) $(pwin32) $(pwince) $(psdl) $(pquartz)
+	$(pfb) $(pfile) $(pimf) $(pimfevas) $(pinput) $(pipc) $(pjob) \
+	$(ptxt) $(px) $(pwin32) $(pwince) $(psdl) $(pquartz)
 
 .PHONY: doc
 

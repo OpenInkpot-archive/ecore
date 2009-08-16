@@ -8,21 +8,24 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#include <dirent.h>
+
 
 #ifdef HAVE_DLFCN_H
 # include <dlfcn.h>
 #endif
 
 #ifdef HAVE_EVIL_H
-# include <evil.h>
+# include <Evil.h>
 #endif
 
 #include "Ecore_Data.h"
 #include "Ecore_Str.h"
 #include "ecore_private.h"
-
-
-static Ecore_List *loaded_plugins = NULL;
 
 static Eina_Bool _hash_keys(const Eina_Hash	*hash,
 			    const char		*key,
@@ -58,7 +61,11 @@ ecore_plugin_load(Ecore_Path_Group *group, const char *plugin_name, const char *
    if (!version || *version == '\0')
      snprintf(temp, sizeof(temp), "%s" SHARED_LIB_SUFFIX, plugin_name);
    else
+#ifndef _WIN32
      snprintf(temp, sizeof(temp), "%s" SHARED_LIB_SUFFIX ".%s", plugin_name, version);
+#else
+     snprintf(temp, sizeof(temp), "%s-%s" SHARED_LIB_SUFFIX, plugin_name, version);
+#endif
 
    path = ecore_path_group_find(group, temp);
 
@@ -93,14 +100,6 @@ ecore_plugin_load(Ecore_Path_Group *group, const char *plugin_name, const char *
 
    plugin->handle = handle;
 
-   /*
-    * Now add it to the list of the groups loaded plugins
-    */
-   if (!loaded_plugins)
-     loaded_plugins = ecore_list_new();
-
-   ecore_list_append(loaded_plugins, plugin);
-
    FREE(path);
 
    return plugin;
@@ -116,19 +115,8 @@ ecore_plugin_unload(Ecore_Plugin *plugin)
 {
    CHECK_PARAM_POINTER("plugin", plugin);
 
-   if (!plugin->handle)
-     return;
-
-   if (ecore_list_goto(loaded_plugins, plugin))
-     ecore_list_remove(loaded_plugins);
-
-   if (ecore_list_empty_is(loaded_plugins))
-     {
-	ecore_list_destroy(loaded_plugins);
-	loaded_plugins = NULL;
-     }
-
-   dlclose(plugin->handle);
+   if (plugin->handle)
+	dlclose(plugin->handle);
 
    FREE(plugin);
 }
@@ -163,23 +151,23 @@ ecore_plugin_symbol_get(Ecore_Plugin *plugin, const char *symbol_name)
  *          paths identified by @p group_id.  @c NULL otherwise.
  * @ingroup Ecore_Plugin
  */
-EAPI Ecore_List *
+EAPI Eina_List *
 ecore_plugin_available_get(Ecore_Path_Group *group)
 {
-   Ecore_List *avail = NULL;
+   Eina_List *avail = NULL;
+   Eina_List *l;
    Eina_Hash *plugins = NULL;
    Eina_Iterator *it = NULL;
    char *path;
 
    CHECK_PARAM_POINTER_RETURN("group", group, NULL);
 
-   if (!group->paths || ecore_list_empty_is(group->paths))
+   if (!group->paths || !eina_list_count(group->paths))
      return NULL;
 
-   ecore_list_first_goto(group->paths);
    plugins = eina_hash_string_superfast_new(NULL);
 
-   while ((path = ecore_list_next(group->paths)) != NULL)
+   EINA_LIST_FOREACH(group->paths, l, path)
      {
 	DIR *dir;
 	struct stat st;
@@ -229,14 +217,10 @@ ecore_plugin_available_get(Ecore_Path_Group *group)
 	closedir(dir);
      }
 
-   avail = ecore_list_new();
-   ecore_list_free_cb_set(avail, free);
-
-
    it = eina_hash_iterator_data_new(plugins);
    if (it)
      {
-	eina_iterator_foreach(it, EINA_EACH(_hash_keys), avail);
+	eina_iterator_foreach(it, EINA_EACH(_hash_keys), &avail);
 	eina_iterator_free(it);
      }
 
@@ -247,8 +231,8 @@ ecore_plugin_available_get(Ecore_Path_Group *group)
 }
 
 static Eina_Bool
-_hash_keys(const Eina_Hash *hash, const char *key, void *list)
+_hash_keys(const Eina_Hash *hash __UNUSED__, const char *key, void *list)
 {
-   ecore_list_append(list, strdup(key));
+   *(Eina_List **)list = eina_list_append(*(Eina_List **)list, key);
    return EINA_TRUE;
 }

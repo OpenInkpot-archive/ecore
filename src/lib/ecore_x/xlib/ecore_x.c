@@ -1,20 +1,37 @@
 /*
  * vim:ts=8:sw=3:sts=8:noexpandtab:cino=>5n-3f0^-2{2
  */
+
+#ifdef HAVE_CONFIG_H
+# include <config.h>
+#endif
+
+#include <stdlib.h>
+#include <string.h>
+
 #include "ecore_private.h"
 #include "Ecore.h"
 #include "ecore_x_private.h"
 #include "Ecore_X.h"
 #include "Ecore_X_Atoms.h"
+#include "Ecore_Input.h"
 
 static int _ecore_x_fd_handler(void *data, Ecore_Fd_Handler *fd_handler);
 static int _ecore_x_fd_handler_buf(void *data, Ecore_Fd_Handler *fd_handler);
 static int _ecore_x_key_mask_get(KeySym sym);
+static int _ecore_x_event_modifier(unsigned int state);
 
 static Ecore_Fd_Handler *_ecore_x_fd_handler_handle = NULL;
+
+static const int AnyXEvent = 0; /* 0 can be used as there are no event types
+				 * with index 0 and 1 as they are used for
+				 * errors
+				 */
+
 static int _ecore_x_event_shape_id = 0;
 static int _ecore_x_event_screensaver_id = 0;
 static int _ecore_x_event_sync_id = 0;
+
 #ifdef ECORE_XRANDR
 static int _ecore_x_event_randr_id = 0;
 #endif
@@ -43,14 +60,9 @@ Ecore_X_Window _ecore_x_private_win = 0;
 
 Ecore_X_Atom _ecore_x_atoms_wm_protocols[ECORE_X_WM_PROTOCOL_NUM];
 
-EAPI int ECORE_X_EVENT_KEY_DOWN = 0;
-EAPI int ECORE_X_EVENT_KEY_UP = 0;
-EAPI int ECORE_X_EVENT_MOUSE_BUTTON_DOWN = 0;
-EAPI int ECORE_X_EVENT_MOUSE_BUTTON_UP = 0;
-EAPI int ECORE_X_EVENT_MOUSE_MOVE = 0;
+EAPI int ECORE_X_EVENT_ANY = 0;
 EAPI int ECORE_X_EVENT_MOUSE_IN = 0;
 EAPI int ECORE_X_EVENT_MOUSE_OUT = 0;
-EAPI int ECORE_X_EVENT_MOUSE_WHEEL = 0;
 EAPI int ECORE_X_EVENT_WINDOW_FOCUS_IN = 0;
 EAPI int ECORE_X_EVENT_WINDOW_FOCUS_OUT = 0;
 EAPI int ECORE_X_EVENT_WINDOW_KEYMAP = 0;
@@ -81,7 +93,9 @@ EAPI int ECORE_X_EVENT_SYNC_COUNTER = 0;
 EAPI int ECORE_X_EVENT_SYNC_ALARM = 0;
 EAPI int ECORE_X_EVENT_SCREEN_CHANGE = 0;
 EAPI int ECORE_X_EVENT_DAMAGE_NOTIFY = 0;
-
+EAPI int ECORE_X_EVENT_RANDR_CRTC_CHANGE = 0;
+EAPI int ECORE_X_EVENT_RANDR_OUTPUT_CHANGE = 0;
+EAPI int ECORE_X_EVENT_RANDR_OUTPUT_PROPERTY_NOTIFY = 0;
 EAPI int ECORE_X_EVENT_WINDOW_DELETE_REQUEST = 0;
 /*
 EAPI int ECORE_X_EVENT_WINDOW_PROP_TITLE_CHANGE = 0;
@@ -104,10 +118,10 @@ EAPI int ECORE_X_EVENT_STARTUP_SEQUENCE_NEW = 0;
 EAPI int ECORE_X_EVENT_STARTUP_SEQUENCE_CHANGE = 0;
 EAPI int ECORE_X_EVENT_STARTUP_SEQUENCE_REMOVE = 0;
 
-EAPI int ECORE_X_MODIFIER_SHIFT = 0;
-EAPI int ECORE_X_MODIFIER_CTRL = 0;
-EAPI int ECORE_X_MODIFIER_ALT = 0;
-EAPI int ECORE_X_MODIFIER_WIN = 0;
+int ECORE_X_MODIFIER_SHIFT = 0;
+int ECORE_X_MODIFIER_CTRL = 0;
+int ECORE_X_MODIFIER_ALT = 0;
+int ECORE_X_MODIFIER_WIN = 0;
 
 EAPI int ECORE_X_LOCK_SCROLL = 0;
 EAPI int ECORE_X_LOCK_NUM = 0;
@@ -157,23 +171,29 @@ ecore_x_init(const char *name)
 	_ecore_x_init_count++;
 	return _ecore_x_init_count;
      }
+   ecore_event_init();
+
    _ecore_x_disp = XOpenDisplay((char *)name);
    if (!_ecore_x_disp) return 0;
    _ecore_x_error_handler_init();
    _ecore_x_event_handlers_num = LASTEvent;
-   
+
+#define ECORE_X_EVENT_HANDLERS_GROW(ext_base, ext_num_events)		\
+   do {									\
+     if (_ecore_x_event_handlers_num < (ext_base + ext_num_events))	\
+       _ecore_x_event_handlers_num = (ext_base + ext_num_events);	\
+   } while (0)
+
    if (XShapeQueryExtension(_ecore_x_disp, &shape_base, &shape_err_base))
-     _ecore_x_event_shape_id = shape_base + ShapeNotify;
-   if (_ecore_x_event_shape_id >= _ecore_x_event_handlers_num)
-     _ecore_x_event_handlers_num = _ecore_x_event_shape_id + 1;
-   
+     _ecore_x_event_shape_id = shape_base;
+   ECORE_X_EVENT_HANDLERS_GROW(shape_base, ShapeNumberEvents);
+
 #ifdef ECORE_XSS
    if (XScreenSaverQueryExtension(_ecore_x_disp, &screensaver_base, &screensaver_err_base))
-     _ecore_x_event_screensaver_id = screensaver_base + ScreenSaverNotify;
-#endif   
-   if (_ecore_x_event_screensaver_id >= _ecore_x_event_handlers_num)
-     _ecore_x_event_handlers_num = _ecore_x_event_screensaver_id + 1;
-   
+     _ecore_x_event_screensaver_id = screensaver_base;
+   ECORE_X_EVENT_HANDLERS_GROW(screensaver_base, ScreenSaverNumberEvents);
+#endif
+
    if (XSyncQueryExtension(_ecore_x_disp, &sync_base, &sync_err_base))
      {
 	int major, minor;
@@ -182,28 +202,24 @@ ecore_x_init(const char *name)
 	if (!XSyncInitialize(_ecore_x_disp, &major, &minor))
 	  _ecore_x_event_sync_id = 0;
      }
-   if (_ecore_x_event_sync_id + XSyncAlarmNotify >= _ecore_x_event_handlers_num)
-     _ecore_x_event_handlers_num = _ecore_x_event_sync_id + XSyncAlarmNotify + 1;
-   
+   ECORE_X_EVENT_HANDLERS_GROW(sync_base, XSyncNumberEvents);
+
 #ifdef ECORE_XRANDR
    if (XRRQueryExtension(_ecore_x_disp, &randr_base, &randr_err_base))
-     _ecore_x_event_randr_id = randr_base + RRScreenChangeNotify;
-   if (_ecore_x_event_randr_id >= _ecore_x_event_handlers_num)
-     _ecore_x_event_handlers_num = _ecore_x_event_randr_id + 1;
+     _ecore_x_event_randr_id = randr_base;
+   ECORE_X_EVENT_HANDLERS_GROW(randr_base, RRNumberEvents);
 #endif
 
 #ifdef ECORE_XFIXES
    if (XFixesQueryExtension(_ecore_x_disp, &fixes_base, &fixes_err_base))
-     _ecore_x_event_fixes_selection_id = fixes_base + XFixesSelectionNotify;
-   if (_ecore_x_event_fixes_selection_id >= _ecore_x_event_handlers_num)
-     _ecore_x_event_handlers_num = _ecore_x_event_fixes_selection_id + 1;
+     _ecore_x_event_fixes_selection_id = fixes_base;
+   ECORE_X_EVENT_HANDLERS_GROW(fixes_base, XFixesNumberEvents);
 #endif
 
 #ifdef ECORE_XDAMAGE
    if (XDamageQueryExtension(_ecore_x_disp, &damage_base, &damage_err_base))
-     _ecore_x_event_damage_id = damage_base + XDamageNotify;
-   if (_ecore_x_event_damage_id >= _ecore_x_event_handlers_num)
-     _ecore_x_event_handlers_num = _ecore_x_event_damage_id + 1;
+     _ecore_x_event_damage_id = damage_base;
+   ECORE_X_EVENT_HANDLERS_GROW(damage_base, XDamageNumberEvents);
 #endif
 
    _ecore_x_event_handlers = calloc(_ecore_x_event_handlers_num, sizeof(void *));
@@ -217,6 +233,7 @@ ecore_x_init(const char *name)
 #ifdef ECORE_XCURSOR   
    _ecore_x_xcursor = XcursorSupportsARGB(_ecore_x_disp);
 #endif
+   _ecore_x_event_handlers[AnyXEvent]        = _ecore_x_event_handle_any_event;
    _ecore_x_event_handlers[KeyPress]         = _ecore_x_event_handle_key_press;
    _ecore_x_event_handlers[KeyRelease]       = _ecore_x_event_handle_key_release;
    _ecore_x_event_handlers[ButtonPress]      = _ecore_x_event_handle_button_press;
@@ -262,7 +279,10 @@ ecore_x_init(const char *name)
      }
 #ifdef ECORE_XRANDR
    if (_ecore_x_event_randr_id)
-     _ecore_x_event_handlers[_ecore_x_event_randr_id] = _ecore_x_event_handle_randr_change;
+     {
+	_ecore_x_event_handlers[_ecore_x_event_randr_id + RRScreenChangeNotify] = _ecore_x_event_handle_randr_change;
+	_ecore_x_event_handlers[_ecore_x_event_randr_id + RRNotify] = _ecore_x_event_handle_randr_notify;
+     }
 #endif
 #ifdef ECORE_XFIXES
    if (_ecore_x_event_fixes_selection_id)
@@ -272,17 +292,24 @@ ecore_x_init(const char *name)
    if (_ecore_x_event_damage_id)
      _ecore_x_event_handlers[_ecore_x_event_damage_id] = _ecore_x_event_handle_damage_notify;
 #endif
-
-   if (!ECORE_X_EVENT_KEY_DOWN)
+#ifdef ECORE_XKB
+   // set x autorepeat detection to on. that means instead of
+   //   press-release-press-release-press-release
+   // you get
+   //   press-press-press-press-press-release
+   do
      {
-	ECORE_X_EVENT_KEY_DOWN                 = ecore_event_type_new();
-	ECORE_X_EVENT_KEY_UP                   = ecore_event_type_new();
-	ECORE_X_EVENT_MOUSE_BUTTON_DOWN        = ecore_event_type_new();
-	ECORE_X_EVENT_MOUSE_BUTTON_UP          = ecore_event_type_new();
-	ECORE_X_EVENT_MOUSE_MOVE               = ecore_event_type_new();
+        Bool works = 0;
+        XkbSetDetectableAutoRepeat(_ecore_x_disp, 1, &works);
+     }
+   while (0);
+#endif
+   
+   if (!ECORE_X_EVENT_ANY)
+     {
+	ECORE_X_EVENT_ANY                      = ecore_event_type_new();
 	ECORE_X_EVENT_MOUSE_IN                 = ecore_event_type_new();
 	ECORE_X_EVENT_MOUSE_OUT                = ecore_event_type_new();
-	ECORE_X_EVENT_MOUSE_WHEEL              = ecore_event_type_new();
 	ECORE_X_EVENT_WINDOW_FOCUS_IN          = ecore_event_type_new();
 	ECORE_X_EVENT_WINDOW_FOCUS_OUT         = ecore_event_type_new();
 	ECORE_X_EVENT_WINDOW_KEYMAP            = ecore_event_type_new();
@@ -312,6 +339,9 @@ ecore_x_init(const char *name)
 	ECORE_X_EVENT_SYNC_COUNTER             = ecore_event_type_new();
 	ECORE_X_EVENT_SYNC_ALARM               = ecore_event_type_new();
 	ECORE_X_EVENT_SCREEN_CHANGE            = ecore_event_type_new();
+	ECORE_X_EVENT_RANDR_CRTC_CHANGE        = ecore_event_type_new();
+	ECORE_X_EVENT_RANDR_OUTPUT_CHANGE      = ecore_event_type_new();
+	ECORE_X_EVENT_RANDR_OUTPUT_PROPERTY_NOTIFY = ecore_event_type_new();
 	ECORE_X_EVENT_DAMAGE_NOTIFY            = ecore_event_type_new();
 	
 	ECORE_X_EVENT_WINDOW_DELETE_REQUEST                = ecore_event_type_new();
@@ -378,6 +408,7 @@ ecore_x_init(const char *name)
 	_ecore_x_event_handlers = NULL;
 	return 0;
      }
+   
 
    _ecore_x_atoms_init();
 
@@ -403,11 +434,13 @@ ecore_x_init(const char *name)
    _ecore_x_damage_init();
    _ecore_x_composite_init();
    _ecore_x_dpms_init();
-   
+   _ecore_x_randr_init();
+
    _ecore_x_init_count++;
    
    _ecore_x_private_win = ecore_x_window_override_new(0, -77, -777, 123, 456);
-   
+
+#ifdef ENABLE_XIM
    /* Setup XIM */
    if (!_ecore_x_ic && XSupportsLocale())
      {
@@ -441,7 +474,7 @@ _im_create_error:
 	XCloseIM(im);
      }
 _im_create_end:
-
+#endif
    return _ecore_x_init_count;
 }
 
@@ -451,6 +484,8 @@ _ecore_x_shutdown(int close_display)
    _ecore_x_init_count--;
    if (_ecore_x_init_count > 0) return _ecore_x_init_count;
    if (!_ecore_x_disp) return _ecore_x_init_count;
+
+#ifdef ENABLE_XIM
    if (_ecore_x_ic)
      {
 	XIM xim;
@@ -459,6 +494,7 @@ _ecore_x_shutdown(int close_display)
 	XCloseIM(xim);
 	_ecore_x_ic = NULL;
      }
+#endif
    if (close_display)
       XCloseDisplay(_ecore_x_disp);
    else
@@ -471,6 +507,7 @@ _ecore_x_shutdown(int close_display)
    _ecore_x_selection_shutdown();
    _ecore_x_dnd_shutdown();
    ecore_x_netwm_shutdown();
+   ecore_event_shutdown();
    if (_ecore_x_init_count < 0) _ecore_x_init_count = 0;
    return _ecore_x_init_count;
 }
@@ -530,6 +567,17 @@ EAPI int
 ecore_x_fd_get(void)
 {
    return ConnectionNumber(_ecore_x_disp);
+}
+
+/**
+ * Retrieves the Ecore_X_Screen handle used for the current X connection.
+ * @return  The current default screen.
+ * @ingroup Ecore_Xcb_Display_Attr_Group
+ */
+EAPI Ecore_X_Screen*
+ecore_x_default_screen_get(void)
+{
+   return (Ecore_X_Screen*) DefaultScreenOfDisplay(_ecore_x_disp);
 }
 
 /**
@@ -679,11 +727,16 @@ _ecore_x_fd_handler(void *data, Ecore_Fd_Handler *fd_handler __UNUSED__)
 	
 	XNextEvent(d, &ev);
 
+#ifdef ENABLE_XIM
 	/* Filter event for XIM */
 	if (XFilterEvent(&ev, ev.xkey.window)) continue;
+#endif
 
 	if ((ev.type >= 0) && (ev.type < _ecore_x_event_handlers_num))
 	  {
+	     if (_ecore_x_event_handlers[AnyXEvent])
+	       _ecore_x_event_handlers[AnyXEvent] (&ev);
+
 	     if (_ecore_x_event_handlers[ev.type])
 	       _ecore_x_event_handlers[ev.type] (&ev);
 	  }
@@ -969,31 +1022,6 @@ ecore_x_window_client_sniff(Ecore_X_Window win)
    XShapeSelectInput(_ecore_x_disp, win, ShapeNotifyMask);
 }
 
-/**
- * Retrieves the atom value associated with the given name.
- * @param  name The given name.
- * @return Associated atom value.
- */
-EAPI Ecore_X_Atom    
-ecore_x_atom_get(const char *name)
-{
-   if (!_ecore_x_disp) return 0;
-   return XInternAtom(_ecore_x_disp, name, False);
-}
-
-EAPI void
-ecore_x_atoms_get(const char **names, int num, Ecore_X_Atom *atoms)
-{
-   Atom *atoms_int;
-   int i;
-   
-   if (!_ecore_x_disp) return;
-   atoms_int = alloca(num * sizeof(Atom));
-   XInternAtoms(_ecore_x_disp, (char **)names, num, False, atoms_int);
-   for (i = 0; i < num; i++)
-     atoms[i] = atoms_int[i];
-}
-
 
 
 
@@ -1190,7 +1218,7 @@ ecore_x_window_button_grab(Ecore_X_Window win, int button,
    
    b = button;
    if (b == 0) b = AnyButton;
-   m = mod;
+   m = _ecore_x_event_modifier(mod);
    if (any_mod) m = AnyModifier;
    locks[0] = 0;
    locks[1] = ECORE_X_LOCK_CAPS;
@@ -1261,7 +1289,7 @@ ecore_x_window_button_ungrab(Ecore_X_Window win, int button,
    
    b = button;
    if (b == 0) b = AnyButton;
-   m = mod;
+   m = _ecore_x_event_modifier(mod);
    if (any_mod) m = AnyModifier;
    locks[0] = 0;
    locks[1] = ECORE_X_LOCK_CAPS;
@@ -1299,7 +1327,7 @@ ecore_x_window_key_grab(Ecore_X_Window win, const char *key,
      }
    if (keycode == 0) return;
    
-   m = mod;
+   m = _ecore_x_event_modifier(mod);
    if (any_mod) m = AnyModifier;
    locks[0] = 0;
    locks[1] = ECORE_X_LOCK_CAPS;
@@ -1360,7 +1388,7 @@ ecore_x_window_key_ungrab(Ecore_X_Window win, const char *key,
      }
    if (keycode == 0) return;
    
-   m = mod;
+   m = _ecore_x_event_modifier(mod);
    if (any_mod) m = AnyModifier;
    locks[0] = 0;
    locks[1] = ECORE_X_LOCK_CAPS;
@@ -1545,3 +1573,19 @@ ecore_x_pointer_xy_get(Ecore_X_Window win, int *x, int *y)
 /*****************************************************************************/
 /*****************************************************************************/
 /*****************************************************************************/
+
+static int
+_ecore_x_event_modifier(unsigned int state)
+{
+   int xmodifiers = 0;
+
+   if (state & ECORE_EVENT_MODIFIER_SHIFT) xmodifiers |= ECORE_X_MODIFIER_SHIFT;
+   if (state & ECORE_EVENT_MODIFIER_CTRL) xmodifiers |= ECORE_X_MODIFIER_CTRL;
+   if (state & ECORE_EVENT_MODIFIER_ALT) xmodifiers |= ECORE_X_MODIFIER_ALT;
+   if (state & ECORE_EVENT_MODIFIER_WIN) xmodifiers |= ECORE_X_MODIFIER_WIN;
+   if (state & ECORE_EVENT_LOCK_SCROLL) xmodifiers |= ECORE_X_LOCK_SCROLL;
+   if (state & ECORE_EVENT_LOCK_NUM) xmodifiers |= ECORE_X_LOCK_NUM;
+   if (state & ECORE_EVENT_LOCK_CAPS) xmodifiers |= ECORE_X_LOCK_CAPS;
+
+   return xmodifiers;
+}

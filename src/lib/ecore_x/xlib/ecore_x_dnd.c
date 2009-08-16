@@ -1,6 +1,14 @@
 /*
  * vim:ts=8:sw=3:sts=8:noexpandtab:cino=>5n-3f0^-2{2
  */
+
+#ifdef HAVE_CONFIG_H
+# include <config.h>
+#endif
+
+#include <stdlib.h>
+#include <string.h>
+
 #include "Ecore.h"
 #include "ecore_x_private.h"
 #include "Ecore_X.h"
@@ -72,7 +80,7 @@ _ecore_x_dnd_shutdown(void)
 }
 
 static int
-_ecore_x_dnd_converter_copy(char *target, void *data, int size, void **data_ret, int *size_ret)
+_ecore_x_dnd_converter_copy(char *target __UNUSED__, void *data, int size, void **data_ret, int *size_ret)
 {
    XTextProperty text_prop;
    char *mystr;
@@ -87,7 +95,7 @@ _ecore_x_dnd_converter_copy(char *target, void *data, int size, void **data_ret,
 
    if (XmbTextListToTextProperty(_ecore_x_disp, &mystr, 1, style, &text_prop) == Success)
      {
-	int bufsize = strlen(text_prop.value) + 1;
+	int bufsize = strlen((char *)text_prop.value) + 1;
 	*data_ret = malloc(bufsize);
 	memcpy(*data_ret, text_prop.value, bufsize);
 	*size_ret = bufsize;
@@ -252,7 +260,7 @@ ecore_x_dnd_type_set(Ecore_X_Window win, const char *type, int on)
 }
 
 EAPI void
-ecore_x_dnd_types_set(Ecore_X_Window win, char **types, unsigned int num_types)
+ecore_x_dnd_types_set(Ecore_X_Window win, const char **types, unsigned int num_types)
 {
    Ecore_X_Atom      *newset = NULL;
    unsigned int      i;

@@ -8,8 +8,6 @@
 # include <config.h>
 #endif
 
-#include "Ecore_Data.h"
-
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -19,6 +17,9 @@
 #endif
 
 #include <Evas.h>
+#include <ecore_private.h>
+#include <Ecore_Data.h>
+#include <Ecore_Input.h>
 
 #define ECORE_MAGIC_EVAS 0x76543211
 
@@ -35,13 +36,13 @@
 #  endif
 #  ifdef BUILD_ECORE_EVAS_XRENDER_XCB
 #   include <xcb/render.h>
-#   include <Evas_Engine_XRender_Xcb.h>
+#   include <Evas_Engine_XRender_X11.h>
 #  endif
 # endif
 # ifdef HAVE_ECORE_X_XLIB
 #  include <X11/Xlib.h>
 #  include <X11/Xutil.h>
-#  ifdef BUILD_ECORE_EVAS_SOFTWARE_X11
+#  ifdef BUILD_ECORE_EVAS_SOFTWARE_XLIB
 #   include <Evas_Engine_Software_X11.h>
 #  endif
 #  ifdef BUILD_ECORE_EVAS_XRENDER_X11
@@ -66,12 +67,15 @@
 # include "Ecore_DirectFB.h"
 #endif
 
-#ifdef BUILD_ECORE_EVAS_BUFFER
+#ifdef BUILD_ECORE_EVAS_SOFTWARE_BUFFER
 # include <Evas_Engine_Buffer.h>
 #endif
 
 #ifdef BUILD_ECORE_EVAS_WIN32
 # include "Ecore_Win32.h"
+# ifdef BUILD_ECORE_EVAS_SOFTWARE_GDI
+#  include <Evas_Engine_Software_Gdi.h>
+# endif
 # ifdef BUILD_ECORE_EVAS_SOFTWARE_DDRAW
 #  include <Evas_Engine_Software_DDraw.h>
 # endif
@@ -93,8 +97,10 @@
 
 
 #define IDLE_FLUSH_TIME 0.5
+#ifndef _ECORE_EVAS_H
+typedef struct _Ecore_Evas Ecore_Evas;
+#endif
 
-typedef struct _Ecore_Evas             Ecore_Evas;
 typedef struct _Ecore_Evas_Engine      Ecore_Evas_Engine;
 typedef struct _Ecore_Evas_Engine_Func Ecore_Evas_Engine_Func;
 
@@ -145,26 +151,20 @@ struct _Ecore_Evas_Engine_Func
    void        (*fn_sticky_set) (Ecore_Evas *ee, int sticky);
    void        (*fn_ignore_events_set) (Ecore_Evas *ee, int ignore);
    void        (*fn_alpha_set) (Ecore_Evas *ee, int alpha);
-   void       *(*fn_window_get) (const Ecore_Evas *ee);
 };
 
 struct _Ecore_Evas_Engine
 {
    Ecore_Evas_Engine_Func *func;
 
-#if defined (BUILD_ECORE_EVAS_SOFTWARE_X11) || defined (BUILD_ECORE_EVAS_SOFTWARE_XCB)
+#ifdef BUILD_ECORE_EVAS_SOFTWARE_X11
    struct {
       Ecore_X_Window win_root;
-      Ecore_X_Window win;
       Eina_List     *win_extra;
       Ecore_X_Pixmap pmap;
       Ecore_X_Pixmap mask;
       Ecore_X_GC     gc;
-#ifdef BUILD_ECORE_EVAS_SOFTWARE_XCB
-# warning [XCB] No Region code
-#else
-      Region         damages;
-#endif /* ! BUILD_ECORE_EVAS_SOFTWARE_XCB */
+      Ecore_X_XRegion *damages;
       int            px, py, pw, ph;
       unsigned char  direct_resize : 1;
       unsigned char  using_bg_pixmap : 1;
@@ -189,7 +189,7 @@ struct _Ecore_Evas_Engine
       int real_h;
    } fb;
 #endif
-#ifdef BUILD_ECORE_EVAS_BUFFER
+#ifdef BUILD_ECORE_EVAS_SOFTWARE_BUFFER
    struct {
       void *pixels;
       Evas_Object *image;
@@ -203,7 +203,6 @@ struct _Ecore_Evas_Engine
 #ifdef BUILD_ECORE_EVAS_WIN32
    struct {
       Ecore_Win32_Window *parent;
-      Ecore_Win32_Window *window;
      struct {
        unsigned char fullscreen : 1;
      } state;
@@ -223,7 +222,7 @@ struct _Ecore_Evas_Engine
 
 struct _Ecore_Evas
 {
-   Ecore_List  __list_data;
+   EINA_INLIST;
    ECORE_MAGIC;
    Evas       *evas;
    const char *driver;
@@ -264,6 +263,7 @@ struct _Ecore_Evas
 	 } hot;
       } cursor;
       int             layer;
+      Ecore_Window    window;
       unsigned char   avoid_damage;
       char            focused      : 1;
       char            iconified    : 1;
@@ -306,7 +306,7 @@ int _ecore_evas_x_shutdown(void);
 #ifdef BUILD_ECORE_EVAS_FB
 int _ecore_evas_fb_shutdown(void);
 #endif
-#ifdef BUILD_ECORE_EVAS_BUFFER
+#ifdef BUILD_ECORE_EVAS_SOFTWARE_BUFFER
 int _ecore_evas_buffer_shutdown(void);
 void _ecore_evas_buffer_render(Ecore_Evas *ee);
 #endif
@@ -325,5 +325,6 @@ void _ecore_evas_fps_debug_shutdown(void);
 void _ecore_evas_fps_debug_rendertime_add(double t);
 void _ecore_evas_free(Ecore_Evas *ee);
 void _ecore_evas_idle_timeout_update(Ecore_Evas *ee);
+void _ecore_evas_mouse_move_process(Ecore_Evas *ee, int x, int y, unsigned int timestamp);
 
 #endif

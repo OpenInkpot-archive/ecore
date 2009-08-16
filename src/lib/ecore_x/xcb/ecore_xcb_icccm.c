@@ -9,10 +9,12 @@
  * client.
  */
 
-#include "ecore_xcb_private.h"
-#include "Ecore_X_Atoms.h"
+#include <string.h>
 
 #include <xcb/xcb_icccm.h>
+
+#include "ecore_xcb_private.h"
+#include "Ecore_X_Atoms.h"
 
 
 /**
@@ -345,9 +347,19 @@ ecore_x_icccm_hints_get(Ecore_X_Window             window __UNUSED__,
 			Ecore_X_Window            *window_group,
                         int                       *is_urgent)
 {
+#ifdef ECORE_XCB_ICCCM02
+   xcb_wm_hints_t           *hints;
+#else
    xcb_wm_hints_t            hints;
+#endif
    xcb_get_property_reply_t *reply;
-   uint32_t                  flags;
+   int32_t                   hints_flags;
+   uint32_t                  hints_input;
+   int32_t                   hints_initial_state;
+   xcb_pixmap_t              hints_icon_pixmap;
+   xcb_pixmap_t              hints_icon_mask;
+   xcb_window_t              hints_icon_window;
+   xcb_window_t              hints_window_group;
 
    if (accepts_focus)
       *accepts_focus = 1;
@@ -373,45 +385,67 @@ ecore_x_icccm_hints_get(Ecore_X_Window             window __UNUSED__,
        (reply->format != 32))
       return 0;
 
-   memcpy(&hints, xcb_get_property_value(reply), reply->value_len);
+#ifdef ECORE_XCB_ICCCM02
+   hints = xcb_alloc_wm_hints();
+   if (!hints)
+      return 0;
 
-   flags = hints.flags;
-   if ((flags & XCB_WM_HINT_INPUT) && (accepts_focus))
+   memcpy(hints, xcb_get_property_value(reply), reply->value_len);
+   hints_flags = xcb_wm_hints_get_flags(hints);
+   hints_input = xcb_wm_hints_get_input(hints);
+   hints_initial_state = xcb_wm_hints_get_initial_state(hints);
+   hints_icon_pixmap = xcb_wm_hints_get_icon_pixmap(hints);
+   hints_icon_mask = xcb_wm_hints_get_icon_mask(hints);
+   hints_icon_window = xcb_wm_hints_get_icon_window(hints);
+   hints_window_group = xcb_wm_hints_get_icon_group(hints);
+   free(hints);
+#else
+   memcpy(&hints, xcb_get_property_value(reply), reply->value_len);
+   hints_flags = hints.flags;
+   hints_input = hints.input;
+   hints_initial_state = hints.initial_state;
+   hints_icon_pixmap = hints.icon_pixmap;
+   hints_icon_mask = hints.icon_mask;
+   hints_icon_window = hints.icon_window;
+   hints_window_group = hints.window_group;
+#endif
+
+   if ((hints_flags & XCB_WM_HINT_INPUT) && (accepts_focus))
      {
-        if (hints.input)
+        if(hints_input)
            *accepts_focus = 1;
         else
            *accepts_focus = 0;
      }
-   if ((flags & XCB_WM_HINT_STATE) && (initial_state))
+   if ((hints_flags & XCB_WM_HINT_STATE) && (initial_state))
      {
-       if (hints.initial_state == XCB_WM_STATE_WITHDRAWN)
+       if (hints_initial_state == XCB_WM_STATE_WITHDRAWN)
            *initial_state = ECORE_X_WINDOW_STATE_HINT_WITHDRAWN;
-        else if (hints.initial_state == XCB_WM_STATE_NORMAL)
+        else if (hints_initial_state == XCB_WM_STATE_NORMAL)
            *initial_state = ECORE_X_WINDOW_STATE_HINT_NORMAL;
-        else if (hints.initial_state == XCB_WM_STATE_ICONIC)
+        else if (hints_initial_state == XCB_WM_STATE_ICONIC)
            *initial_state = ECORE_X_WINDOW_STATE_HINT_ICONIC;
      }
-   if ((flags & XCB_WM_HINT_ICON_PIXMAP) && (icon_pixmap))
+   if ((hints_flags & XCB_WM_HINT_ICON_PIXMAP) && (icon_pixmap))
      {
-        *icon_pixmap = hints.icon_pixmap;
+        *icon_pixmap = hints_icon_pixmap;
      }
-   if ((flags & XCB_WM_HINT_ICON_MASK) && (icon_mask))
+   if ((hints_flags & XCB_WM_HINT_ICON_MASK) && (icon_mask))
      {
-        *icon_mask = hints.icon_mask;
+        *icon_mask = hints_icon_mask;
      }
-   if ((flags & XCB_WM_HINT_ICON_WINDOW) && (icon_window))
+   if ((hints_flags & XCB_WM_HINT_ICON_WINDOW) && (icon_window))
      {
-        *icon_window = hints.icon_window;
+        *icon_window = hints_icon_window;
      }
-   if ((flags & XCB_WM_HINT_WINDOW_GROUP) && (window_group))
+   if ((hints_flags & XCB_WM_HINT_WINDOW_GROUP) && (window_group))
      {
         if (reply->value_len < XCB_NUM_WM_HINTS_ELEMENTS)
            *window_group = 0;
         else
-           *window_group = hints.window_group;
+           *window_group = hints_window_group;
      }
-   if ((flags & XCB_WM_HINT_X_URGENCY) && (is_urgent))
+   if ((hints_flags & XCB_WM_HINT_X_URGENCY) && (is_urgent))
      {
         *is_urgent = 1;
      }
@@ -486,8 +520,22 @@ ecore_x_icccm_size_pos_hints_set(Ecore_X_Window  window,
 				 double          min_aspect,
                                  double          max_aspect)
 {
-   xcb_size_hints_t          hint;
    xcb_get_property_reply_t *reply;
+#ifdef ECORE_XCB_ICCCM02
+   xcb_size_hints_t         *hint;
+   hint = xcb_alloc_size_hints();
+   if (!hint)
+      return;
+#else
+   xcb_size_hints_t          hint;
+
+#define xcb_size_hints_set_flags(a, b) a.flags = b
+#define xcb_size_hints_set_win_gravity(a, b) a.win_gravity = b
+#define xcb_size_hints_set_min_size(a, b, c) a.min_width = b; a.min_height = c
+#define xcb_size_hints_set_max_size(a, b, c) a.max_width = b; a.max_height = c
+#define xcb_size_hints_set_base_size(a, b, c) a.base_width = b; a.base_height = c
+#define xcb_size_hints_set_resize_inc(a, b, c) a.width_inc = b; a.height_inc = c
+#endif
 
    reply = _ecore_xcb_reply_get();
    if (!reply                                      ||
@@ -501,7 +549,7 @@ ecore_x_icccm_size_pos_hints_set(Ecore_X_Window  window,
    hint.flags = 0;
    if (request_pos)
      {
-	hint.flags = XCB_SIZE_HINT_US_POSITION;
+       xcb_size_hints_set_flags(hint, XCB_SIZE_HINT_US_POSITION);
      }
    if (gravity != ECORE_X_GRAVITY_NW)
      {
@@ -529,13 +577,30 @@ ecore_x_icccm_size_pos_hints_set(Ecore_X_Window  window,
      }
    if ((min_aspect > 0.0) || (max_aspect > 0.0))
      {
-	xcb_size_hints_set_aspect(&hint,
+	xcb_size_hints_set_aspect(
+#ifdef ECORE_XCB_ICCCM02
+            hint,
+#else
+            &hint,
+#endif
                                   (int32_t)(min_aspect * 10000),
                                   10000,
                                   (int32_t)(max_aspect * 10000),
                                   10000);
      }
+
+#ifdef ECORE_XCB_ICCCM02
+   xcb_set_wm_normal_hints(_ecore_xcb_conn, window, hint);
+   free(hint);
+#else
    xcb_set_wm_normal_hints(_ecore_xcb_conn, window, &hint);
+#undef xcb_size_hints_set_flags
+#undef xcb_size_hints_set_win_gravity
+#undef xcb_size_hints_set_min_size
+#undef xcb_size_hints_set_max_size
+#undef xcb_size_hints_set_base_size
+#undef xcb_size_hints_set_resize_inc
+#endif
 }
 
 /**
@@ -608,22 +673,23 @@ ecore_x_icccm_size_pos_hints_get(Ecore_X_Window   window __UNUSED__,
    if (!_ecore_x_icccm_size_hints_get(reply, ECORE_X_ATOM_WM_NORMAL_HINTS, &hint))
      return 0;
 
-   if ((hint.flags & XCB_SIZE_HINT_US_POSITION) || (hint.flags & XCB_SIZE_HINT_P_POSITION))
+   flags = xcb_size_hints_get_flags(hint);
+     if ((flags & XCB_SIZE_HINT_US_POSITION) || (flags & XCB_SIZE_HINT_P_POSITION))
      {
 	if (request_pos)
 	   *request_pos = 1;
      }
-   if (hint.flags & XCB_SIZE_HINT_P_WIN_GRAVITY)
+   if (flags & XCB_SIZE_HINT_P_WIN_GRAVITY)
      {
 	if (gravity)
 	   *gravity = hint.win_gravity;
      }
-   if (hint.flags & XCB_SIZE_HINT_P_MIN_SIZE)
+   if (flags & XCB_SIZE_HINT_P_MIN_SIZE)
      {
 	minw = hint.min_width;
 	minh = hint.min_height;
      }
-   if (hint.flags & XCB_SIZE_HINT_P_MAX_SIZE)
+   if (flags & XCB_SIZE_HINT_P_MAX_SIZE)
      {
 	maxw = hint.max_width;
 	maxh = hint.max_height;
@@ -632,7 +698,7 @@ ecore_x_icccm_size_pos_hints_get(Ecore_X_Window   window __UNUSED__,
 	if (maxh < minh)
 	   maxh = minh;
      }
-   if (hint.flags & XCB_SIZE_HINT_BASE_SIZE)
+   if (flags & XCB_SIZE_HINT_BASE_SIZE)
      {
 	basew = hint.base_width;
 	baseh = hint.base_height;
@@ -641,7 +707,7 @@ ecore_x_icccm_size_pos_hints_get(Ecore_X_Window   window __UNUSED__,
 	if (baseh > minh)
 	   minh = baseh;
      }
-   if (hint.flags & XCB_SIZE_HINT_P_RESIZE_INC)
+   if (flags & XCB_SIZE_HINT_P_RESIZE_INC)
      {
 	stepx = hint.width_inc;
         stepy = hint.height_inc;
@@ -650,7 +716,7 @@ ecore_x_icccm_size_pos_hints_get(Ecore_X_Window   window __UNUSED__,
 	if (stepy < 1)
 	   stepy = 1;
      }
-   if (hint.flags & XCB_SIZE_HINT_P_ASPECT)
+   if (flags & XCB_SIZE_HINT_P_ASPECT)
      {
 	if (hint.min_aspect_den > 0)
 	   mina = ((double)hint.min_aspect_num) / ((double)hint.min_aspect_den);

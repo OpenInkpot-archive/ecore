@@ -49,11 +49,14 @@
  * more details.
  */
 
-#ifndef _ECORE_PRIVATE_H
+#ifdef _WIN32
+# include <winsock2.h>
+#elif defined (__FreeBSD__) && (__FreeBSD_version >= 420001)
+# include <sys/select.h>
+#else
 # include <sys/types.h>
-# ifndef _WIN32
-#  include <signal.h>
-# endif
+# include <sys/time.h>
+# include <signal.h>
 #endif
 
 #ifndef TRUE
@@ -278,6 +281,10 @@ extern "C" {
    EAPI void              *ecore_idle_exiter_del(Ecore_Idle_Exiter *idle_exiter);
 
    EAPI void              ecore_main_loop_iterate(void);
+
+   EAPI void              ecore_main_loop_select_func_set(int (*func)(int nfds, fd_set *readfds, fd_set *writefds, fd_set *exceptfds, struct timeval *timeout));
+   EAPI void             *ecore_main_loop_select_func_get(void);
+
    EAPI void              ecore_main_loop_begin(void);
    EAPI void              ecore_main_loop_quit(void);
    EAPI Ecore_Fd_Handler *ecore_main_fd_handler_add(int fd, Ecore_Fd_Handler_Flags flags, int (*func) (void *data, Ecore_Fd_Handler *fd_handler), const void *data, int (*buf_func) (void *buf_data, Ecore_Fd_Handler *fd_handler), const void *buf_data);
@@ -290,13 +297,17 @@ extern "C" {
    EAPI Ecore_Pipe  *ecore_pipe_add(void (*handler) (void *data, void *buffer, unsigned int nbyte), const void *data);
    EAPI void        *ecore_pipe_del(Ecore_Pipe *p);
    EAPI int          ecore_pipe_write(Ecore_Pipe *p, const void *buffer, unsigned int nbytes);
+   EAPI void         ecore_pipe_write_close(Ecore_Pipe *p);
+   EAPI void         ecore_pipe_read_close(Ecore_Pipe *p);
 
    EAPI double ecore_time_get(void);
    EAPI double ecore_loop_time_get(void);
-       
+
    EAPI Ecore_Timer *ecore_timer_add(double in, int (*func) (void *data), const void *data);
+   EAPI Ecore_Timer *ecore_timer_loop_add(double in, int (*func) (void *data), const void *data);
    EAPI void        *ecore_timer_del(Ecore_Timer *timer);
    EAPI void         ecore_timer_interval_set(Ecore_Timer *timer, double in);
+   EAPI double       ecore_timer_interval_get(Ecore_Timer *timer);
    EAPI void         ecore_timer_freeze(Ecore_Timer *timer);
    EAPI void         ecore_timer_thaw(Ecore_Timer *timer);
    EAPI void         ecore_timer_delay(Ecore_Timer *timer, double add);

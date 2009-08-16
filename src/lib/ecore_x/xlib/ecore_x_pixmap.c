@@ -1,3 +1,11 @@
+/*
+ * vim:ts=8:sw=3:sts=8:noexpandtab:cino=>5n-3f0^-2{2
+ */
+
+#ifdef HAVE_CONFIG_H
+# include <config.h>
+#endif
+
 #include "Ecore.h"
 #include "ecore_x_private.h"
 #include "Ecore_X.h"
@@ -38,7 +46,7 @@ ecore_x_pixmap_new(Ecore_X_Window win, int w, int h, int dep)
  * @ingroup Ecore_X_Pixmap_Group
  */
 EAPI void
-ecore_x_pixmap_del(Ecore_X_Pixmap pmap)
+ecore_x_pixmap_free(Ecore_X_Pixmap pmap)
 {
    XFreePixmap(_ecore_x_disp, pmap);
 }

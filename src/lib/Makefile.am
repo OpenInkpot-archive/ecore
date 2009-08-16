@@ -2,6 +2,7 @@
 MAINTAINERCLEANFILES = Makefile.in
 SUBDIRS = \
 ecore \
+ecore_input \
 ecore_job \
 ecore_txt \
 ecore_fb \

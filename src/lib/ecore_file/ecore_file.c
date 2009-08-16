@@ -6,6 +6,14 @@
 # include <config.h>
 #endif
 
+#include <Ecore_Str.h>
+#include <stdio.h>
+#include <string.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#include <dirent.h>
+
 #ifndef _FILE_OFFSET_BITS
 # define _FILE_OFFSET_BITS  64
 #endif
@@ -47,7 +55,7 @@ ecore_file_init()
 //     goto error;
    return init;
 
-error:
+//error:
 
    ecore_file_monitor_shutdown();
    ecore_file_path_shutdown();
@@ -148,6 +156,117 @@ ecore_file_mkdir(const char *dir)
 }
 
 /**
+ * Create complete directory in a batch.
+ *
+ * @param dirs list of directories, null terminated.
+ * @return number of successfull directories created, -1 if dirs is NULL.
+ *
+ * @see ecore_file_mkdir() and ecore_file_mkpaths()
+ */
+EAPI int
+ecore_file_mkdirs(const char **dirs)
+{
+   if (!dirs) return -1;
+   int i = 0;
+   for (; *dirs != NULL; dirs++)
+     if (ecore_file_mkdir(*dirs))
+       i++;
+   return i;
+}
+
+/**
+ * Create complete list of sub-directories in a batch (optimized).
+ *
+ * @param base the base directory to act on, will be created if does
+ *     not exists.
+ * @param subdirs list of directories, null terminated. These are
+ *     created similarly to ecore_file_mkdir(), so same mode and whole
+ *     path to that point must exists. So if creating base/a/b/c,
+ *     provide subdirs with "a", "a/b" and "a/b/c" in that order!
+ *
+ * @return number of successfull directories created, -1 if subdirs or
+ *     base is NULL or invalid.
+ *
+ * @see ecore_file_mkdir() and ecore_file_mkpaths()
+ */
+EAPI int
+ecore_file_mksubdirs(const char *base, const char **subdirs)
+{
+#ifndef HAVE_ATFILE_SOURCE
+   char buf[PATH_MAX];
+   int baselen;
+#else
+   int fd;
+   DIR *dir;
+#endif
+   int i;
+
+   if (!subdirs) return -1;
+   if ((!base) || (base[0] == '\0')) return -1;
+
+   if ((!ecore_file_is_dir(base)) && (!ecore_file_mkpath(base)))
+     return 0;
+
+#ifndef HAVE_ATFILE_SOURCE
+   baselen = ecore_strlcpy(buf, base, sizeof(buf));
+   if ((baselen < 1) || (baselen + 1 >= (int)sizeof(buf)))
+     return 0;
+
+   if (buf[baselen - 1] != '/')
+     {
+	buf[baselen] = '/';
+	baselen++;
+     }
+#else
+   dir = opendir(base);
+   if (!dir)
+     return 0;
+   fd = dirfd(dir);
+#endif
+
+   i = 0;
+   for (; *subdirs != NULL; subdirs++)
+     {
+	struct stat st;
+
+#ifndef HAVE_ATFILE_SOURCE
+	ecore_strlcpy(buf + baselen, *subdirs, sizeof(buf) - baselen);
+	if (stat(buf, &st) == 0)
+#else
+	if (fstatat(fd, *subdirs, &st, 0) == 0)
+#endif
+	  {
+	     if (S_ISDIR(st.st_mode))
+	       {
+		  i++;
+		  continue;
+	       }
+	  }
+	else
+	  {
+	     if (errno == ENOENT)
+	       {
+#ifndef HAVE_ATFILE_SOURCE
+		  if (mkdir(buf, default_mode) == 0)
+#else
+		  if (mkdirat(fd, *subdirs, default_mode) == 0)
+#endif
+		    {
+		       i++;
+		       continue;
+		    }
+		 }
+	    }
+     }
+
+#ifdef HAVE_ATFILE_SOURCE
+   closedir(dir);
+#endif
+
+   return i;
+}
+
+/**
  * Delete the given dir
  * @param  dir The name of the directory to delete
  * @return 1 on success, 0 on failure
@@ -224,36 +343,65 @@ ecore_file_recursive_rm(const char *dir)
    return 1;
 }
 
+static inline int
+_ecore_file_mkpath_if_not_exists(const char *path)
+{
+   struct stat st;
+   if (stat(path, &st) < 0)
+     return ecore_file_mkdir(path);
+   else if (!S_ISDIR(st.st_mode))
+     return 0;
+   else
+     return 1;
+}
+
 /**
  * Create a complete path
  * @param  path The path to create
  * @return 1 on success, 0 on failure
+ *
+ * @see ecore_file_mkpaths() and ecore_file_mkdir()
  */
 EAPI int
 ecore_file_mkpath(const char *path)
 {
    char ss[PATH_MAX];
-   int  i;
+   unsigned int i;
 
-   ss[0] = 0;
-   i = 0;
-   while (path[i])
+   if (ecore_file_is_dir(path))
+     return 1;
+
+   for (i = 0; path[i] != '\0'; ss[i] = path[i], i++)
      {
 	if (i == sizeof(ss) - 1) return 0;
-	ss[i] = path[i];
-	ss[i + 1] = 0;
-	if (path[i] == '/')
+	if ((path[i] == '/') && (i > 0))
 	  {
-	     ss[i] = 0;
-	     if ((ecore_file_exists(ss)) && (!ecore_file_is_dir(ss))) return 0;
-	     else if (!ecore_file_exists(ss)) ecore_file_mkdir(ss);
-	     ss[i] = '/';
+	     ss[i] = '\0';
+	     if (!_ecore_file_mkpath_if_not_exists(ss))
+	       return 0;
 	  }
-	i++;
      }
-   if ((ecore_file_exists(ss)) && (!ecore_file_is_dir(ss))) return 0;
-   else if (!ecore_file_exists(ss)) ecore_file_mkdir(ss);
-   return 1;
+   ss[i] = '\0';
+   return _ecore_file_mkpath_if_not_exists(ss);
+}
+
+/**
+ * Create complete paths in a batch.
+ *
+ * @param paths list of paths, null terminated.
+ * @return number of successfull paths created, -1 if paths is NULL.
+ *
+ * @see ecore_file_mkpath() and ecore_file_mkdirs()
+ */
+EAPI int
+ecore_file_mkpaths(const char **paths)
+{
+   if (!paths) return -1;
+   int i = 0;
+   for (; *paths != NULL; paths++)
+     if (ecore_file_mkpath(*paths))
+       i++;
+   return i;
 }
 
 /**
@@ -502,36 +650,32 @@ ecore_file_readlink(const char *link)
  * For more information see the manual pages of strcoll and setlocale.
  * The list will not contain the directory entries for '.' and '..'.
  * @param  dir The name of the directory to list
- * @return Return an Ecore_List containing all the files in the directory;
+ * @return Return an Eina_List containing all the files in the directory;
  *         on failure it returns NULL.
  */
-EAPI Ecore_List *
+EAPI Eina_List *
 ecore_file_ls(const char *dir)
 {
    char               *f;
    DIR                *dirp;
    struct dirent      *dp;
-   Ecore_List         *list;
+   Eina_List         *list = NULL;
 
    dirp = opendir(dir);
    if (!dirp) return NULL;
-
-   list = ecore_list_new();
-   ecore_list_free_cb_set(list, free);
 
    while ((dp = readdir(dirp)))
      {
 	if ((strcmp(dp->d_name, ".")) && (strcmp(dp->d_name, "..")))
 	  {
 	       f = strdup(dp->d_name);
-	       ecore_list_append(list, f);
+	       list = eina_list_append(list, f);
 	  }
      }
    closedir(dirp);
 
-   ecore_list_sort(list, ECORE_COMPARE_CB(strcoll), ECORE_SORT_MIN);
+   list = eina_list_sort(list, ECORE_SORT_MIN, ECORE_COMPARE_CB(strcoll));
 
-   ecore_list_first_goto(list);
    return list;
 }
 

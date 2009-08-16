@@ -7,6 +7,7 @@
 #endif
 
 #include <stdlib.h>
+#include <stdio.h>
 #include <errno.h>
 
 #ifdef HAVE_EVIL
@@ -34,6 +35,9 @@
 
 # define pipe_write(fd, buffer, size) send((fd), (char *)(buffer), size, 0)
 # define pipe_read(fd, buffer, size)  recv((fd), (char *)(buffer), size, 0)
+# define pipe_close(fd)               closesocket(fd)
+# define PIPE_FD_INVALID              INVALID_SOCKET
+# define PIPE_FD_ERROR                SOCKET_ERROR
 
 #else
 
@@ -42,6 +46,9 @@
 
 # define pipe_write(fd, buffer, size) write((fd), buffer, size)
 # define pipe_read(fd, buffer, size)  read((fd), buffer, size)
+# define pipe_close(fd)               close(fd)
+# define PIPE_FD_INVALID              -1
+# define PIPE_FD_ERROR                -1
 
 #endif /* ! _WIN32 */
 
@@ -331,12 +338,55 @@ ecore_pipe_del(Ecore_Pipe *p)
 	      "ecore_pipe_del");
 	return NULL;
      }
-   ecore_main_fd_handler_del(p->fd_handler);
-   close(p->fd_read);
-   close(p->fd_write);
+   if(p->fd_handler != NULL)
+     ecore_main_fd_handler_del(p->fd_handler);
+   if(p->fd_read != PIPE_FD_INVALID)
+     pipe_close(p->fd_read);
+   if(p->fd_write != PIPE_FD_INVALID)
+     pipe_close(p->fd_write);
    data = (void *)p->data;
    free (p);
    return data;
+}
+
+/**
+ * Close the read end of an Ecore_Pipe object created with ecore_pipe_add().
+ *
+ * @param p The Ecore_Pipe object.
+ * @ingroup Ecore_Pipe_Group
+ */
+EAPI void
+ecore_pipe_read_close(Ecore_Pipe *p)
+{
+   if (!ECORE_MAGIC_CHECK(p, ECORE_MAGIC_PIPE))
+     {
+	ECORE_MAGIC_FAIL(p, ECORE_MAGIC_PIPE,
+	      "ecore_pipe_read_close");
+	return;
+     }
+   ecore_main_fd_handler_del(p->fd_handler);
+   p->fd_handler = NULL;
+   pipe_close(p->fd_read);
+   p->fd_read = PIPE_FD_INVALID;
+}
+
+/**
+ * Close the write end of an Ecore_Pipe object created with ecore_pipe_add().
+ *
+ * @param p The Ecore_Pipe object.
+ * @ingroup Ecore_Pipe_Group
+ */
+EAPI void
+ecore_pipe_write_close(Ecore_Pipe *p)
+{
+   if (!ECORE_MAGIC_CHECK(p, ECORE_MAGIC_PIPE))
+     {
+	ECORE_MAGIC_FAIL(p, ECORE_MAGIC_PIPE,
+	      "ecore_pipe_write_close");
+	return;
+     }
+   pipe_close(p->fd_write);
+   p->fd_write = PIPE_FD_INVALID;
 }
 
 /**
@@ -345,6 +395,7 @@ ecore_pipe_del(Ecore_Pipe *p)
  * @param p      The Ecore_Pipe object.
  * @param buffer The data to write into the pipe.
  * @param nbytes The size of the @p buffer in bytes
+ * @return       Returns TRUE on a successful write, FALSE on an error
  * @ingroup Ecore_Pipe_Group
  */
 EAPI int
@@ -358,9 +409,13 @@ ecore_pipe_write(Ecore_Pipe *p, const void *buffer, unsigned int nbytes)
      {
 	ECORE_MAGIC_FAIL(p, ECORE_MAGIC_PIPE,
 	      "ecore_pipe_write");
-	return 0;
+	return FALSE;
      }
-   /* first write the len into the pipe */
+
+   if(p->fd_write == PIPE_FD_INVALID)
+     return FALSE;
+
+   /* First write the len into the pipe */
    do
      {
 	ret = pipe_write(p->fd_write, &nbytes, sizeof(nbytes));
@@ -374,9 +429,15 @@ ecore_pipe_write(Ecore_Pipe *p, const void *buffer, unsigned int nbytes)
 	     /* XXX What should we do here? */
 	     fprintf(stderr, "The length of the data was not written complete"
 		  " to the pipe\n");
-	     return 0;
+	     return FALSE;
 	  }
-	else if (ret == -1 && errno == EINTR)
+	else if (ret == PIPE_FD_ERROR && errno == EPIPE)
+	  {
+	     pipe_close(p->fd_write);
+	     p->fd_write = PIPE_FD_INVALID;
+	     return FALSE;
+	  }
+	else if (ret == PIPE_FD_ERROR && errno == EINTR)
 	  /* try it again */
 	  ;
 	else
@@ -389,7 +450,7 @@ ecore_pipe_write(Ecore_Pipe *p, const void *buffer, unsigned int nbytes)
    while (retry--);
 
    if (retry != ECORE_PIPE_WRITE_RETRY)
-     return 0;
+     return FALSE;
 
    /* and now pass the data to the pipe */
    do
@@ -399,13 +460,19 @@ ecore_pipe_write(Ecore_Pipe *p, const void *buffer, unsigned int nbytes)
 	      nbytes - already_written);
 
 	if (ret == (ssize_t)(nbytes - already_written))
-	  return 1;
+	  return TRUE;
 	else if (ret >= 0)
 	  {
 	     already_written -= ret;
 	     continue;
 	  }
-	else if (ret == -1 && errno == EINTR)
+	else if (ret == PIPE_FD_ERROR && errno == EPIPE)
+	  {
+	     pipe_close(p->fd_write);
+	     p->fd_write = PIPE_FD_INVALID;
+	     return FALSE;
+	  }
+	else if (ret == PIPE_FD_ERROR && errno == EINTR)
 	  /* try it again */
 	  ;
 	else
@@ -417,7 +484,7 @@ ecore_pipe_write(Ecore_Pipe *p, const void *buffer, unsigned int nbytes)
      }
    while (retry--);
 
-   return 0;
+   return FALSE;
 }
 
 /* Private function */
@@ -452,8 +519,15 @@ _ecore_pipe_read(void *data, Ecore_Fd_Handler *fd_handler __UNUSED__)
 		  fprintf(stderr, "Only read %d bytes from the pipe, although"
 			" we need to read %d bytes.\n", ret, sizeof(p->len));
 	       }
-	     else if ((ret == 0) ||
-                      ((ret == -1) && ((errno == EINTR) || (errno == EAGAIN))))
+	     else if (ret == 0)
+	       {
+		  p->handler((void *)p->data, NULL, 0);
+		  pipe_close(p->fd_read);
+		  p->fd_read = PIPE_FD_INVALID;
+		  p->fd_handler = NULL;
+		  return ECORE_CALLBACK_CANCEL;
+	       }
+	     else if ((ret == PIPE_FD_ERROR) && ((errno == EINTR) || (errno == EAGAIN)))
 	       return ECORE_CALLBACK_RENEW;
 	     else
 	       {
@@ -487,7 +561,15 @@ _ecore_pipe_read(void *data, Ecore_Fd_Handler *fd_handler __UNUSED__)
 	     p->already_read += ret;
 	     return ECORE_CALLBACK_RENEW;
 	  }
-	else if (ret == -1 && (errno == EINTR || errno == EAGAIN))
+	else if (ret == 0)
+	  {
+	     p->handler((void *)p->data, NULL, 0);
+	     pipe_close(p->fd_read);
+	     p->fd_read = PIPE_FD_INVALID;
+	     p->fd_handler = NULL;
+	     return ECORE_CALLBACK_CANCEL;
+	  }
+	else if (ret == PIPE_FD_ERROR && (errno == EINTR || errno == EAGAIN))
 	  return ECORE_CALLBACK_RENEW;
 	else
 	  {

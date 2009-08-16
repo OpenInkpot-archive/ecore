@@ -1,32 +1,17 @@
 #ifndef _ECORE_PRIVATE_H
 #define _ECORE_PRIVATE_H
 
-#ifdef HAVE_CONFIG_H
-# include <config.h>
-#endif
-
+#include <sys/types.h>
+#include <unistd.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/time.h>
-#include <sys/types.h>
-#include <unistd.h>
+
 #ifdef HAVE_SIGNAL_H
 # include <signal.h>
 #endif
-#include <sys/stat.h>
-#include <fcntl.h>
-#include <limits.h>
-#include <dirent.h>
-#ifdef HAVE_SYS_RESOURCE_H
-# include <sys/resource.h>
-#endif
 
-#include <eina_types.h>
-
-#ifdef HAVE_SYS_MMAN_H
-# include <sys/mman.h>
-#endif
+#include <Eina.h>
 
 #ifdef EAPI
 # undef EAPI
@@ -135,21 +120,6 @@ EAPI void ecore_print_warning(const char *function, const char *sparam);
 
 typedef unsigned int              Ecore_Magic;
 
-typedef struct _Ecore_List2       Ecore_List2;
-typedef struct _Ecore_List2_Data  Ecore_List2_Data;
-
-struct _Ecore_List2
-{
-   Ecore_List2  *next, *prev;
-   Ecore_List2  *last;
-};
-
-struct _Ecore_List2_Data
-{
-   Ecore_List2   __list_data;
-   void *data;
-};
-
 #ifndef _ECORE_H
 enum _Ecore_Fd_Handler_Flags
 {
@@ -255,7 +225,7 @@ typedef struct _Ecore_Poller        Ecore_Poller;
 #ifndef _WIN32
 struct _Ecore_Exe
 {
-   Ecore_List2   __list_data;
+   EINA_INLIST;
    ECORE_MAGIC;
    pid_t        pid;
    void        *data;
@@ -291,7 +261,7 @@ struct _Ecore_Exe
 
 struct _Ecore_Timer
 {
-   Ecore_List2     __list_data;
+   EINA_INLIST;
    ECORE_MAGIC;
    double          in;
    double          at;
@@ -305,7 +275,7 @@ struct _Ecore_Timer
 
 struct _Ecore_Idler
 {
-   Ecore_List2   __list_data;
+   EINA_INLIST;
    ECORE_MAGIC;
    int          delete_me : 1;
    int        (*func) (void *data);
@@ -314,7 +284,7 @@ struct _Ecore_Idler
 
 struct _Ecore_Idle_Enterer
 {
-   Ecore_List2   __list_data;
+   EINA_INLIST;
    ECORE_MAGIC;
    int          delete_me : 1;
    int        (*func) (void *data);
@@ -323,7 +293,7 @@ struct _Ecore_Idle_Enterer
 
 struct _Ecore_Idle_Exiter
 {
-   Ecore_List2   __list_data;
+   EINA_INLIST;
    ECORE_MAGIC;
    int          delete_me : 1;
    int        (*func) (void *data);
@@ -332,7 +302,7 @@ struct _Ecore_Idle_Exiter
 
 struct _Ecore_Fd_Handler
 {
-   Ecore_List2               __list_data;
+   EINA_INLIST;
    ECORE_MAGIC;
    int                      fd;
    Ecore_Fd_Handler_Flags   flags;
@@ -350,7 +320,7 @@ struct _Ecore_Fd_Handler
 
 struct _Ecore_Event_Handler
 {
-   Ecore_List2   __list_data;
+   EINA_INLIST;
    ECORE_MAGIC;
    int          type;
    int          delete_me : 1;
@@ -360,7 +330,7 @@ struct _Ecore_Event_Handler
 
 struct _Ecore_Event_Filter
 {
-   Ecore_List2   __list_data;
+   EINA_INLIST;
    ECORE_MAGIC;
    int          delete_me : 1;
    void *     (*func_start) (void *data);
@@ -372,7 +342,7 @@ struct _Ecore_Event_Filter
 
 struct _Ecore_Event
 {
-   Ecore_List2   __list_data;
+   EINA_INLIST;
    ECORE_MAGIC;
    int          type;
    void        *event;
@@ -383,7 +353,7 @@ struct _Ecore_Event
 
 struct _Ecore_Animator
 {
-   Ecore_List2   __list_data;
+   EINA_INLIST;
    ECORE_MAGIC;
    unsigned char delete_me : 1;
    int           (*func) (void *data);
@@ -392,7 +362,7 @@ struct _Ecore_Animator
 
 struct _Ecore_Poller
 {
-   Ecore_List2   __list_data;
+   EINA_INLIST;
    ECORE_MAGIC;
    int           ibit;
    unsigned char delete_me : 1;

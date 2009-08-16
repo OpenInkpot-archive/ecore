@@ -1,28 +1,38 @@
 /*
  * vim:ts=8:sw=3:sts=8:noexpandtab:cino=>5n-3f0^-2{2
  */
+
 /*
  * getaddrinfo with callback
  *
  * man getaddrinfo
  *
  */
-#include "ecore_private.h"
-#include "Ecore.h"
-#include "ecore_con_private.h"
 
+#ifdef HAVE_CONFIG_H
+# include <config.h>
+#endif
+
+#include <string.h>
 #include <ctype.h>
+#ifdef __OpenBSD__
+# include <sys/types.h>
+#endif
 #include <netinet/in.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <arpa/nameser.h>
 #include <netdb.h>
 
+#include "ecore_private.h"
+#include "Ecore.h"
+#include "ecore_con_private.h"
+
 typedef struct _CB_Data CB_Data;
 
 struct _CB_Data
 {
-   Ecore_List2 __list_data;
+   EINA_INLIST;
    Ecore_Con_Info_Cb cb_done;
    void *data;
    Ecore_Fd_Handler *fdh;
@@ -38,7 +48,7 @@ static int _ecore_con_info_data_handler(void *data, Ecore_Fd_Handler *fd_handler
 static int _ecore_con_info_exit_handler(void *data, int type __UNUSED__, void *event);
 
 static int info_init = 0;
-static Ecore_List2 *info_slaves = NULL;
+static CB_Data *info_slaves = NULL;
 
 EAPI int
 ecore_con_info_init(void)
@@ -53,7 +63,7 @@ ecore_con_info_shutdown(void)
    info_init--;
    if (info_init == 0)
      {
-	while (info_slaves) _ecore_con_info_slave_free((CB_Data *)info_slaves);
+	while (info_slaves) _ecore_con_info_slave_free(info_slaves);
      }
    return info_init;
 }
@@ -187,28 +197,30 @@ ecore_con_info_get(Ecore_Con_Server *svr,
    if ((cbdata->pid = fork()) == 0)
      {
         Ecore_Con_Info *container;
-	struct addrinfo *result;
+	struct addrinfo *result = NULL;
 	char service[NI_MAXSERV];
 	char hbuf[NI_MAXHOST];
 	char sbuf[NI_MAXSERV];
-	void *tosend;
+	void *tosend = NULL;
 	int tosend_len;
 	int canonname_len = 0;
+	int err;
 
-	/* FIXME with EINA */
-	snprintf(service, NI_MAXSERV, "%i", svr->port);
+	eina_convert_itoa(svr->port, service);
 	/* CHILD */
 	if (!getaddrinfo(svr->name, service, hints, &result) && result)
 	  {
 	    if (result->ai_canonname)
 	      canonname_len = strlen(result->ai_canonname) + 1;
 	    tosend_len = sizeof(Ecore_Con_Info) + result->ai_addrlen + canonname_len;
-	    tosend = malloc(tosend_len);
+
+	    if (!(tosend = malloc(tosend_len)))
+	      goto on_error;
+
+	    memset(tosend, 0, tosend_len);
 	    container = (Ecore_Con_Info *)tosend;
 
 	    container->size = tosend_len;
-	    memset(container->ip, 0, sizeof(container->ip));
-	    memset(container->service, 0, sizeof(container->service));
 
 	    memcpy(&container->info, result, sizeof(struct addrinfo));
 	    memcpy(tosend + sizeof(Ecore_Con_Info), result->ai_addr, result->ai_addrlen);
@@ -221,13 +233,15 @@ ecore_con_info_get(Ecore_Con_Server *svr,
 		memcpy(container->ip, hbuf, sizeof(container->ip));
 		memcpy(container->service, sbuf, sizeof(container->service));
 	      }
-	    write(fd[1], tosend, tosend_len);
+	    err = write(fd[1], tosend, tosend_len);
 
 	    free(tosend);
 	  }
-	else
-	  write(fd[1], "", 1);
 
+on_error:
+	if (result)
+	  freeaddrinfo(result);
+	err = write(fd[1], "", 1);
 	close(fd[1]);
 # ifdef __USE_ISOC99
 	_Exit(0);
@@ -245,7 +259,7 @@ ecore_con_info_get(Ecore_Con_Server *svr,
 	close(fd[0]);
 	return 0;
      }
-   info_slaves = _ecore_list2_append(info_slaves, cbdata);
+   info_slaves = (CB_Data *) eina_inlist_append(EINA_INLIST_GET(info_slaves), EINA_INLIST_GET(cbdata));
    return 1;
 }
 
@@ -296,7 +310,7 @@ _ecore_con_info_readdata(CB_Data *cbdata)
 static void
 _ecore_con_info_slave_free(CB_Data *cbdata)
 {
-   info_slaves = _ecore_list2_remove(info_slaves, cbdata);
+   info_slaves = (CB_Data *) eina_inlist_remove(EINA_INLIST_GET(info_slaves), EINA_INLIST_GET(cbdata));
    close(ecore_main_fd_handler_fd_get(cbdata->fdh));
    ecore_main_fd_handler_del(cbdata->fdh);
    ecore_event_handler_del(cbdata->handler);

@@ -1,8 +1,6 @@
 #ifndef _ECORE_X_PRIVATE_H
 #define _ECORE_X_PRIVATE_H
 
-#include "config.h"
-
 #include <sys/param.h>
 #ifndef MAXHOSTNAMELEN
 #define MAXHOSTNAMELEN 256
@@ -48,6 +46,9 @@
 #endif
 #ifdef ECORE_XDPMS
 #include <X11/extensions/dpms.h>
+#endif
+#ifdef ECORE_XKB
+#include <X11/XKBlib.h>
 #endif
 
 #include "ecore_private.h"
@@ -139,6 +140,16 @@ typedef struct _Ecore_X_DND_Target
    int will_accept;
 } Ecore_X_DND_Target;
 
+
+extern int ECORE_X_MODIFIER_SHIFT;
+extern int ECORE_X_MODIFIER_CTRL;
+extern int ECORE_X_MODIFIER_ALT;
+extern int ECORE_X_MODIFIER_WIN;
+
+extern int ECORE_X_LOCK_SCROLL;
+extern int ECORE_X_LOCK_NUM;
+extern int ECORE_X_LOCK_CAPS;
+
 extern Display *_ecore_x_disp;
 extern double   _ecore_x_double_click_time;
 extern Time     _ecore_x_event_last_time;
@@ -158,6 +169,7 @@ extern void    *_ecore_window_grab_replay_data;
 extern Ecore_X_Window _ecore_x_private_win;
 
 void _ecore_x_error_handler_init(void);
+void _ecore_x_event_handle_any_event(XEvent *xevent);
 void _ecore_x_event_handle_key_press(XEvent *xevent);
 void _ecore_x_event_handle_key_release(XEvent *xevent);
 void _ecore_x_event_handle_button_press(XEvent *xevent);
@@ -196,6 +208,7 @@ void _ecore_x_event_handle_sync_counter(XEvent *xevent);
 void _ecore_x_event_handle_sync_alarm(XEvent *xevent);
 #ifdef ECORE_XRANDR
 void _ecore_x_event_handle_randr_change(XEvent *xevent);
+void _ecore_x_event_handle_randr_notify(XEvent *xevent);
 #endif
 #ifdef ECORE_XFIXES
 void _ecore_x_event_handle_fixes_selection_notify(XEvent *xevent);
@@ -236,6 +249,7 @@ void _ecore_x_fixes_init(void);
 void _ecore_x_damage_init(void);
 void _ecore_x_composite_init(void);
 void _ecore_x_dpms_init(void);
+void _ecore_x_randr_init(void);
 
 void _ecore_x_atoms_init(void);
     

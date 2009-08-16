@@ -2,6 +2,8 @@
  * vim:ts=8:sw=3:sts=8:noexpandtab:cino=>5n-3f0^-2{2
  */
 
+#include <string.h>
+
 #include "ecore_xcb_private.h"
 #include "Ecore_X_Atoms.h"
 
@@ -794,11 +796,17 @@ EAPI int
 ecore_x_window_prop_protocol_isset(Ecore_X_Window      window,
                                    Ecore_X_WM_Protocol protocol)
 {
-   xcb_get_property_cookie_t     cookie;
+   Ecore_X_Atom  proto;
+   uint32_t      i;
+   uint8_t       ret = 0;
+
+#ifdef ECORE_XCB_ICCCM02
+   Ecore_X_Atom *protos;
+   uint32_t      protos_count;
+#else
+   xcb_get_property_cookie_t cookie;
    xcb_get_wm_protocols_reply_t *protos;
-   Ecore_X_Atom                  proto;
-   uint32_t                      i;
-   uint8_t                       ret = 0;
+#endif
 
    /* check for invalid values */
    if (protocol >= ECORE_X_WM_PROTOCOL_NUM)
@@ -806,9 +814,9 @@ ecore_x_window_prop_protocol_isset(Ecore_X_Window      window,
 
    proto = _ecore_xcb_atoms_wm_protocols[protocol];
 
-   cookie = xcb_get_wm_protocols(_ecore_xcb_conn, window, ECORE_X_ATOM_WM_PROTOCOLS);
-   if (!xcb_get_wm_protocols_reply(_ecore_xcb_conn, cookie, protos, NULL))
-       return ret;
+#ifdef ECORE_XCB_ICCCM02
+   if (!xcb_get_wm_protocols(_ecore_xcb_conn, window, &protos_count, &protos))
+	return ret;
 
    for (i = 0; i < protos->atoms_len; i++)
 	if (protos->atoms[i] == proto)
@@ -816,6 +824,18 @@ ecore_x_window_prop_protocol_isset(Ecore_X_Window      window,
 	     ret = 1;
 	     break;
 	  }
+#else
+   cookie = xcb_get_wm_protocols(_ecore_xcb_conn, window, ECORE_X_ATOM_WM_PROTOCOLS);
+   if (!xcb_get_wm_protocols_reply(_ecore_xcb_conn, cookie, protos, NULL))
+       return ret;
+
+   for (i = 0; i < protos->atoms_len; ++i)
+        if (protos->atoms[i] == proto)
+          {
+             ret = 1;
+             break;
+          }
+#endif
 
    free(protos);
 
@@ -838,14 +858,19 @@ EAPI Ecore_X_WM_Protocol *
 ecore_x_window_prop_protocol_list_get(Ecore_X_Window window,
                                       int           *num_ret)
 {
-   Ecore_X_WM_Protocol          *prot_ret = NULL;
-   xcb_get_property_cookie_t     cookie;
-   xcb_get_wm_protocols_reply_t *protos;
+   Ecore_X_WM_Protocol *prot_ret = NULL;
    uint32_t             i;
+#ifdef ECORE_XCB_ICCCM02
+   Ecore_X_Atom        *protos;
+   uint32_t             protos_count;
+#else
+   xcb_get_property_cookie_t cookie;
+   xcb_get_wm_protocols_reply_t *protos;
+#endif
 
-   cookie = xcb_get_wm_protocols(_ecore_xcb_conn, window, ECORE_X_ATOM_WM_PROTOCOLS);
-   if (!xcb_get_wm_protocols_reply(_ecore_xcb_conn, cookie, protos, NULL))
-       return NULL;
+#ifdef ECORE_XCB_ICCCM02
+   if (!xcb_get_wm_protocols(_ecore_xcb_conn, window, &protos_count, &protos))
+     return NULL;
 
    if ((!protos) || (protos->atoms_len == 0)) return NULL;
 
@@ -867,7 +892,38 @@ ecore_x_window_prop_protocol_list_get(Ecore_X_Window window,
 	  }
      }
    free(protos);
+   *num_ret = protos_count;
+#else
+   cookie = xcb_get_wm_protocols(_ecore_xcb_conn, window, ECORE_X_ATOM_WM_PROTOCOLS);
+   if (!xcb_get_wm_protocols_reply(_ecore_xcb_conn, cookie, protos, NULL))
+     return NULL;
+
+   if (!protos) return NULL;
+   if (protos->atoms_len == 0)
+     {
+       free(protos);
+       return NULL;
+     }
+   prot_ret = calloc(1, protos->atoms_len * sizeof(Ecore_X_WM_Protocol));
+   if (!prot_ret)
+     {
+       free(protos);
+       return NULL;
+     }
+   for (i = 0; i < protos->atoms_len; i++)
+     {
+       Ecore_X_WM_Protocol j;
+
+       prot_ret[i] = -1;
+       for (j = 0; j < ECORE_X_WM_PROTOCOL_NUM; j++)
+         {
+           if (_ecore_xcb_atoms_wm_protocols[j] == protos->atoms[i])
+             prot_ret[i] = j;
+         }
+     }
+   free(protos);
    *num_ret = protos->atoms_len;
+#endif
 
    return prot_ret;
 }

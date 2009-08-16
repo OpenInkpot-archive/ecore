@@ -1,10 +1,18 @@
+/*
+ * vim:ts=8:sw=3:sts=8:noexpandtab:cino=>5n-3f0^-2{2
+ */
+
+#ifdef HAVE_CONFIG_H
+# include <config.h>
+#endif
+
+#ifdef HAVE_TSLIB
+# include <tslib.h>
+# include <errno.h>
+#endif
+
 #include "Ecore_Fb.h"
 #include "ecore_fb_private.h"
-#include "config.h"
-#ifdef HAVE_TSLIB
-#include <tslib.h>
-#include <errno.h>
-#endif
 
 typedef struct _Ecore_Fb_Ts_Event Ecore_Fb_Ts_Event;
 typedef struct _Ecore_Fb_Ts_Calibrate Ecore_Fb_Ts_Calibrate;
@@ -74,7 +82,6 @@ static double _ecore_fb_double_click_time = 0.25;
 EAPI int
 ecore_fb_ts_init(void)
 {
-   int prev_flags;
 #ifdef HAVE_TSLIB
    char *tslib_tsdevice = NULL;
    if ( ( tslib_tsdevice = getenv("TSLIB_TSDEVICE") ) != NULL )
@@ -105,8 +112,6 @@ ecore_fb_ts_init(void)
 #endif
    if (_ecore_fb_ts_fd >= 0)
      {
-	prev_flags = fcntl(_ecore_fb_ts_fd, F_GETFL);
-	fcntl(_ecore_fb_ts_fd, F_SETFL, prev_flags | O_NONBLOCK);
 	_ecore_fb_ts_fd_handler_handle = ecore_main_fd_handler_add(_ecore_fb_ts_fd, 
 								   ECORE_FD_READ,
 								   _ecore_fb_ts_fd_handler, NULL,

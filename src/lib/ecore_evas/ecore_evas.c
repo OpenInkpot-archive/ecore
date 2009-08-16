@@ -1,13 +1,19 @@
+/*
+ * vim:ts=8:sw=3:sts=8:noexpandtab:cino=>5n-3f0^-2{2
+ */
 
 #ifdef HAVE_CONFIG_H
 # include <config.h>
 #endif
 
+#include <string.h>
+
 #include "Ecore.h"
+#include "Ecore_Input.h"
+
 #include "ecore_private.h"
 #include "ecore_evas_private.h"
 #include "Ecore_Evas.h"
-#include <string.h>
 
 static int _ecore_evas_init_count = 0;
 static Ecore_Fd_Handler *_ecore_evas_async_events_fd = NULL;
@@ -27,13 +33,13 @@ ecore_evas_engine_type_supported_get(Ecore_Evas_Engine_Type engine)
    switch (engine)
      {
       case ECORE_EVAS_ENGINE_SOFTWARE_BUFFER:
-#ifdef BUILD_ECORE_EVAS_BUFFER
+#ifdef BUILD_ECORE_EVAS_SOFTWARE_BUFFER
 	return 1;
 #else
 	return 0;
 #endif
-      case ECORE_EVAS_ENGINE_SOFTWARE_X11:
-#ifdef BUILD_ECORE_EVAS_SOFTWARE_X11
+      case ECORE_EVAS_ENGINE_SOFTWARE_XLIB:
+#ifdef BUILD_ECORE_EVAS_SOFTWARE_XLIB
 	return 1;
 #else
 	return 0;
@@ -62,6 +68,12 @@ ecore_evas_engine_type_supported_get(Ecore_Evas_Engine_Type engine)
 #else
 	return 0;
 #endif
+      case ECORE_EVAS_ENGINE_SOFTWARE_GDI:
+#ifdef BUILD_ECORE_EVAS_SOFTWARE_GDI
+	return 1;
+#else
+	return 0;
+#endif
       case ECORE_EVAS_ENGINE_SOFTWARE_DDRAW:
 #ifdef BUILD_ECORE_EVAS_SOFTWARE_DDRAW
 	return 1;
@@ -80,8 +92,8 @@ ecore_evas_engine_type_supported_get(Ecore_Evas_Engine_Type engine)
 #else
 	return 0;
 #endif
-     case ECORE_EVAS_ENGINE_SDL:
-#ifdef BUILD_ECORE_EVAS_SDL
+     case ECORE_EVAS_ENGINE_SOFTWARE_SDL:
+#ifdef BUILD_ECORE_EVAS_SOFTWARE_SDL
         return 1;
 #else
         return 0;
@@ -171,7 +183,7 @@ ecore_evas_shutdown(void)
 #ifdef BUILD_ECORE_EVAS_FB
 	while (_ecore_evas_fb_shutdown());
 #endif
-#ifdef BUILD_ECORE_EVAS_BUFFER
+#ifdef BUILD_ECORE_EVAS_SOFTWARE_BUFFER
 	while (_ecore_evas_buffer_shutdown());
 #endif
 #ifdef BUILD_ECORE_EVAS_DIRECTFB
@@ -351,9 +363,9 @@ _ecore_evas_constructor_software_16_x11(int x, int y, int w, int h, const char *
 }
 #endif
 
-#ifdef BUILD_ECORE_EVAS_SDL
+#ifdef BUILD_ECORE_EVAS_SOFTWARE_SDL
 static Ecore_Evas *
-_ecore_evas_constructor_sdl(int x, int y, int w, int h, const char *extra_options)
+_ecore_evas_constructor_sdl(int x __UNUSED__, int y __UNUSED__, int w, int h, const char *extra_options)
 {
    Ecore_Evas *ee;
    unsigned int fullscreen = 0, hwsurface = 0, noframe = 0, alpha = 0;
@@ -371,7 +383,7 @@ _ecore_evas_constructor_sdl(int x, int y, int w, int h, const char *extra_option
 }
 
 static Ecore_Evas *
-_ecore_evas_constructor_sdl16(int x, int y, int w, int h, const char *extra_options)
+_ecore_evas_constructor_sdl16(int x __UNUSED__, int y __UNUSED__, int w, int h, const char *extra_options)
 {
    Ecore_Evas *ee;
    unsigned int fullscreen = 0, hwsurface = 0, noframe = 0, alpha = 0;
@@ -409,7 +421,7 @@ _ecore_evas_constructor_directfb(int x, int y, int w, int h, const char *extra_o
 
 #ifdef BUILD_ECORE_EVAS_FB
 static Ecore_Evas *
-_ecore_evas_constructor_fb(int x, int y, int w, int h, const char *extra_options)
+_ecore_evas_constructor_fb(int x __UNUSED__, int y __UNUSED__, int w, int h, const char *extra_options)
 {
    Ecore_Evas *ee;
    char *disp_name = NULL;
@@ -422,6 +434,14 @@ _ecore_evas_constructor_fb(int x, int y, int w, int h, const char *extra_options
    free(disp_name);
 
    return ee;
+}
+#endif
+
+#ifdef BUILD_ECORE_EVAS_SOFTWARE_GDI
+static Ecore_Evas *
+_ecore_evas_constructor_software_gdi(int x, int y, int w, int h, const char *extra_options)
+{
+   return ecore_evas_software_gdi_new(NULL, x, y, w, h);
 }
 #endif
 
@@ -453,7 +473,7 @@ _ecore_evas_constructor_opengl_glew(int x, int y, int w, int h, const char *extr
 static Ecore_Evas *
 _ecore_evas_constructor_software_16_ddraw(int x, int y, int w, int h, const char *extra_options)
 {
-   return ecore_evas_software_ddraw_new(NULL, x, y, w, h);
+   return ecore_evas_software_16_ddraw_new(NULL, x, y, w, h);
 }
 #endif
 
@@ -483,9 +503,9 @@ _ecore_evas_constructor_software_16_wince_gdi(int x, int y, int w, int h, const 
 }
 #endif
 
-#ifdef BUILD_ECORE_EVAS_BUFFER
+#ifdef BUILD_ECORE_EVAS_SOFTWARE_BUFFER
 static Ecore_Evas *
-_ecore_evas_constructor_buffer(int x, int y, int w, int h, const char *extra_options)
+_ecore_evas_constructor_buffer(int x __UNUSED__, int y __UNUSED__, int w, int h, const char *extra_options __UNUSED__)
 {
    return ecore_evas_buffer_new(w, h);
 }
@@ -503,9 +523,6 @@ static const struct ecore_evas_engine _engines[] = {
 #ifdef BUILD_ECORE_EVAS_OPENGL_X11
   {"opengl_x11", _ecore_evas_constructor_opengl_x11},
 #endif
-#ifdef BUILD_ECORE_EVAS_SOFTWARE_XCB
-  {"software_xcb", _ecore_evas_constructor_software_xcb},
-#endif
 #ifdef BUILD_ECORE_EVAS_XRENDER_XCB
   {"xrender_xcb", _ecore_evas_constructor_xrender_x11},
 #endif
@@ -520,6 +537,9 @@ static const struct ecore_evas_engine _engines[] = {
 #endif
 
   /* windows */
+#ifdef BUILD_ECORE_EVAS_SOFTWARE_GDI
+  {"software_gdi", _ecore_evas_constructor_software_gdi},
+#endif
 #ifdef BUILD_ECORE_EVAS_SOFTWARE_DDRAW
   {"software_ddraw", _ecore_evas_constructor_software_ddraw},
 #endif
@@ -540,13 +560,13 @@ static const struct ecore_evas_engine _engines[] = {
 #endif
 
   /* Last chance to have a window */
-#ifdef BUILD_ECORE_EVAS_SDL
+#ifdef BUILD_ECORE_EVAS_SOFTWARE_SDL
   {"sdl", _ecore_evas_constructor_sdl},
   {"software_16_sdl", _ecore_evas_constructor_sdl16},
 #endif
 
   /* independent */
-#ifdef BUILD_ECORE_EVAS_BUFFER
+#ifdef BUILD_ECORE_EVAS_SOFTWARE_BUFFER
   {"buffer", _ecore_evas_constructor_buffer},
 #endif
   {NULL, NULL}
@@ -1269,6 +1289,9 @@ ecore_evas_rotation_set(Ecore_Evas *ee, int rot)
    while (rot < 0) rot += 360;
    while (rot >= 360) rot -= 360;
    IFC(ee, fn_rotation_set) (ee, rot);
+   /* make sure everything gets redrawn */
+   evas_damage_rectangle_add(ee->evas, 0, 0, ee->w, ee->h);
+   evas_damage_rectangle_add(ee->evas, 0, 0, ee->h, ee->w);
    IFE;
 }
 
@@ -1864,7 +1887,7 @@ ecore_evas_cursor_set(Ecore_Evas *ee, const char *file, int layer, int hot_x, in
  * @param layer
  * @param hot_x The x coordinate of the cursor's hot spot
  * @param hot_y The y coordinate of the cursor's hot spot
- * 
+ *
  * This function makes the mouse cursor over @p ee be the image specified by
  * @p file. The actual point within the image that the mouse is at is specified
  * by @p hot_x and @p hot_y, which are coordinates with respect to the top left
@@ -2337,18 +2360,17 @@ ecore_evas_ignore_events_get(const Ecore_Evas *ee)
       return ee->ignore_events ? 1 : 0;
 }
 
-EAPI void *
+EAPI Ecore_Window
 ecore_evas_window_get(const Ecore_Evas *ee)
 {
    if (!ECORE_MAGIC_CHECK(ee, ECORE_MAGIC_EVAS))
    {
       ECORE_MAGIC_FAIL(ee, ECORE_MAGIC_EVAS,
          "ecore_evas_window_get");
-      return NULL;
+      return 0;
    }
 
-   if (ee->engine.func->fn_window_get) return ee->engine.func->fn_window_get(ee);
-   return NULL;
+   return ee->prop.window;
 }
 
 /* fps debug calls - for debugging how much time your app actually spends */
@@ -2410,19 +2432,30 @@ _ecore_evas_fps_debug_shutdown(void)
 void
 _ecore_evas_fps_debug_rendertime_add(double t)
 {
-   if ((_ecore_evas_fps_debug_fd >= 0) &&
-       (_ecore_evas_fps_rendertime_mmap))
-     {
-	unsigned int tm;
+   static double rtime = 0.0;
+   static double rlapse = 0.0;
+   static int frames = 0;
+   static int flapse = 0;
+   double tim;
 
-	tm = (unsigned int)(t * 1000000.0);
-	/* i know its not 100% theoretically guaranteed, but i'd say a write */
-	/* of an int could be considered atomic for all practical purposes */
-	/* oh and since this is cumulative, 1 second = 1,000,000 ticks, so */
-	/* this can run for about 4294 seconds becore looping. if you are */
-	/* doing performance testing in one run for over an hour... well */
-	/* time to restart or handle a loop condition :) */
-	*(_ecore_evas_fps_rendertime_mmap) += tm;
+   tim = ecore_time_get();
+   rtime += t;
+   frames++;
+   if (rlapse == 0.0)
+     {
+        rlapse = tim;
+        flapse = frames;
+     }
+   else if ((tim - rlapse) >= 0.5)
+     {
+        printf("FRAME: %i, FPS: %3.1f, RTIME %3.0f%%\n",
+               frames,
+               (frames - flapse) / (tim - rlapse),
+               (100.0 * rtime) / (tim - rlapse)
+               );
+        rlapse = tim;
+        flapse = frames;
+        rtime = 0.0;
      }
 }
 
@@ -2468,7 +2501,7 @@ _ecore_evas_cb_idle_flush(void *data)
 }
 
 static int
-_ecore_evas_async_events_fd_handler(void *data, Ecore_Fd_Handler *fd_handler)
+_ecore_evas_async_events_fd_handler(void *data __UNUSED__, Ecore_Fd_Handler *fd_handler __UNUSED__)
 {
    evas_async_events_process();
 
@@ -2484,3 +2517,39 @@ _ecore_evas_idle_timeout_update(Ecore_Evas *ee)
 						 _ecore_evas_cb_idle_flush,
 						 ee);
 }
+
+void
+_ecore_evas_mouse_move_process(Ecore_Evas *ee, int x, int y, unsigned int timestamp)
+{
+   ee->mouse.x = x;
+   ee->mouse.y = y;
+   if (ee->prop.cursor.object)
+     {
+	evas_object_show(ee->prop.cursor.object);
+	if (ee->rotation == 0)
+	  evas_object_move(ee->prop.cursor.object,
+			   x - ee->prop.cursor.hot.x,
+			   y - ee->prop.cursor.hot.y);
+	else if (ee->rotation == 90)
+	  evas_object_move(ee->prop.cursor.object,
+			   ee->h - y - 1 - ee->prop.cursor.hot.x,
+			   x - ee->prop.cursor.hot.y);
+	else if (ee->rotation == 180)
+	  evas_object_move(ee->prop.cursor.object,
+			   ee->w - x - 1 - ee->prop.cursor.hot.x,
+			   ee->h - y - 1 - ee->prop.cursor.hot.y);
+	else if (ee->rotation == 270)
+	  evas_object_move(ee->prop.cursor.object,
+			   y - ee->prop.cursor.hot.x,
+			   ee->w - x - 1 - ee->prop.cursor.hot.y);
+     }
+   if (ee->rotation == 0)
+     evas_event_feed_mouse_move(ee->evas, x, y, timestamp, NULL);
+   else if (ee->rotation == 90)
+     evas_event_feed_mouse_move(ee->evas, ee->h - y - 1, x, timestamp, NULL);
+   else if (ee->rotation == 180)
+     evas_event_feed_mouse_move(ee->evas, ee->w - x - 1, ee->h - y - 1, timestamp, NULL);
+   else if (ee->rotation == 270)
+     evas_event_feed_mouse_move(ee->evas, y, ee->w - x - 1, timestamp, NULL);
+}
+

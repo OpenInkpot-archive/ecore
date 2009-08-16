@@ -1,7 +1,8 @@
 /*
  * vim:ts=8:sw=3:sts=8:noexpandtab:cino=>5n-3f0^-2{2
  */
-/* 
+
+/*
  * Simple dns lookup
  *
  * http://www.faqs.org/rfcs/rfc1035.html
@@ -26,22 +27,31 @@
  *
  * * Need more buffer overflow checks.
  */
-#include "ecore_private.h"
-#include "Ecore.h"
-#include "ecore_con_private.h"
 
+#ifdef HAVE_CONFIG_H
+# include <config.h>
+#endif
+
+#include <string.h>
 #include <ctype.h>
+#ifdef __OpenBSD__
+# include <sys/types.h>
+#endif
 #include <netinet/in.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <arpa/nameser.h>
 #include <netdb.h>
 
+#include "ecore_private.h"
+#include "Ecore.h"
+#include "ecore_con_private.h"
+
 typedef struct _CB_Data CB_Data;
 
 struct _CB_Data
 {
-   Ecore_List2 __list_data;
+   EINA_INLIST;
    void (*cb_done) (void *data, struct hostent *hostent);
    void *data;
    Ecore_Fd_Handler *fdh;
@@ -56,8 +66,8 @@ static int _ecore_con_dns_data_handler(void *data, Ecore_Fd_Handler *fd_handler)
 static int _ecore_con_dns_exit_handler(void *data, int type __UNUSED__, void *event);
 
 static int dns_init = 0;
-static Ecore_List2 *dns_slaves = NULL;
-  
+static CB_Data *dns_slaves = NULL;
+
 int
 ecore_con_dns_init(void)
 {
@@ -71,7 +81,7 @@ ecore_con_dns_shutdown(void)
    dns_init--;
    if (dns_init == 0)
      {
-	while (dns_slaves) _ecore_con_dns_slave_free((CB_Data *)dns_slaves);
+	while (dns_slaves) _ecore_con_dns_slave_free(dns_slaves);
      }
    return dns_init;
 }
@@ -83,7 +93,7 @@ ecore_con_dns_lookup(const char *name,
 {
    CB_Data *cbdata;
    int fd[2];
-   
+
    if (pipe(fd) < 0) return 0;
    cbdata = calloc(1, sizeof(CB_Data));
    if (!cbdata)
@@ -95,7 +105,7 @@ ecore_con_dns_lookup(const char *name,
    cbdata->cb_done = done_cb;
    cbdata->data = data;
    cbdata->fd2 = fd[1];
-   if (!(cbdata->fdh = ecore_main_fd_handler_add(fd[0], ECORE_FD_READ, 
+   if (!(cbdata->fdh = ecore_main_fd_handler_add(fd[0], ECORE_FD_READ,
 						 _ecore_con_dns_data_handler,
 						 cbdata,
 						 NULL, NULL)))
@@ -105,17 +115,17 @@ ecore_con_dns_lookup(const char *name,
 	close(fd[1]);
 	return 0;
      }
-			     
+
    if ((cbdata->pid = fork()) == 0)
      {
 	struct hostent *he;
-	
+
 	/* CHILD */
 	he = gethostbyname(name);
 	if (he)
 	  {
 	     struct in_addr addr;
-	     
+
 	     memcpy((struct in_addr *)&addr, he->h_addr,
 		    sizeof(struct in_addr));
 	     write(fd[1], &(addr.s_addr), sizeof(in_addr_t));
@@ -127,9 +137,9 @@ ecore_con_dns_lookup(const char *name,
 	close(fd[1]);
 # ifdef __USE_ISOC99
 	_Exit(0);
-# else	
+# else
 	_exit(0);
-# endif	
+# endif
      }
    /* PARENT */
    cbdata->handler = ecore_event_handler_add(ECORE_EXE_EVENT_DEL, _ecore_con_dns_exit_handler, cbdata);
@@ -141,7 +151,7 @@ ecore_con_dns_lookup(const char *name,
 	close(fd[0]);
 	return 0;
      }
-   dns_slaves = _ecore_list2_append(dns_slaves, cbdata);
+   dns_slaves = (CB_Data *) eina_inlist_append(EINA_INLIST_GET(dns_slaves), EINA_INLIST_GET(cbdata));
    return 1;
 }
 
@@ -171,7 +181,7 @@ _ecore_con_dns_readdata(CB_Data *cbdata)
 static void
 _ecore_con_dns_slave_free(CB_Data *cbdata)
 {
-   dns_slaves = _ecore_list2_remove(dns_slaves, cbdata);
+   dns_slaves = (CB_Data *) eina_inlist_remove(EINA_INLIST_GET(dns_slaves), EINA_INLIST_GET(cbdata));
    close(ecore_main_fd_handler_fd_get(cbdata->fdh));
    ecore_main_fd_handler_del(cbdata->fdh);
    ecore_event_handler_del(cbdata->handler);
@@ -203,7 +213,7 @@ _ecore_con_dns_exit_handler(void *data, int type __UNUSED__, void *event)
 {
    CB_Data *cbdata;
    Ecore_Exe_Event_Del *ev;
-   
+
    ev = event;
    cbdata = data;
    if (cbdata->pid != ev->pid) return 1;

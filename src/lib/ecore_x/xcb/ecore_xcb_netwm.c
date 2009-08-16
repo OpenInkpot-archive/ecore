@@ -6,7 +6,11 @@
  * _NET_WM... aka Extended Window Manager Hint (EWMH) functions.
  */
 
-#include "Ecore_Data.h"
+#include <stdio.h>
+#include <string.h>
+
+#include <Ecore_Data.h>
+
 #include "ecore_xcb_private.h"
 #include "Ecore_X_Atoms.h"
 
@@ -2201,6 +2205,10 @@ _ecore_x_netwm_action_atom_get(Ecore_X_Action action)
 	 return ECORE_X_ATOM_NET_WM_ACTION_CHANGE_DESKTOP;
       case ECORE_X_ACTION_CLOSE:
 	 return ECORE_X_ATOM_NET_WM_ACTION_CLOSE;
+      case ECORE_X_ACTION_ABOVE:
+	 return ECORE_X_ATOM_NET_WM_ACTION_ABOVE;
+      case ECORE_X_ACTION_BELOW:
+	 return ECORE_X_ATOM_NET_WM_ACTION_BELOW;
       default:
 	 return 0;
      }

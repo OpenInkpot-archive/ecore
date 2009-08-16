@@ -2,6 +2,12 @@
  * vim:ts=8:sw=3:sts=8:noexpandtab:cino=>5n-3f0^-2{2
  */
 
+#ifdef HAVE_CONFIG_H
+# include <config.h>
+#endif
+
+#include <stdlib.h>
+
 #include "ecore_x_private.h"
 #include "Ecore_X.h"
 
@@ -137,7 +143,7 @@ ecore_x_region_new_from_picture(Ecore_X_Picture picture)
 }
 
 EAPI void
-ecore_x_region_del(Ecore_X_Region region)
+ecore_x_region_free(Ecore_X_Region region)
 {
 #ifdef ECORE_XFIXES
    XFixesDestroyRegion(_ecore_x_disp, region);

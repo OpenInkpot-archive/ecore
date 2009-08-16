@@ -20,9 +20,12 @@ AM_CPPFLAGS = \
 -I$(top_srcdir)/src/lib/ecore \
 -I$(top_srcdir)/src/lib/ecore_txt \
 -I$(top_srcdir)/src/lib/ecore_x \
+-I$(top_srcdir)/src/lib/ecore_input \
 -I$(top_builddir)/src/lib/ecore \
 -I$(top_builddir)/src/lib/ecore_txt \
 -I$(top_builddir)/src/lib/ecore_x \
+-I$(top_builddir)/src/lib/ecore_input \
+@EVAS_CFLAGS@ \
 @EINA_CFLAGS@
 
 noinst_LTLIBRARIES = libecore_x_xcb.la
@@ -44,6 +47,7 @@ ecore_xcb_mwm.c \
 ecore_xcb_netwm.c \
 ecore_xcb_pixmap.c \
 ecore_xcb_randr.c \
+ecore_xcb_region.c \
 ecore_xcb_reply.c \
 ecore_xcb_screensaver.c \
 ecore_xcb_selection.c \
@@ -71,6 +75,7 @@ libecore_x_xcb_la_LIBADD = \
 @XCB_LIBS@ \
 $(top_builddir)/src/lib/ecore/libecore.la \
 $(top_builddir)/src/lib/ecore_txt/libecore_txt.la \
+$(top_builddir)/src/lib/ecore_input/libecore_input.la \
 @EINA_LIBS@
 
 libecore_x_xcb_la_LDFLAGS = -version-info @version_info@

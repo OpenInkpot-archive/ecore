@@ -1,27 +1,20 @@
-
 #ifdef HAVE_CONFIG_H
 # include <config.h>
 #endif
 
-#include "Ecore.h"
+#include <Ecore.h>
+#include <Ecore_Input.h>
+
 #include "ecore_private.h"
 #include "ecore_evas_private.h"
 #include "Ecore_Evas.h"
 
-#ifdef BUILD_ECORE_EVAS_BUFFER
+#ifdef BUILD_ECORE_EVAS_SOFTWARE_BUFFER
 static int _ecore_evas_init_count = 0;
 
 static int _ecore_evas_fps_debug = 0;
 
 static Ecore_Evas *ecore_evases = NULL;
-
-static void
-_ecore_evas_mouse_move_process(Ecore_Evas *ee, int x, int y, unsigned int timestamp)
-{
-   ee->mouse.x = x;
-   ee->mouse.y = y;
-   evas_event_feed_mouse_move(ee->evas, x, y, timestamp, NULL);
-}
 
 static int
 _ecore_evas_buffer_init(void)
@@ -36,8 +29,6 @@ _ecore_evas_buffer_init(void)
 static void
 _ecore_evas_buffer_free(Ecore_Evas *ee)
 {
-   ecore_evases = _ecore_list2_remove(ecore_evases, ee);
-   _ecore_evas_buffer_shutdown();
    if (ee->engine.buffer.image)
      {
 	Ecore_Evas *ee2;
@@ -47,7 +38,12 @@ _ecore_evas_buffer_free(Ecore_Evas *ee)
 	ee2->sub_ecore_evas = eina_list_remove(ee2->sub_ecore_evas, ee);
      }
    else
-     free(ee->engine.buffer.pixels);
+     {
+	ecore_evases = (Ecore_Evas *) eina_inlist_remove(EINA_INLIST_GET(ecore_evases), EINA_INLIST_GET(ee));
+
+	free(ee->engine.buffer.pixels);
+     }
+   _ecore_evas_buffer_shutdown();
 }
 
 static void
@@ -97,7 +93,7 @@ _ecore_evas_buffer_shutdown(void)
      {
 	while (ecore_evases)
 	  {
-	     _ecore_evas_free((Ecore_Evas *)ecore_evases);
+	     _ecore_evas_free(ecore_evases);
 	  }
 	if (_ecore_evas_fps_debug) _ecore_evas_fps_debug_shutdown();
      }
@@ -128,7 +124,7 @@ _ecore_evas_buffer_render(Ecore_Evas *ee)
    updates = evas_render_updates(ee->evas);
    if (ee->engine.buffer.image)
      {
-        Evas_Rectangle *r;
+        Eina_Rectangle *r;
 
 	EINA_LIST_FOREACH(updates, l, r)
 	  if (ee->engine.buffer.image)
@@ -422,7 +418,6 @@ static const Ecore_Evas_Engine_Func _ecore_buffer_engine_func =
      NULL,
      NULL,
      NULL,
-     NULL,
      NULL
 };
 #endif
@@ -435,7 +430,7 @@ static const Ecore_Evas_Engine_Func _ecore_buffer_engine_func =
 EAPI Ecore_Evas *
 ecore_evas_buffer_new(int w, int h)
 {
-#ifdef BUILD_ECORE_EVAS_BUFFER
+#ifdef BUILD_ECORE_EVAS_SOFTWARE_BUFFER
    Evas_Engine_Info_Buffer *einfo;
    Ecore_Evas *ee;
    int rmethod;
@@ -504,7 +499,7 @@ ecore_evas_buffer_new(int w, int h)
 
    evas_event_feed_mouse_in(ee->evas, 0, NULL);
 
-   ecore_evases = _ecore_list2_prepend(ecore_evases, ee);
+   ecore_evases = (Ecore_Evas *) eina_inlist_prepend(EINA_INLIST_GET(ecore_evases), EINA_INLIST_GET(ee));
    return ee;
 #else
    return NULL;
@@ -514,7 +509,7 @@ ecore_evas_buffer_new(int w, int h)
 EAPI const void *
 ecore_evas_buffer_pixels_get(Ecore_Evas *ee)
 {
-#ifdef BUILD_ECORE_EVAS_BUFFER
+#ifdef BUILD_ECORE_EVAS_SOFTWARE_BUFFER
    _ecore_evas_buffer_render(ee);
    return ee->engine.buffer.pixels;
 #else
@@ -525,7 +520,7 @@ ecore_evas_buffer_pixels_get(Ecore_Evas *ee)
 EAPI Evas_Object *
 ecore_evas_object_image_new(Ecore_Evas *ee_target)
 {
-#ifdef BUILD_ECORE_EVAS_BUFFER
+#ifdef BUILD_ECORE_EVAS_SOFTWARE_BUFFER
    Evas_Object *o;
    Evas_Engine_Info_Buffer *einfo;
    Ecore_Evas *ee;

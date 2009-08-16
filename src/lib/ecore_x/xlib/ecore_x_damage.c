@@ -2,6 +2,11 @@
  * vim:ts=8:sw=3:sts=8:noexpandtab:cino=>5n-3f0^-2{2
  */
 
+#ifdef HAVE_CONFIG_H
+# include <config.h>
+#endif
+
+
 #include "ecore_x_private.h"
 #include "Ecore_X.h"
 
@@ -46,7 +51,7 @@ ecore_x_damage_new(Ecore_X_Drawable d, Ecore_X_Damage_Report_Level level)
 }
 
 EAPI void
-ecore_x_damage_del(Ecore_X_Damage damage)
+ecore_x_damage_free(Ecore_X_Damage damage)
 {
 #ifdef ECORE_XDAMAGE
    XDamageDestroy(_ecore_x_disp, damage);

@@ -2,6 +2,8 @@
  * vim:ts=8:sw=3:sts=8:noexpandtab:cino=>5n-3f0^-2{2
  */
 
+#include <string.h>
+
 #include "Ecore.h"
 #include "ecore_xcb_private.h"
 #include "Ecore_X_Atoms.h"
@@ -354,7 +356,7 @@ ecore_x_dnd_type_set(Ecore_X_Window window,
  */
 EAPI void
 ecore_x_dnd_types_set(Ecore_X_Window window,
-                      char         **types,
+                      const char   **types,
                       unsigned int   num_types)
 {
    Ecore_X_Atom *newset = NULL;

@@ -1,7 +1,28 @@
+/*
+ * vim:ts=8:sw=3:sts=8:noexpandtab:cino=>5n-3f0^-2{2
+ */
+
+#ifdef HAVE_CONFIG_H
+# include <config.h>
+#endif
+
+#if defined (__FreeBSD__) || defined (__OpenBSD__) || defined (__NetBSD__)
+#include <sys/time.h>
+#include <sys/resource.h>
+#endif
+
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
 #include <errno.h>
+#include <sys/types.h>
+#include <unistd.h>
+#include <fcntl.h>
+
 #ifdef HAVE_SYS_WAIT_H
 # include <sys/wait.h>
-#endif /* HAVE_SYS_WAIT_H */
+#endif
+
 #include "ecore_private.h"
 #include "Ecore.h"
 
@@ -561,7 +582,7 @@ ecore_exe_pipe_run(const char *exe_cmd, Ecore_Exe_Flags flags, const void *data)
 		       }
 		    }
 
-		  exes = _ecore_list2_append(exes, exe);
+		  exes = (Ecore_Exe *) eina_inlist_append(EINA_INLIST_GET(exes), EINA_INLIST_GET(exe));
 		  n = 0;
 	       }
 	     else
@@ -938,7 +959,7 @@ ecore_exe_free(Ecore_Exe * exe)
    IF_FREE(exe->error_data_buf);
    IF_FREE(exe->cmd);
 
-   exes = _ecore_list2_remove(exes, exe);
+   exes = (Ecore_Exe *) eina_inlist_remove(EINA_INLIST_GET(exes), EINA_INLIST_GET(exe));
    ECORE_MAGIC_SET(exe, ECORE_MAGIC_NONE);
    IF_FREE(exe->tag);
    free(exe);
@@ -1281,13 +1302,9 @@ _ecore_exe_shutdown(void)
 Ecore_Exe          *
 _ecore_exe_find(pid_t pid)
 {
-   Ecore_List2        *l;
-
-   for (l = (Ecore_List2 *) exes; l; l = l->next)
+   Ecore_Exe *exe;
+   EINA_INLIST_FOREACH(exes, exe)
      {
-	Ecore_Exe          *exe;
-
-	exe = (Ecore_Exe *) l;
 	if (exe->pid == pid)
 	   return exe;
      }

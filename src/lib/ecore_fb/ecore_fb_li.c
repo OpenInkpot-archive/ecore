@@ -1,9 +1,17 @@
+/*
+ * vim:ts=8:sw=3:sts=8:noexpandtab:cino=>5n-3f0^-2{2
+ */
+
+#ifdef HAVE_CONFIG_H
+# include <config.h>
+#endif
+
 #include "Ecore_Fb.h"
 #include "ecore_fb_private.h"
 
 #define CLICK_THRESHOLD_DEFAULT 0.25
 
-static Ecore_List *_ecore_fb_li_devices = NULL;
+static Eina_List *_ecore_fb_li_devices = NULL;
 
 static const char *_ecore_fb_li_kbd_syms[128 * 6] =
 {
@@ -20,7 +28,7 @@ static const char *_ecore_fb_li_kbd_syms[128 * 6] =
  * size.
  *						- bigeasy
  */
-extern int long_has_neither_32_not_64_bits(void);
+extern int long_has_neither_32_nor_64_bits(void);
 static inline int test_bit(int bit, unsigned long *array)
 {
 	if (sizeof(long) == 4)
@@ -250,15 +258,15 @@ _ecore_fb_li_device_event_rel(Ecore_Fb_Input_Device *dev, struct input_event *ie
 static void
 _ecore_fb_li_device_event_abs(Ecore_Fb_Input_Device *dev, struct input_event *iev)
 {
+	static int prev_pressure = 0;
+	int pressure;
+
 	if(!dev->listen)
 		return;
 	switch(iev->code)
 	{
 		case ABS_X:
-		case ABS_Y:
-		{
-			Ecore_Fb_Event_Mouse_Move *ev;
-			if((iev->code == ABS_X) && (dev->mouse.w != 0))
+			if(dev->mouse.w != 0)
 			{
 				int tmp;
 
@@ -269,8 +277,12 @@ _ecore_fb_li_device_event_abs(Ecore_Fb_Input_Device *dev, struct input_event *ie
 					dev->mouse.x = dev->mouse.w;
 				else
 					dev->mouse.x = tmp;
+				dev->mouse.event = ECORE_FB_EVENT_MOUSE_MOVE;
 			}
-			else if((iev->code == ABS_Y) && (dev->mouse.h != 0))
+			break;
+
+		case ABS_Y:
+			if(dev->mouse.h != 0)
 			{
 				int tmp;
 
@@ -281,18 +293,59 @@ _ecore_fb_li_device_event_abs(Ecore_Fb_Input_Device *dev, struct input_event *ie
 					dev->mouse.y = dev->mouse.h;
 				else
 					dev->mouse.y = tmp;
+				dev->mouse.event = ECORE_FB_EVENT_MOUSE_MOVE;
 			}
-			ev = calloc(1,sizeof(Ecore_Fb_Event_Mouse_Move));
-			ev->x = dev->mouse.x;
-			ev->y = dev->mouse.y;
-			ev->dev = dev;
+			break;
 
-			ecore_event_add(ECORE_FB_EVENT_MOUSE_MOVE, ev, NULL, NULL);
-			break;
-		}
 		case ABS_PRESSURE:
-			/* TODO emulate a button press */
+			pressure = iev->value;
+			if ((pressure) && (!prev_pressure))
+			{
+				/* DOWN: mouse is down, but was not now */
+				dev->mouse.event = ECORE_FB_EVENT_MOUSE_BUTTON_DOWN;
+			}
+			else if ((!pressure) && (prev_pressure))
+			{
+				/* UP: mouse was down, but is not now */
+				dev->mouse.event = ECORE_FB_EVENT_MOUSE_BUTTON_UP;
+			}
+			prev_pressure = pressure;
 			break;
+	}
+}
+
+static void
+_ecore_fb_li_device_event_syn(Ecore_Fb_Input_Device *dev, struct input_event *iev)
+{
+	if(!dev->listen)
+		return;
+
+	if(dev->mouse.event == ECORE_FB_EVENT_MOUSE_MOVE)
+	{
+		Ecore_Fb_Event_Mouse_Move *ev;
+		ev = calloc(1,sizeof(Ecore_Fb_Event_Mouse_Move));
+		ev->x = dev->mouse.x;
+		ev->y = dev->mouse.y;
+		ev->dev = dev;
+		ecore_event_add(ECORE_FB_EVENT_MOUSE_MOVE, ev, NULL, NULL);
+	}
+	else if(dev->mouse.event == ECORE_FB_EVENT_MOUSE_BUTTON_DOWN)
+	{
+		Ecore_Fb_Event_Mouse_Button_Down *ev;
+		ev = calloc(1, sizeof(Ecore_Fb_Event_Mouse_Button_Down));
+		ev->x = dev->mouse.x;
+		ev->y = dev->mouse.y;
+		ev->button = 1;
+		ecore_event_add(ECORE_FB_EVENT_MOUSE_BUTTON_DOWN, ev, NULL, NULL);
+	}
+	else if(dev->mouse.event == ECORE_FB_EVENT_MOUSE_BUTTON_UP)
+	{
+		Ecore_Fb_Event_Mouse_Button_Up *ev;
+		ev = calloc(1, sizeof(Ecore_Fb_Event_Mouse_Button_Up));
+		ev->x = dev->mouse.x;
+		ev->y = dev->mouse.y;
+		ev->button = 1;
+		ecore_event_add(ECORE_FB_EVENT_MOUSE_BUTTON_UP, ev, NULL, NULL);
 	}
 }
 
@@ -312,6 +365,9 @@ _ecore_fb_li_device_fd_callback(void *data, Ecore_Fd_Handler *fdh)
 	{
 		switch(ev[i].type)
 		{
+			case EV_SYN:
+				_ecore_fb_li_device_event_syn(dev, &ev[i]);
+				break;
 			case EV_ABS:
 				_ecore_fb_li_device_event_abs(dev, &ev[i]);
 				break;
@@ -365,9 +421,6 @@ ecore_fb_input_device_open(const char *dev)
 	if(!dev) return NULL;
 	device = calloc(1, sizeof(Ecore_Fb_Input_Device));
 	if(!device) return NULL;
-
-	if(!_ecore_fb_li_devices)
-		_ecore_fb_li_devices = ecore_list_new();
 
 	if((fd = open(dev, O_RDONLY, O_NONBLOCK)) < 0)
 	{
@@ -425,7 +478,7 @@ ecore_fb_input_device_open(const char *dev)
 			break;
 		}
 	}
-	ecore_list_append(_ecore_fb_li_devices, device);
+	_ecore_fb_li_devices = eina_list_append(_ecore_fb_li_devices, device);
 	return device;
 
 	error_caps:
@@ -442,8 +495,7 @@ ecore_fb_input_device_close(Ecore_Fb_Input_Device *dev)
 	/* close the fd */
 	close(dev->fd);
 	/* remove the element from the list */
-	if(ecore_list_goto(_ecore_fb_li_devices, dev))
-		ecore_list_remove(_ecore_fb_li_devices);
+	_ecore_fb_li_devices = eina_list_remove(_ecore_fb_li_devices, dev);
 	free(dev);
 }
 

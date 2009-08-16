@@ -2,7 +2,27 @@
  * vim:ts=8:sw=3:sts=8:noexpandtab:cino=>5n-3f0^-2{2
  */
 
-#include "config.h"
+#ifdef HAVE_CONFIG_H
+# include <config.h>
+#endif
+
+#ifdef HAVE_ALLOCA_H
+# include <alloca.h>
+#elif defined __GNUC__
+# define alloca __builtin_alloca
+#elif defined _AIX
+# define alloca __alloca
+#elif defined _MSC_VER
+# include <malloc.h>
+# define alloca _alloca
+#else
+# include <stddef.h>
+# ifdef  __cplusplus
+extern "C"
+# endif
+void *alloca (size_t);
+#endif
+
 #include "Ecore.h"
 #include "ecore_x_private.h"
 #include "Ecore_X.h"
@@ -151,6 +171,8 @@ _ecore_x_atoms_init(void)
 	{ "_NET_WM_ACTION_FULLSCREEN", &ECORE_X_ATOM_NET_WM_ACTION_FULLSCREEN },
 	{ "_NET_WM_ACTION_CHANGE_DESKTOP", &ECORE_X_ATOM_NET_WM_ACTION_CHANGE_DESKTOP },
 	{ "_NET_WM_ACTION_CLOSE", &ECORE_X_ATOM_NET_WM_ACTION_CLOSE },
+	{ "_NET_WM_ACTION_ABOVE", &ECORE_X_ATOM_NET_WM_ACTION_ABOVE },
+	{ "_NET_WM_ACTION_BELOW", &ECORE_X_ATOM_NET_WM_ACTION_BELOW },
 
 	{ "_NET_WM_STRUT", &ECORE_X_ATOM_NET_WM_STRUT },
 	{ "_NET_WM_STRUT_PARTIAL", &ECORE_X_ATOM_NET_WM_STRUT_PARTIAL },
@@ -171,9 +193,9 @@ _ecore_x_atoms_init(void)
 	{ "_NET_WM_WINDOW_SHADE", &ECORE_X_ATOM_NET_WM_WINDOW_SHADE },
 
 	{ "TARGETS", &ECORE_X_ATOM_SELECTION_TARGETS },
+	{ "CLIPBOARD", &ECORE_X_ATOM_SELECTION_CLIPBOARD },
 	{ "PRIMARY", &ECORE_X_ATOM_SELECTION_PRIMARY },
 	{ "SECONDARY", &ECORE_X_ATOM_SELECTION_SECONDARY },
-	{ "CLIPBOARD", &ECORE_X_ATOM_SELECTION_CLIPBOARD },
 	{ "_ECORE_SELECTION_PRIMARY", &ECORE_X_ATOM_SELECTION_PROP_PRIMARY },
 	{ "_ECORE_SELECTION_SECONDARY", &ECORE_X_ATOM_SELECTION_PROP_SECONDARY },
 	{ "_ECORE_SELECTION_CLIPBOARD", &ECORE_X_ATOM_SELECTION_PROP_CLIPBOARD },
@@ -200,4 +222,46 @@ _ecore_x_atoms_init(void)
    for (i = 0; i < num; i++) names[i] = (char *)items[i].name;
    XInternAtoms(_ecore_x_disp, names, num, False, atoms);
    for (i = 0; i < num; i++) *(items[i].atom) = atoms[i];
+}
+
+/**
+ * Retrieves the atom value associated with the given name.
+ * @param  name The given name.
+ * @return Associated atom value.
+ */
+EAPI Ecore_X_Atom
+ecore_x_atom_get(const char *name)
+{
+   if (!_ecore_x_disp) return 0;
+   return XInternAtom(_ecore_x_disp, name, False);
+}
+
+EAPI void
+ecore_x_atoms_get(const char **names, int num, Ecore_X_Atom *atoms)
+{
+   Atom *atoms_int;
+   int i;
+
+   if (!_ecore_x_disp) return;
+   atoms_int = alloca(num * sizeof(Atom));
+   XInternAtoms(_ecore_x_disp, (char **)names, num, False, atoms_int);
+   for (i = 0; i < num; i++)
+     atoms[i] = atoms_int[i];
+}
+
+EAPI char *
+ecore_x_atom_name_get(Ecore_X_Atom atom)
+{
+   char *name;
+   char *xname;
+
+   if (!_ecore_x_disp) return NULL;
+
+   xname = XGetAtomName(_ecore_x_disp, atom);
+   if (!xname) return NULL;
+
+   name = strdup(xname);
+   XFree(xname);
+
+   return name;
 }

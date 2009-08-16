@@ -5,6 +5,7 @@ if BUILD_ECORE_X_XLIB
 
 AM_CPPFLAGS = \
 @Xcursor_cflags@ \
+@XKB_CFLAGS@ \
 @XDAMAGE_CFLAGS@ \
 @XCOMPOSITE_CFLAGS@ \
 @XDPMS_CFLAGS@ \
@@ -19,9 +20,12 @@ AM_CPPFLAGS = \
 -I$(top_srcdir)/src/lib/ecore \
 -I$(top_srcdir)/src/lib/ecore_txt \
 -I$(top_srcdir)/src/lib/ecore_x \
+-I$(top_srcdir)/src/lib/ecore_input \
 -I$(top_builddir)/src/lib/ecore \
 -I$(top_builddir)/src/lib/ecore_txt \
 -I$(top_builddir)/src/lib/ecore_x \
+-I$(top_builddir)/src/lib/ecore_input \
+@EVAS_CFLAGS@ \
 @EINA_CFLAGS@
 
 noinst_LTLIBRARIES = libecore_x_xlib.la
@@ -52,10 +56,12 @@ ecore_x_dpms.c \
 ecore_x_drawable.c \
 ecore_x_cursor.c \
 ecore_x_test.c \
-ecore_x_atoms.c
+ecore_x_atoms.c \
+ecore_x_region.c
 
 libecore_x_xlib_la_LIBADD = \
 @Xcursor_libs@ \
+@XKB_LIBS@ \
 @XDAMAGE_LIBS@ \
 @XCOMPOSITE_LIBS@ \
 @XDPMS_LIBS@ \
@@ -69,6 +75,7 @@ libecore_x_xlib_la_LIBADD = \
 @x_libs@ \
 $(top_builddir)/src/lib/ecore/libecore.la \
 $(top_builddir)/src/lib/ecore_txt/libecore_txt.la \
+$(top_builddir)/src/lib/ecore_input/libecore_input.la \
 @EINA_LIBS@
 
 libecore_x_xlib_la_LDFLAGS = -version-info @version_info@

@@ -1,3 +1,14 @@
+/*
+ * vim:ts=8:sw=3:sts=8:noexpandtab:cino=>5n-3f0^-2{2
+ */
+
+#ifdef HAVE_CONFIG_H
+# include <config.h>
+#endif
+
+#include <stdio.h>
+#include <string.h>
+
 #include "ecore_private.h"
 #include "Ecore_DirectFB.h"
 #include "ecore_directfb_private.h"
@@ -495,7 +506,7 @@ ecore_directfb_window_new(int x, int y, int w, int h)
 }
 
 EAPI void
-ecore_directfb_window_del(Ecore_DirectFB_Window *ecore_window)
+ecore_directfb_window_free(Ecore_DirectFB_Window *ecore_window)
 {
 	DFBCHECK(ecore_window->surface->Release(ecore_window->surface));
 	DFBCHECK(ecore_window->window->Release(ecore_window->window));
@@ -643,7 +654,7 @@ ecore_directfb_window_size_get(Ecore_DirectFB_Window *ecore_window, int *w, int 
 }
 
 EAPI int
-ecore_directfb_init(const char *name)
+ecore_directfb_init(const char *name __UNUSED__)
 {
 	int i = 0;
 	
@@ -695,8 +706,6 @@ ecore_directfb_init(const char *name)
 EAPI int
 ecore_directfb_shutdown(void)
 {
-	int i;
-
 	_ecore_directfb_init_count--;
 	if (_ecore_directfb_init_count > 0) return _ecore_directfb_init_count;
 	if (_ecore_directfb_init_count < 0)

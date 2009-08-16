@@ -2,12 +2,18 @@
  * vim:ts=8:sw=3:sts=8:noexpandtab:cino=>5n-3f0^-2{2
  */
 
-#include <limits.h>
+#ifdef HAVE_CONFIG_H
+# include <config.h>
+#endif
+
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+#include <limits.h>
 
-#include "config.h"
+#include <ecore_private.h>
 
+#include "Ecore_IMF.h"
 #include "ecore_imf_private.h"
 
 static void _ecore_imf_module_load_all(void);
@@ -63,32 +69,24 @@ ecore_imf_module_shutdown(void)
 static Eina_Bool
 _hash_module_available_get(const Eina_Hash *hash, int *data, void *list)
 {
-  ecore_list_append(list, data);
+  *(Eina_List**)list = eina_list_append(*(Eina_List**)list, data);
   return EINA_TRUE;
 }
 
-Ecore_List *
+Eina_List *
 ecore_imf_module_available_get(void)
 {
-   Ecore_List *values;
+   Eina_List *values = NULL;
    Eina_Iterator *it = NULL;
 
    if (!modules) return NULL;
 
-   values = ecore_list_new();
-   if (!values) return NULL;
-
    it = eina_hash_iterator_data_new(modules);
    if (!it)
-     {
-       ecore_list_destroy(values);
        return NULL;
-     }
 
-   eina_iterator_foreach(it, EINA_EACH(_hash_module_available_get), values);
+   eina_iterator_foreach(it, EINA_EACH(_hash_module_available_get), &values);
    eina_iterator_free(it);
-
-   ecore_list_first_goto(values);
 
    return values;
 }
@@ -125,29 +123,23 @@ ecore_imf_module_context_create(const char *ctx_id)
 static Eina_Bool
 _hash_ids_get(const Eina_Hash *hash, const char *key, void *list)
 {
-  ecore_list_append(list, key);
+  *(Eina_List**)list = eina_list_append(*(Eina_List**)list, key);
   return EINA_TRUE;
 }
 
-Ecore_List *
+Eina_List *
 ecore_imf_module_context_ids_get(void)
 {
-   Ecore_List *l = NULL;
+   Eina_List *l = NULL;
    Eina_Iterator *it = NULL;
 
    if (!modules) return NULL;
 
-   l = ecore_list_new();
-   if (!l) return NULL;
-
    it = eina_hash_iterator_key_new(modules);
    if (!it)
-     {
-       ecore_list_destroy(l);
        return NULL;
-     }
 
-   eina_iterator_foreach(it, EINA_EACH(_hash_ids_get), l);
+   eina_iterator_foreach(it, EINA_EACH(_hash_ids_get), &l);
    eina_iterator_free(it);
 
    return l;
@@ -160,16 +152,16 @@ _hash_ids_by_canvas_type_get(const Eina_Hash *hash, void *data, void *fdata)
    Ecore_IMF_Selector *selector = fdata;
 
    if (!strcmp(module->info->canvas_type, selector->toselect))
-     ecore_list_append(selector->selected, (void *)module->info->id);
+     selector->selected = eina_list_append(selector->selected, (void *)module->info->id);
 
    return EINA_TRUE;
 }
 
-Ecore_List *
+Eina_List *
 ecore_imf_module_context_ids_by_canvas_type_get(const char *canvas_type)
 {
    Ecore_IMF_Selector selector;
-   Ecore_List *values;
+   Eina_List *values = NULL;
    Eina_Iterator *it = NULL;
 
    if (!modules) return NULL;
@@ -177,22 +169,14 @@ ecore_imf_module_context_ids_by_canvas_type_get(const char *canvas_type)
    if (!canvas_type)
      return ecore_imf_module_context_ids_get();
 
-   values = ecore_list_new();
-   if (!values) return NULL;
-
    it = eina_hash_iterator_data_new(modules);
    if (!it)
-     {
-       ecore_list_destroy(values);
        return NULL;
-     }
 
    selector.toselect = canvas_type;
    selector.selected = values;
    eina_iterator_foreach(it, EINA_EACH(_hash_ids_by_canvas_type_get), &selector);
    eina_iterator_free(it);
-
-   ecore_list_first_goto(values);
 
    return values;
 }
@@ -200,7 +184,7 @@ ecore_imf_module_context_ids_by_canvas_type_get(const char *canvas_type)
 static void
 _ecore_imf_module_load_all(void)
 {
-   Ecore_List *avail;
+   Eina_List *avail;
    char *filename;
    Ecore_Plugin *plugin;
    const Ecore_IMF_Context_Info *info = NULL;
@@ -210,8 +194,7 @@ _ecore_imf_module_load_all(void)
    avail = ecore_plugin_available_get(ecore_imf_modules_path);
    if (!avail) return;
 
-   ecore_list_first_goto(avail);
-   while ((filename = ecore_list_next(avail)))
+   EINA_LIST_FREE(avail, filename)
      {
 	plugin = ecore_plugin_load(ecore_imf_modules_path, filename, NULL);
 	if (!plugin)
@@ -252,8 +235,6 @@ _ecore_imf_module_load_all(void)
 
 	_ecore_imf_module_append(plugin, info, imf_module_create);
      }
-
-   ecore_list_destroy(avail);
 }
 
 static void
@@ -264,7 +245,7 @@ _ecore_imf_module_append(Ecore_Plugin *plugin,
    Ecore_IMF_Module *module;
 
    if (!modules)
-     modules = eina_hash_string_superfast_new(_ecore_imf_module_free);
+     modules = eina_hash_string_superfast_new(EINA_FREE_CB(_ecore_imf_module_free));
 
    module = malloc(sizeof(Ecore_IMF_Module));
    module->plugin = plugin;

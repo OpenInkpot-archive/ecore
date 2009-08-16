@@ -3,6 +3,7 @@ MAINTAINERCLEANFILES = Makefile.in
 AM_CPPFLAGS = \
 -I$(top_srcdir)/src/lib/ecore \
 -I$(top_builddir)/src/lib/ecore \
+@TSLIB_CFLAGS@ \
 @EINA_CFLAGS@
 
 if BUILD_ECORE_FB
@@ -21,11 +22,11 @@ ecore_fb_ts.c
 # ecore_fb_ps2.c
 
 libecore_fb_la_LIBADD = \
-@tslib_libs@ \
+@TSLIB_LIBS@ \
 $(top_builddir)/src/lib/ecore/libecore.la \
 @EINA_LIBS@
 
-libecore_fb_la_LDFLAGS = -version-info @version_info@
+libecore_fb_la_LDFLAGS = -version-info @version_info@ @ecore_fb_release_info@
 
 endif
 

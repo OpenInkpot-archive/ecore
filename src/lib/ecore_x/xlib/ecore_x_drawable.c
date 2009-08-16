@@ -2,6 +2,10 @@
  * vim:ts=8:sw=3:sts=8:noexpandtab:cino=>5n-3f0^-2{2
  */
 
+#ifdef HAVE_CONFIG_H
+# include <config.h>
+#endif
+
 #include "ecore_x_private.h"
 
 
@@ -81,4 +85,19 @@ ecore_x_drawable_depth_get(Ecore_X_Drawable d)
       depth_ret = 0;
 
    return (int) depth_ret;
+}
+
+/**
+ * Fill the specified rectangle on a drawable.
+ * @param d The given drawable.
+ * @param gc The graphic context that controls the fill rules.
+ * @param x The X coordinate of the top-left corner of the rectangle.
+ * @param y The Y coordinate of the top-left corner of the rectangle.
+ * @param width The width of the rectangle.
+ * @param height The height of the rectangle.
+ */
+EAPI void
+ecore_x_drawable_rectangle_fill(Ecore_X_Drawable d, Ecore_X_GC gc, int x, int y, int width, int height)
+{
+   XFillRectangle(_ecore_x_disp, d, gc, x, y, width, height);
 }

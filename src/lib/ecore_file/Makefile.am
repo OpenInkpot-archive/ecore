@@ -4,6 +4,7 @@ AM_CPPFLAGS = \
 -I$(top_srcdir)/src/lib/ecore \
 -I$(top_srcdir)/src/lib/ecore_con \
 -I$(top_builddir)/src/lib/ecore \
+@EFL_ECORE_FILE_BUILD@ \
 @CURL_CFLAGS@ \
 @EVIL_CFLAGS@ \
 @EINA_CFLAGS@ \
@@ -34,7 +35,7 @@ $(lib_ecore_con_la) \
 @EVIL_LIBS@ \
 @EINA_LIBS@
 
-libecore_file_la_LDFLAGS = -no-undefined @lt_enable_auto_import@ -version-info @version_info@
+libecore_file_la_LDFLAGS = -no-undefined @lt_enable_auto_import@ -version-info @version_info@ @ecore_file_release_info@
 
 endif
 

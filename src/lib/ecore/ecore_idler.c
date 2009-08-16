@@ -1,3 +1,13 @@
+/*
+ * vim:ts=8:sw=3:sts=8:noexpandtab:cino=>5n-3f0^-2{2
+ */
+
+#ifdef HAVE_CONFIG_H
+# include <config.h>
+#endif
+
+#include <stdlib.h>
+
 #include "ecore_private.h"
 #include "Ecore.h"
 
@@ -30,7 +40,7 @@ ecore_idler_add(int (*func) (void *data), const void *data)
    ECORE_MAGIC_SET(ie, ECORE_MAGIC_IDLER);
    ie->func = func;
    ie->data = (void *)data;
-   idlers = _ecore_list2_append(idlers, ie);
+   idlers = (Ecore_Idler *) eina_inlist_append(EINA_INLIST_GET(idlers), EINA_INLIST_GET(ie));
    return ie;
 }
 
@@ -58,12 +68,10 @@ ecore_idler_del(Ecore_Idler *idler)
 void
 _ecore_idler_shutdown(void)
 {
-   while (idlers)
+   Ecore_Idler *ie;
+   while ((ie = idlers))
      {
-	Ecore_Idler *ie;
-
-	ie = idlers;
-	idlers = _ecore_list2_remove(idlers, ie);
+	idlers = (Ecore_Idler *) eina_inlist_remove(EINA_INLIST_GET(idlers), EINA_INLIST_GET(idlers));
 	ECORE_MAGIC_SET(ie, ECORE_MAGIC_NONE);
 	free(ie);
      }
@@ -73,13 +81,10 @@ _ecore_idler_shutdown(void)
 int
 _ecore_idler_call(void)
 {
-   Ecore_List2 *l;
+   Ecore_Idler *ie;
 
-   for (l = (Ecore_List2 *)idlers; l; l = l->next)
+   EINA_INLIST_FOREACH(idlers, ie)
      {
-	Ecore_Idler *ie;
-
-	ie = (Ecore_Idler *)l;
 	if (!ie->delete_me)
 	  {
 	     if (!ie->func(ie->data)) ecore_idler_del(ie);
@@ -87,15 +92,14 @@ _ecore_idler_call(void)
      }
    if (idlers_delete_me)
      {
-	for (l = (Ecore_List2 *)idlers; l;)
+       Ecore_Idler *l;
+	for (l = idlers; l;)
 	  {
-	     Ecore_Idler *ie;
-
-	     ie = (Ecore_Idler *)l;
-	     l = l->next;
+	     ie = l;
+	     l = (Ecore_Idler *) EINA_INLIST_GET(l)->next;
 	     if (ie->delete_me)
 	       {
-		  idlers = _ecore_list2_remove(idlers, ie);
+		  idlers = (Ecore_Idler *) eina_inlist_remove(EINA_INLIST_GET(idlers), EINA_INLIST_GET(ie));
 		  ECORE_MAGIC_SET(ie, ECORE_MAGIC_NONE);
 		  free(ie);
 	       }

@@ -11,11 +11,14 @@
 # define USER_TIMER_MINIMUM 0x0a
 #endif
 
+#include <stdlib.h>
+#include <stdio.h>
 #include <math.h>
 #include <sys/time.h>
 #include <sys/types.h>
 #include <unistd.h>
 #include <errno.h>
+#include <fcntl.h>
 
 #define FIX_HZ 1
 
@@ -26,19 +29,35 @@
 # endif
 #endif
 
+#ifdef HAVE_EVIL
+# include <Evil.h>
+#endif
+
 #include "ecore_private.h"
 #include "Ecore.h"
 
 static int  _ecore_main_select(double timeout);
 static void _ecore_main_fd_handlers_cleanup(void);
+static void _ecore_main_fd_handlers_bads_rem(void);
 static void _ecore_main_fd_handlers_call(void);
 static int  _ecore_main_fd_handlers_buf_call(void);
 static void _ecore_main_loop_iterate_internal(int once_only);
+
+#ifdef _WIN32
+static int _ecore_main_win32_select(int nfds, fd_set *readfds, fd_set *writefds,
+				    fd_set *exceptfds, struct timeval *timeout);
+#endif
 
 static int               in_main_loop = 0;
 static int               do_quit = 0;
 static Ecore_Fd_Handler *fd_handlers = NULL;
 static int               fd_handlers_delete_me = 0;
+
+#ifdef _WIN32
+static int (*main_loop_select)(int , fd_set *, fd_set *, fd_set *, struct timeval *) = _ecore_main_win32_select;
+#else
+static int (*main_loop_select)(int , fd_set *, fd_set *, fd_set *, struct timeval *) = select;
+#endif
 
 static double            t1 = 0.0;
 static double            t2 = 0.0;
@@ -102,6 +121,37 @@ ecore_main_loop_quit(void)
 }
 
 /**
+ * Sets the function to use when monitoring multiple file descriptors,
+ * and waiting until one of more of the file descriptors before ready
+ * for some class of I/O operation.
+ *
+ * This function will be used instead of the system call select and
+ * could possible be used to integrate the Ecore event loop with an
+ * external event loop.
+ *
+ * @warning you don't know how to use, don't even try to use it.
+ *
+ * @ingroup Ecore_Main_Loop_Group
+ */
+EAPI void
+ecore_main_loop_select_func_set(int (*func)(int nfds, fd_set *readfds, fd_set *writefds, fd_set *exceptfds, struct timeval *timeout))
+{
+   main_loop_select = func;
+}
+
+/**
+ * Gets the select function set by ecore_select_func_set(),
+ * or the native select function if none was set.
+ *
+ * @ingroup Ecore_Main_Loop_Group
+ */
+EAPI void *
+ecore_main_loop_select_func_get(void)
+{
+   return main_loop_select;
+}
+
+/**
  * @defgroup Ecore_FD_Handler_Group File Event Handling Functions
  *
  * Functions that deal with file descriptor handlers.
@@ -147,6 +197,7 @@ ecore_main_fd_handler_add(int fd, Ecore_Fd_Handler_Flags flags, int (*func) (voi
    if ((fd < 0) ||
        (flags == 0) ||
        (!func)) return NULL;
+
    fdh = calloc(1, sizeof(Ecore_Fd_Handler));
    if (!fdh) return NULL;
    ECORE_MAGIC_SET(fdh, ECORE_MAGIC_FD_HANDLER);
@@ -160,7 +211,8 @@ ecore_main_fd_handler_add(int fd, Ecore_Fd_Handler_Flags flags, int (*func) (voi
    fdh->data = (void *)data;
    fdh->buf_func = buf_func;
    fdh->buf_data = (void *)buf_data;
-   fd_handlers = _ecore_list2_append(fd_handlers, fdh);
+   fd_handlers = (Ecore_Fd_Handler *) eina_inlist_append(EINA_INLIST_GET(fd_handlers),
+							 EINA_INLIST_GET(fdh));
    return fdh;
 }
 
@@ -277,7 +329,8 @@ _ecore_main_shutdown(void)
 	Ecore_Fd_Handler *fdh;
 
 	fdh = fd_handlers;
-	fd_handlers = _ecore_list2_remove(fd_handlers, fdh);
+	fd_handlers = (Ecore_Fd_Handler *) eina_inlist_remove(EINA_INLIST_GET(fd_handlers),
+							      EINA_INLIST_GET(fdh));
 	ECORE_MAGIC_SET(fdh, ECORE_MAGIC_NONE);
 	free(fdh);
      }
@@ -291,7 +344,7 @@ _ecore_main_select(double timeout)
    fd_set         rfds, wfds, exfds;
    int            max_fd;
    int            ret;
-   Ecore_List2    *l;
+   Ecore_Fd_Handler *fdh;
 
    t = NULL;
    if ((!finite(timeout)) || (timeout == 0.0))  /* finite() tests for NaN, too big, too small, and infinity.  */
@@ -303,11 +356,6 @@ _ecore_main_select(double timeout)
    else if (timeout > 0.0)
      {
 	int sec, usec;
-
-#if _WIN32
-        if (timeout > 0.05)
-          timeout = 0.05;
-#endif
 
 #ifdef FIX_HZ
 	timeout += (0.5 / HZ);
@@ -327,20 +375,11 @@ _ecore_main_select(double timeout)
    FD_ZERO(&exfds);
 
    /* call the prepare callback for all handlers */
-   for (l = (Ecore_List2 *)fd_handlers; l; l = l->next)
+   EINA_INLIST_FOREACH(fd_handlers, fdh)
+     if (!fdh->delete_me && fdh->prep_func)
+       fdh->prep_func (fdh->prep_data, fdh);
+   EINA_INLIST_FOREACH(fd_handlers, fdh)
      {
-	Ecore_Fd_Handler *fdh;
-
-	fdh = (Ecore_Fd_Handler *)l;
-
-	if (!fdh->delete_me && fdh->prep_func)
-	  fdh->prep_func (fdh->prep_data, fdh);
-     }
-   for (l = (Ecore_List2 *)fd_handlers; l; l = l->next)
-     {
-	Ecore_Fd_Handler *fdh;
-
-	fdh = (Ecore_Fd_Handler *)l;
 	if (fdh->flags & ECORE_FD_READ)
 	  {
 	     FD_SET(fdh->fd, &rfds);
@@ -358,29 +397,33 @@ _ecore_main_select(double timeout)
 	  }
      }
    if (_ecore_signal_count_get()) return -1;
-   ret = select(max_fd + 1, &rfds, &wfds, &exfds, t);
+
+   ret = main_loop_select(max_fd + 1, &rfds, &wfds, &exfds, t);
+
    _ecore_loop_time = ecore_time_get();
    if (ret < 0)
      {
+#ifdef _WIN32
+       fprintf(stderr, "main_loop_select error %d\n", WSAGetLastError());
+	if (WSAEINTR == WSAGetLastError()) return -1;
+#else
 	if (errno == EINTR) return -1;
+	else if (errno == EBADF)
+	     _ecore_main_fd_handlers_bads_rem();
+#endif
      }
    if (ret > 0)
      {
-	for (l = (Ecore_List2 *)fd_handlers; l; l = l->next)
-	  {
-	     Ecore_Fd_Handler *fdh;
-
-	     fdh = (Ecore_Fd_Handler *)l;
-	     if (!fdh->delete_me)
-	       {
-		  if (FD_ISSET(fdh->fd, &rfds))
-		    fdh->read_active = 1;
-		  if (FD_ISSET(fdh->fd, &wfds))
-		    fdh->write_active = 1;
-		  if (FD_ISSET(fdh->fd, &exfds))
-		    fdh->error_active = 1;
-	       }
-	  }
+	EINA_INLIST_FOREACH(fd_handlers, fdh)
+	  if (!fdh->delete_me)
+	    {
+	       if (FD_ISSET(fdh->fd, &rfds))
+		 fdh->read_active = 1;
+	       if (FD_ISSET(fdh->fd, &wfds))
+		 fdh->write_active = 1;
+	       if (FD_ISSET(fdh->fd, &exfds))
+		 fdh->error_active = 1;
+	    }
 	_ecore_main_fd_handlers_cleanup();
 	return 1;
      }
@@ -388,20 +431,61 @@ _ecore_main_select(double timeout)
 }
 
 static void
+_ecore_main_fd_handlers_bads_rem(void)
+{
+   fprintf(stderr, "Removing bad fds\n");
+   Ecore_Fd_Handler *fdh;
+   Eina_Inlist *l;
+
+   for (l = EINA_INLIST_GET(fd_handlers); l; )
+     {
+	fdh = (Ecore_Fd_Handler *) l;
+	l = l->next;
+	errno = 0;
+
+	if ((fcntl(fdh->fd, F_GETFD) < 0) && (errno == EBADF))
+	  {
+	     fprintf(stderr, "Found bad fd at index %d\n", fdh->fd);
+	     if (fdh->flags & ECORE_FD_ERROR)
+	       {
+		  fprintf(stderr, "Fd set for error! calling user\n");
+	         if (!fdh->func(fdh->data, fdh))
+		   {
+		     fprintf(stderr, "Fd function err returned 0, remove it\n");
+		     fdh->delete_me = 1;
+		     fd_handlers_delete_me = 1;
+		     _ecore_main_fd_handlers_cleanup();
+		   }
+	       }
+	     else
+	       {
+		  fprintf(stderr, "Problematic fd found at %d! setting it for delete\n", fdh->fd);
+		  fdh->delete_me = 1;
+		  fd_handlers_delete_me = 1;
+		  _ecore_main_fd_handlers_cleanup();
+	       }
+	  }
+
+    }
+}
+
+static void
 _ecore_main_fd_handlers_cleanup(void)
 {
-   Ecore_List2 *l;
+   Ecore_Fd_Handler *fdh;
+   Eina_Inlist *l;
 
    if (!fd_handlers_delete_me) return;
-   for (l = (Ecore_List2 *)fd_handlers; l;)
+   for (l = EINA_INLIST_GET(fd_handlers); l; )
      {
-	Ecore_Fd_Handler *fdh;
+	fdh = (Ecore_Fd_Handler *) l;
 
-	fdh = (Ecore_Fd_Handler *)l;
 	l = l->next;
 	if (fdh->delete_me)
 	  {
-	     fd_handlers = _ecore_list2_remove(fd_handlers, fdh);
+//	     fprintf(stderr, "Removing fd %d\n", fdh->fd);
+	     fd_handlers = (Ecore_Fd_Handler *) eina_inlist_remove(EINA_INLIST_GET(fd_handlers),
+								   EINA_INLIST_GET(fdh));
 	     ECORE_MAGIC_SET(fdh, ECORE_MAGIC_NONE);
 	     free(fdh);
 	  }
@@ -412,63 +496,54 @@ _ecore_main_fd_handlers_cleanup(void)
 static void
 _ecore_main_fd_handlers_call(void)
 {
-   Ecore_List2    *l;
+   Ecore_Fd_Handler *fdh;
 
-   for (l = (Ecore_List2 *)fd_handlers; l; l = l->next)
-     {
-	Ecore_Fd_Handler *fdh;
-
-	fdh = (Ecore_Fd_Handler *)l;
-	if (!fdh->delete_me)
-	  {
-	     if ((fdh->read_active) ||
-		 (fdh->write_active) ||
-		 (fdh->error_active))
-	       {
-		  if (!fdh->func(fdh->data, fdh))
-		    {
-		       fdh->delete_me = 1;
-		       fd_handlers_delete_me = 1;
-		    }
-		  fdh->read_active = 0;
+   EINA_INLIST_FOREACH(fd_handlers, fdh)
+     if (!fdh->delete_me)
+       {
+	  if ((fdh->read_active) ||
+	      (fdh->write_active) ||
+	      (fdh->error_active))
+	    {
+	       if (!fdh->func(fdh->data, fdh))
+		 {
+		    fdh->delete_me = 1;
+		    fd_handlers_delete_me = 1;
+		 }
+	       fdh->read_active = 0;
 		  fdh->write_active = 0;
 		  fdh->error_active = 0;
-	       }
-	  }
-     }
+	    }
+       }
 }
 
 static int
 _ecore_main_fd_handlers_buf_call(void)
 {
-   Ecore_List2    *l;
+   Ecore_Fd_Handler *fdh;
    int ret;
 
    ret = 0;
-   for (l = (Ecore_List2 *)fd_handlers; l; l = l->next)
-     {
-	Ecore_Fd_Handler *fdh;
+   EINA_INLIST_FOREACH(fd_handlers, fdh)
+     if (!fdh->delete_me)
+       {
+	  if (fdh->buf_func)
+	    {
+	       if (fdh->buf_func(fdh->buf_data, fdh))
+		 {
+		    ret |= fdh->func(fdh->data, fdh);
+		    fdh->read_active = 1;
+		 }
+	    }
+       }
 
-	fdh = (Ecore_Fd_Handler *)l;
-	if (!fdh->delete_me)
-	  {
-	     if (fdh->buf_func)
-	       {
-		  if (fdh->buf_func(fdh->buf_data, fdh))
-		    {
-		       ret |= fdh->func(fdh->data, fdh);
-		       fdh->read_active = 1;
-		    }
-	       }
-	  }
-     }
    return ret;
 }
 
 static void
 _ecore_main_loop_iterate_internal(int once_only)
 {
-   double next_time;
+   double next_time = -1.0;
    int    have_event = 0;
    int    have_signal;
 
@@ -478,11 +553,9 @@ _ecore_main_loop_iterate_internal(int once_only)
 	double now;
 
 	now = ecore_loop_time_get();
-	while (_ecore_timer_call(now));
+        while (_ecore_timer_call(now));
 	_ecore_timer_cleanup();
      }
-   /* any timers re-added as a result of these are allowed to go */
-   _ecore_timer_enable_new();
    /* process signals into events .... */
    while (_ecore_signal_count_get()) _ecore_signal_call();
    if (_ecore_event_exist())
@@ -532,6 +605,8 @@ _ecore_main_loop_iterate_internal(int once_only)
 	  _ecore_fps_debug_runtime_add(t2 - t1);
      }
    start_loop:
+   /* any timers re-added as a result of these are allowed to go */
+   _ecore_timer_enable_new();
    if (do_quit)
      {
 	in_main_loop--;
@@ -565,6 +640,7 @@ _ecore_main_loop_iterate_internal(int once_only)
 		       if (next_time >= 0) goto start_loop;
 		       if (do_quit) break;
 		    }
+                  _ecore_loop_time = ecore_time_get();
 	       }
 	  }
 	/* timers */
@@ -587,9 +663,10 @@ _ecore_main_loop_iterate_internal(int once_only)
 		       if (_ecore_signal_count_get() > 0) have_signal = 1;
 		       if (have_event || have_signal) break;
 		       next_time = _ecore_timer_next_get();
-		       if (next_time < 0) goto start_loop;
+		       if (next_time <= 0) break;
 		       if (do_quit) break;
 		    }
+                  _ecore_loop_time = ecore_time_get();
 	       }
 	  }
      }
@@ -614,36 +691,6 @@ _ecore_main_loop_iterate_internal(int once_only)
 	_ecore_main_fd_handlers_cleanup();
      }
    while (_ecore_main_fd_handlers_buf_call());
-#if _WIN32
-   {
-      MSG msg;
-      BOOL ret;
-      UINT_PTR TmrID = 0;
-      if ((UINT) (next_time * 1000.0) > USER_TIMER_MINIMUM)
-        {
-           TmrID = SetTimer(NULL, 0, (UINT) (next_time * 1000.0), NULL);
-           ret = GetMessage(&msg, NULL, 0, 0);
-        }
-      else
-        {
-           ret = PeekMessage(&msg, NULL, 0, 0, PM_REMOVE);
-        }
-
-      if (ret)
-        {
-           do
-             {
-                TranslateMessage(&msg);
-                DispatchMessageW(&msg);
-                Sleep(0); /* Give other threads a chance to run */
-             } while (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE));
-        }
-
-      if (TmrID)
-        KillTimer(NULL, TmrID);
-   }
-#endif
-
 
 /* ok - too much optimising. let's call idle enterers more often. if we
  * have events that place more events or jobs etc. on the event queue
@@ -653,3 +700,105 @@ _ecore_main_loop_iterate_internal(int once_only)
      _ecore_idle_enterer_call();
    in_main_loop--;
 }
+
+#ifdef _WIN32
+static int
+_ecore_main_win32_select(int nfds, fd_set *readfds, fd_set *writefds,
+			 fd_set *exceptfds, struct timeval *tv)
+{
+   HANDLE* events[MAXIMUM_WAIT_OBJECTS];
+   int     sockets[MAXIMUM_WAIT_OBJECTS];
+   int     events_nbr = 0;
+   DWORD   result;
+   DWORD   timeout;
+   MSG     msg;
+   int     i;
+   int     res;
+
+   /* Create an event object per socket */
+   for(i = 0; i < nfds; i++)
+     {
+        WSAEVENT event;
+        long network_event;
+
+        network_event = 0;
+        if(FD_ISSET(i, readfds))
+	  network_event |= FD_READ;
+        if(FD_ISSET(i, writefds))
+	  network_event |= FD_WRITE;
+        if(FD_ISSET(i, exceptfds))
+	  network_event |= FD_OOB;
+
+        if(network_event)
+	  {
+             event = WSACreateEvent();
+	     WSAEventSelect(i, event, network_event);
+	     events[events_nbr] = event;
+	     sockets[events_nbr] = i;
+	     events_nbr++;
+          }
+     }
+
+   /* Empty the queue before waiting */
+   while (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
+     {
+	TranslateMessage(&msg);
+	DispatchMessage(&msg);
+     }
+
+   /* Wait for any message sent or posted to this queue */
+   /* or for one of the passed handles be set to signaled. */
+   if(tv == NULL)
+     timeout = INFINITE;
+   else
+     timeout = (DWORD)(tv->tv_sec * 1000.0 + tv->tv_usec / 1000.0);
+
+   result = MsgWaitForMultipleObjects(events_nbr, events, FALSE,
+				      timeout, QS_ALLINPUT);
+
+   FD_ZERO(readfds);
+   FD_ZERO(writefds);
+   FD_ZERO(exceptfds);
+
+   /* The result tells us the type of event we have. */
+   if (result == WAIT_TIMEOUT)
+     {
+        res = 0;
+     }
+   else if (result == (WAIT_OBJECT_0 + events_nbr))
+     {
+        while (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
+	  {
+	     TranslateMessage(&msg);
+	     DispatchMessage(&msg);
+	  }
+
+        res = 0;
+     }
+   else if ((result >= 0) && (result < WAIT_OBJECT_0 + events_nbr))
+     {
+        WSANETWORKEVENTS network_event;
+
+        WSAEnumNetworkEvents(sockets[result], events[result], &network_event);
+
+        if(network_event.lNetworkEvents & FD_READ)
+	  FD_SET(sockets[result], readfds);
+        if(network_event.lNetworkEvents & FD_WRITE)
+	  FD_SET(sockets[result], writefds);
+        if(network_event.lNetworkEvents & FD_OOB)
+	  FD_SET(sockets[result], exceptfds);
+
+        res = 1;
+     }
+   else
+     {
+        fprintf(stderr, "unknown result...\n");
+     }
+
+   /* Remove event objects again */
+   for(i = 0; i < events_nbr; i++)
+     WSACloseEvent(events[i]);
+
+   return res;
+}
+#endif

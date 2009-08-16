@@ -1,3 +1,11 @@
+/*
+ * vim:ts=8:sw=3:sts=8:noexpandtab:cino=>5n-3f0^-2{2
+ */
+
+#ifdef HAVE_CONFIG_H
+# include <config.h>
+#endif
+
 #include <string.h>
 #include <ctype.h>
 #include <stdio.h>
@@ -11,7 +19,6 @@
 #include <unistd.h>
 
 #include "Ecore_Config.h"
-#include "config.h"
 #include "ecore_config_private.h"
 #include "ecore_config_ipc.h"
 
@@ -528,7 +535,7 @@ ecore_config_typed_add(const char *key, const void *val, int type)
 
    if (!(e = calloc(1, sizeof(Ecore_Config_Prop))))
      {
-	error = ECORE_CONFIG_ERR_OOM;
+	return ECORE_CONFIG_ERR_OOM;
      }
    else if (!(e->key = strdup(key)))
      {
