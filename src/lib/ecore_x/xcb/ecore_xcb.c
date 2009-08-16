@@ -70,6 +70,9 @@ Ecore_X_Window      _ecore_xcb_private_window = 0;
 
 Ecore_X_Atom        _ecore_xcb_atoms_wm_protocols[ECORE_X_WM_PROTOCOL_NUM];
 
+/* Duplicate of Xlib functions. Probably should be adjusted somehow */
+static void (*_io_error_func) (void *data) = NULL;
+static void *_io_error_data = NULL;
 
 EAPI int ECORE_X_EVENT_ANY                      = 0;
 EAPI int ECORE_X_EVENT_MOUSE_IN                 = 0;
@@ -948,6 +951,9 @@ _ecore_xcb_fd_handler(void *data, Ecore_Fd_Handler *fd_handler __UNUSED__)
    while ((ev = xcb_poll_for_event(c)))
      handle_event(ev);
 
+   if (xcb_connection_has_error(c))
+     if (_io_error_func) (*_io_error_func)(_io_error_data);
+
    return 1;
 }
 
@@ -959,6 +965,9 @@ _ecore_xcb_fd_handler_buf(void *data, Ecore_Fd_Handler *fd_handler __UNUSED__)
    c = (xcb_connection_t *)data;
 
    _ecore_xcb_event_buffered = xcb_poll_for_event(c);
+   if (xcb_connection_has_error(c))
+     if (_io_error_func) (*_io_error_func)(_io_error_data);
+
    if (!_ecore_xcb_event_buffered)
      return 0;
 
@@ -1975,6 +1984,20 @@ ecore_x_pointer_last_xy_get(int *x,
 {
    if (x) *x = _ecore_xcb_event_last_root_x;
    if (y) *y = _ecore_xcb_event_last_root_y;
+}
+
+/**
+ * Set the I/O error handler.
+ * @param func The I/O error handler function
+ * @param data The data to be passed to the handler function
+ *
+ * Set the X I/O error handler function
+ */
+EAPI void
+ecore_x_io_error_handler_set(void (*func) (void *data), const void *data)
+{
+   _io_error_func = func;
+   _io_error_data = (void *)data;
 }
 
 
