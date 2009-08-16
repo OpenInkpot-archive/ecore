@@ -56,9 +56,6 @@ _ecore_xcb_cookie_cache (unsigned int cookie)
 {
    Ecore_Xcb_Data *data;
 
-   if (!_ecore_xcb_cookies)
-     return;
-
    data = (Ecore_Xcb_Data *)malloc(sizeof(Ecore_Xcb_Data));
    if (!data)
      return;
