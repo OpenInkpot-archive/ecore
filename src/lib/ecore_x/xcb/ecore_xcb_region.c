@@ -6,8 +6,8 @@
 # include <config.h>
 #endif
 
-#include "ecore_x_private.h"
-
+#include "ecore_xcb_private.h"
+#include <pixman.h>
 
 /*
  * [x] XCreateRegion
@@ -62,6 +62,7 @@ ecore_x_xregion_set(Ecore_X_XRegion *region, Ecore_X_GC gc)
    xcb_rectangle_t *rects;
    pixman_box16_t  *boxes;
    int              num;
+   int              i;
 
    if (!region)
      return 0;
@@ -83,7 +84,7 @@ ecore_x_xregion_set(Ecore_X_XRegion *region, Ecore_X_GC gc)
         rects[i].height = boxes[i].y2 - boxes[i].y1 + 1;
      }
 
-   xcb_set_clip_rectangles(_ecore_x_connection,
+   xcb_set_clip_rectangles(_ecore_xcb_conn,
                            XCB_CLIP_ORDERING_YX_BANDED,
                            gc,
                            0, 0,
@@ -123,7 +124,7 @@ ecore_x_xregion_union_rect(Ecore_X_XRegion *dst, Ecore_X_XRegion *src, Ecore_X_R
 EAPI int
 ecore_x_xregion_subtract(Ecore_X_XRegion *dst, Ecore_X_XRegion *r1, Ecore_X_XRegion *r2)
 {
-   return pixman_region_subtract((pixman_region16_t *)dst, (pixman_region16_t *)rm, (pixman_region16_t *)rs);
+   return pixman_region_subtract((pixman_region16_t *)dst, (pixman_region16_t *)r1, (pixman_region16_t *)r2);
 }
 
 EAPI int
@@ -136,21 +137,12 @@ ecore_x_xregion_is_empty(Ecore_X_XRegion *region)
 }
 
 EAPI int
-ecore_x_xregion_is_empty(Ecore_X_XRegion *r1, Ecore_X_XRegion *r2)
-{
-   if (!r1 || !r2)
-     return 0;
-
-   return pixman_region_equal((pixman_region16_t *)r1, (pixman_region16_t *)r2);
-}
-
-EAPI int
 ecore_x_xregion_point_contain(Ecore_X_XRegion *region, int x, int y)
 {
    if (!region)
      return 0;
 
-   return pixman_region_contains_point((pixman_region16_t *)region, x, y);
+   return pixman_region_contains_point((pixman_region16_t *)region, x, y, NULL);
 }
 
 EAPI int
