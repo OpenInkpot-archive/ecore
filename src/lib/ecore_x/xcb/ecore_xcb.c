@@ -199,7 +199,8 @@ ecore_x_init(const char *name)
 	return _ecore_xcb_init_count;
      }
    _ecore_xcb_conn = xcb_connect(name, &screen);
-   if (!_ecore_xcb_conn) return 0;
+   if (xcb_connection_has_error(_ecore_xcb_conn))
+       return 0;
 
    /* FIXME: no error code right now */
    /* _ecore_xcb_error_handler_init(); */
