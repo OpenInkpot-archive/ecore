@@ -652,6 +652,7 @@ ecore_x_icccm_size_pos_hints_get(Ecore_X_Window   window __UNUSED__,
    int32_t                   stepy = -1;
    double                    mina = 0.0;
    double                    maxa = 0.0;
+   uint32_t                  flags;
 
    if (request_pos) *request_pos = 0;
    if (gravity) *gravity = ECORE_X_GRAVITY_NW;
@@ -673,7 +674,11 @@ ecore_x_icccm_size_pos_hints_get(Ecore_X_Window   window __UNUSED__,
    if (!_ecore_x_icccm_size_hints_get(reply, ECORE_X_ATOM_WM_NORMAL_HINTS, &hint))
      return 0;
 
+#ifdef ECORE_XCB_ICCCM02
    flags = xcb_size_hints_get_flags(hint);
+#else
+   flags = hint.flags;
+#endif
      if ((flags & XCB_SIZE_HINT_US_POSITION) || (flags & XCB_SIZE_HINT_P_POSITION))
      {
 	if (request_pos)
