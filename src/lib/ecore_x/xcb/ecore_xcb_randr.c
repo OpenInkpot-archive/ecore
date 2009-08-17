@@ -105,7 +105,7 @@ ecore_x_randr_events_select(Ecore_X_Window window,
 {
 #ifdef ECORE_XCB_RANDR
      xcb_randr_select_input(_ecore_xcb_conn, window,
-                            on ? XCB_RANDR_SCREEN_CHANGE_NOTIFY : 0);
+                            on ? XCB_RANDR_NOTIFY_MASK_SCREEN_CHANGE : 0);
      return 1;
 #else
    return 0;
@@ -290,8 +290,8 @@ ecore_x_randr_current_screen_size_get(Ecore_X_Window root __UNUSED__)
    sizes = xcb_randr_get_screen_info_sizes(reply);
    if (size_index < reply->nSizes)
      {
-        ret.width = sizes[size_index].mwidth;
-        ret.height = sizes[size_index].mheight;
+        ret.width = sizes[size_index].width;
+        ret.height = sizes[size_index].height;
      }
 #endif /* ECORE_XCB_RANDR */
 

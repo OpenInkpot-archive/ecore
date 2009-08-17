@@ -1,8 +1,20 @@
-ecore (0.9.9.050-20090116-9) asimov; urgency=low
+ecore (0.9.9.062-1) asimov; urgency=low
 
   * svn-03 snapshot
 
  -- Mikhail Gusarov <dottedmag@dottedmag.net>  Tue, 18 Aug 2009 00:31:06 +0700
+
+ecore (0.9.9.050-20090116-10) asimov; urgency=low
+
+  * ecore_x_randr_current_screen_size_get should return size in pixel
+
+ -- Alexander Kerner <lunohod@openinkpot.org>  Thu, 09 Jul 2009 01:57:49 +0200
+
+ecore (0.9.9.050-20090116-9) asimov; urgency=low
+
+  * xcb randr fixes
+
+ -- Alexander Kerner <lunohod@openinkpot.org>  Thu, 09 Jul 2009 01:16:21 +0200
 
 ecore (0.9.9.050-20090116-8) asimov; urgency=low
 
