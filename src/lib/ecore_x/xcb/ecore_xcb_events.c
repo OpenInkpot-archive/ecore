@@ -197,7 +197,7 @@ _ecore_x_event_free_selection_notify(void *data __UNUSED__, void *ev)
 { \
 	e->keyname = strdup((a)); \
 	e->key = strdup(e->keyname); \
-	e->compose = ecore_txt_convert(nl_langinfo(CODESET), "UTF-8", (b)); \
+	e->compose = NULL; \
     e->string = strdup(e->keyname); \
     break; \
 }
@@ -357,7 +357,6 @@ static void _ecore_xcb_event_free_key(void *data, Ecore_Event_Key *e)
 {
     free(e->keyname);
     free(e->key);
-    free(e->compose);
     free(e->string);
     free(e);
 }
