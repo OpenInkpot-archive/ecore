@@ -1,3 +1,9 @@
+ecore (0.9.9.062-3) asimov; urgency=low
+
+  * Fixed memory corruption in ecore_x_window_children_get.
+
+ -- Mikhail Gusarov <dottedmag@dottedmag.net>  Tue, 22 Sep 2009 06:31:51 +0700
+
 ecore (0.9.9.062-2) asimov; urgency=low
 
   * pixman added to build-depends
