@@ -295,7 +295,7 @@ char *get_rotated_key(char *r0, char *r90, char *r180, char *r270)
 		   _key_info("XF86AudioPlay", NULL); \
 	   case 225: \
 		   _key_info("XF86Search", NULL); \
-       default: return; \
+	   default: _ecore_xcb_event_free_key(NULL, e); return; \
    }
 
 /* XCB key hack ends */
