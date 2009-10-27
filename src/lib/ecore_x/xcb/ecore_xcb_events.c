@@ -355,9 +355,9 @@ _ecore_mouse_move(unsigned int timestamp, unsigned int xmodifiers,
 
 static void _ecore_xcb_event_free_key(void *data, Ecore_Event_Key *e)
 {
-    free(e->keyname);
-    free(e->key);
-    free(e->string);
+    free((char*)e->keyname);
+    free((char*)e->key);
+    free((char*)e->string);
     free(e);
 }
 
