@@ -1,3 +1,9 @@
+ecore (0.9.9.062-5) asimov; urgency=low
+
+  * Fix crash in _ecore_main_fd_handlers_bads_rem
+
+ -- Alexander Kerner <lunohod@openinkpot.org>  Sat, 28 Nov 2009 14:46:58 +0100
+
 ecore (0.9.9.062-4) asimov; urgency=low
 
   * Fix memory leak when pressed key is not found in _hack_get_key table
