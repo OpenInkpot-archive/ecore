@@ -6,6 +6,13 @@
 #define __ECORE_WINCE_PRIVATE_H__
 
 
+/* logging messages macros */
+extern int _ecore_wince_log_dom_global;
+
+#define ERR(...) EINA_LOG_DOM_ERR(_ecore_wince_log_dom_global , __VA_ARGS__)
+#define DBG(...) EINA_LOG_DOM_DBG(_ecore_wince_log_dom_global , __VA_ARGS__)
+#define INF(...) EINA_LOG_DOM_INFO(_ecore_wince_log_dom_global , __VA_ARGS__)
+
 #define ECORE_WINCE_WINDOW_CLASS L"Ecore_WinCE_Window_Class"
 
 
@@ -42,11 +49,10 @@ struct _Ecore_WinCE_Window
    unsigned int        fullscreen    : 1;
 };
 
-extern double              _ecore_wince_double_click_time;
-extern double              _ecore_wince_event_last_time;
-extern Ecore_WinCE_Window *_ecore_wince_event_last_window;
-
 extern HINSTANCE           _ecore_wince_instance;
+extern double              _ecore_wince_double_click_time;
+extern long                _ecore_wince_event_last_time;
+extern Ecore_WinCE_Window *_ecore_wince_event_last_window;
 
 
 void  _ecore_wince_event_handle_key_press(Ecore_WinCE_Callback_Data *msg, int is_keystroke);

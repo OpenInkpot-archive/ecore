@@ -24,9 +24,10 @@
 /***** Global declarations *****/
 
 double              _ecore_wince_double_click_time = 0.25;
-double              _ecore_wince_event_last_time = 0.0;
+long                _ecore_wince_event_last_time = 0;
 Ecore_WinCE_Window *_ecore_wince_event_last_window = NULL;
 HINSTANCE           _ecore_wince_instance = NULL;
+int                 _ecore_wince_log_dom_global = -1;
 
 int ECORE_WINCE_EVENT_MOUSE_IN              = 0;
 int ECORE_WINCE_EVENT_MOUSE_OUT             = 0;
@@ -44,13 +45,13 @@ int ECORE_WINCE_EVENT_WINDOW_DELETE_REQUEST = 0;
 
 static int       _ecore_wince_init_count = 0;
 
-
 LRESULT CALLBACK _ecore_wince_window_procedure(HWND   window,
                                                UINT   message,
                                                WPARAM window_param,
                                                LPARAM data_param);
 
-static void      _ecore_wince_error_print_cb(Eina_Error_Level level,
+static void      _ecore_wince_error_print_cb(const Eina_Log_Domain *d,
+                                             Eina_Log_Level   level,
                                              const char      *file,
                                              const char      *fnc,
                                              int              line,
@@ -66,21 +67,31 @@ ecore_wince_init()
 {
    WNDCLASS wc;
 
-   eina_error_print_cb_set(_ecore_wince_error_print_cb, NULL);
+   if (++_ecore_wince_init_count != 1)
+     return _ecore_wince_init_count;
 
-   EINA_ERROR_PINFO("initializing ecore_wince (current count: %d)\n", _ecore_wince_init_count);
+   if (!eina_init())
+     return --_ecore_wince_init_count;
 
-   if (_ecore_wince_init_count > 0)
+   eina_log_print_cb_set(_ecore_wince_error_print_cb, NULL);
+   _ecore_wince_log_dom_global = eina_log_domain_register("ecore_wince", EINA_COLOR_LIGHTBLUE);
+   if (_ecore_wince_log_dom_global < 0)
      {
-	_ecore_wince_init_count++;
-	return _ecore_wince_init_count;
+        EINA_LOG_ERR("Ecore_WinCE: Could not register log domain");
+        goto shutdown_eina;
+      }
+
+   if (!ecore_event_init())
+     {
+        ERR("Ecore_WinCE: Could not init ecore_event");
+        goto unregister_log_domain;
      }
 
    _ecore_wince_instance = GetModuleHandle(NULL);
    if (!_ecore_wince_instance)
      {
-        EINA_ERROR_PERR("GetModuleHandle() failed\n");
-        return 0;
+        ERR("GetModuleHandle() failed");
+        goto shutdown_ecore_event;
      }
 
    memset (&wc, 0, sizeof (wc));
@@ -97,9 +108,8 @@ ecore_wince_init()
 
    if(!RegisterClass(&wc))
      {
-        EINA_ERROR_PERR("RegisterClass() failed\n");
-        FreeLibrary(_ecore_wince_instance);
-        return 0;
+        ERR("RegisterClass() failed");
+        goto free_library;
      }
 
    if (!ECORE_WINCE_EVENT_MOUSE_IN)
@@ -116,11 +126,18 @@ ecore_wince_init()
         ECORE_WINCE_EVENT_WINDOW_DELETE_REQUEST = ecore_event_type_new();
      }
 
-   ecore_event_init();
-
-   _ecore_wince_init_count++;
-
    return _ecore_wince_init_count;
+
+ free_library:
+   FreeLibrary(_ecore_wince_instance);
+ shutdown_ecore_event:
+   ecore_event_shutdown();
+ unregister_log_domain:
+   eina_log_domain_unregister(_ecore_wince_log_dom_global);
+ shutdown_eina:
+   eina_shutdown();
+
+   return --_ecore_wince_init_count;
 }
 
 int
@@ -128,12 +145,8 @@ ecore_wince_shutdown()
 {
    HWND task_bar;
 
-   EINA_ERROR_PINFO("shutting down ecore_wince (current count: %d)\n", _ecore_wince_init_count);
-
-   _ecore_wince_init_count--;
-   if (_ecore_wince_init_count > 0) return _ecore_wince_init_count;
-
-   ecore_event_shutdown();
+   if (--_ecore_wince_init_count != 0)
+     return _ecore_wince_init_count;
 
    /* force task bar to be shown (in case the application exits */
    /* while being fullscreen) */
@@ -145,16 +158,16 @@ ecore_wince_shutdown()
      }
 
    if (!UnregisterClass(ECORE_WINCE_WINDOW_CLASS, _ecore_wince_instance))
-     {
-        EINA_ERROR_PERR("UnregisterClass() failed\n");
-     }
+     ERR("UnregisterClass() failed");
+
    if (!FreeLibrary(_ecore_wince_instance))
-     {
-        EINA_ERROR_PERR("FreeLibrary() failed\n");
-     }
+     ERR("FreeLibrary() failed");
+
    _ecore_wince_instance = NULL;
 
-   if (_ecore_wince_init_count < 0) _ecore_wince_init_count = 0;
+   ecore_event_shutdown();
+   eina_log_domain_unregister(_ecore_wince_log_dom_global);
+   eina_shutdown();
 
    return _ecore_wince_init_count;
 }
@@ -191,7 +204,7 @@ ecore_wince_double_click_time_get(void)
 /**
  * Return the last event time
  */
-EAPI double
+EAPI long
 ecore_wince_current_time_get(void)
 {
    return _ecore_wince_event_last_time;
@@ -264,7 +277,7 @@ _ecore_wince_window_procedure(HWND   window,
             {
                POINT pt;
 
-               EINA_ERROR_PINFO("mouse in window\n");
+               INF("mouse in window");
 
                pt.x = LOWORD(data_param);
                pt.y = HIWORD(data_param);
@@ -287,7 +300,7 @@ _ecore_wince_window_procedure(HWND   window,
             }
           else
             {
-               EINA_ERROR_PERR("GetClientRect() failed\n");
+               ERR("GetClientRect() failed");
             }
           _ecore_wince_event_handle_motion_notify(data);
 
@@ -335,13 +348,14 @@ _ecore_wince_window_procedure(HWND   window,
 }
 
 static void
-_ecore_wince_error_print_cb(Eina_Error_Level level __UNUSED__,
-                             const char     *file __UNUSED__,
-                             const char     *fnc,
-                             int             line,
-                             const char     *fmt,
-                             void           *data __UNUSED__,
-                             va_list         args)
+_ecore_wince_error_print_cb(const Eina_Log_Domain *d __UNUSED__,
+                            Eina_Log_Level  level __UNUSED__,
+                            const char     *file __UNUSED__,
+                            const char     *fnc,
+                            int             line,
+                            const char     *fmt,
+                            void           *data __UNUSED__,
+                            va_list         args)
 {
    fprintf(stderr, "[%s:%d] ", fnc, line);
    vfprintf(stderr, fmt, args);

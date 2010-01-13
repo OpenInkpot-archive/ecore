@@ -11,6 +11,15 @@
 #include <stdarg.h>
 #include <ctype.h>
 
+#ifdef ENABLE_NLS
+# include <libintl.h>
+#else
+# define gettext(x) (x)
+# define dgettext(domain, x) (x)
+#endif
+
+#define _(x) dgettext("ecore", x)
+
 #ifdef _WIN32_WCE
 # include <Evil.h>
 #endif
@@ -61,22 +70,24 @@ _ecore_getopt_help_print_replace_program(FILE *fp, const Ecore_Getopt *parser __
 static void
 _ecore_getopt_version(FILE *fp, const Ecore_Getopt *parser)
 {
-   fputs("Version: ", fp);
+   fputs(_("Version:"), fp);
+   fputc(' ', fp);
    _ecore_getopt_help_print_replace_program(fp, parser, parser->version);
 }
 
 static void
 _ecore_getopt_help_usage(FILE *fp, const Ecore_Getopt *parser)
 {
-   fputs("Usage: ", fp);
+   fputs(_("Usage:"), fp);
+   fputc(' ', fp);
 
    if (!parser->usage)
      {
-	fprintf(fp, "%s [options]\n", prog);
+	fprintf(fp, _("%s [options]\n"), prog);
 	return;
      }
 
-   _ecore_getopt_help_print_replace_program(fp, parser, parser->usage);
+   _ecore_getopt_help_print_replace_program(fp, parser, gettext(parser->usage));
 }
 
 static int
@@ -166,7 +177,7 @@ _ecore_getopt_help_description(FILE *fp, const Ecore_Getopt *parser)
    const char *p, *prg, *ver;
    int used, prglen, verlen;
 
-   p = parser->description;
+   p = gettext(parser->description);
    if (!p)
      return;
 
@@ -219,18 +230,22 @@ _ecore_getopt_help_description(FILE *fp, const Ecore_Getopt *parser)
 static void
 _ecore_getopt_copyright(FILE *fp, const Ecore_Getopt *parser)
 {
-   fputs("Copyright:\n   ", fp);
+   const char *txt = gettext(parser->copyright);
+   fputs(_("Copyright:"), fp);
+   fputs("\n   ", fp);
    _ecore_getopt_help_line
-     (fp, 3, cols, 3, parser->copyright, strlen(parser->copyright));
+     (fp, 3, cols, 3, txt, strlen(txt));
    fputc('\n', fp);
 }
 
 static void
 _ecore_getopt_license(FILE *fp, const Ecore_Getopt *parser)
 {
-   fputs("License:\n   ", fp);
+   const char *txt = gettext(parser->license);
+   fputs(_("License:"), fp);
+   fputs("\n   ", fp);
    _ecore_getopt_help_line
-     (fp, 3, cols, 3, parser->license, strlen(parser->license));
+     (fp, 3, cols, 3, txt, strlen(txt));
    fputc('\n', fp);
 }
 
@@ -269,11 +284,12 @@ _ecore_getopt_help_desc_setup_metavar(const Ecore_Getopt_Desc *desc, char *metav
 {
    if (desc->metavar)
      {
-	*metavarlen = strlen(desc->metavar);
+	const char *txt = gettext(desc->metavar);
+	*metavarlen = strlen(txt);
 	if (*metavarlen > maxsize - 1)
 	  *metavarlen = maxsize - 1;
 
-	memcpy(metavar, desc->metavar, *metavarlen);
+	memcpy(metavar, txt, *metavarlen);
 	metavar[*metavarlen] = '\0';
      }
    else if (desc->longname)
@@ -378,7 +394,7 @@ _ecore_getopt_help_desc_store(FILE *fp, const int base, const int total, int use
      }
 
    used = _ecore_getopt_help_line
-     (fp, base, total, used, "Type: ", sizeof("Type: ") - 1);
+     (fp, base, total, used, _("Type: "), strlen(_("Type: ")));
    used = _ecore_getopt_help_line(fp, base, total, used, str, len);
 
    if (store->arg_req == ECORE_GETOPT_DESC_ARG_REQUIREMENT_YES)
@@ -394,8 +410,8 @@ _ecore_getopt_help_desc_store(FILE *fp, const int base, const int total, int use
 	 len = str ? strlen(str) : 0;
 	 break;
       case ECORE_GETOPT_TYPE_BOOL:
-	 str = store->def.boolv ? "TRUE" : "FALSE";
-	 len = store->def.boolv ? sizeof("TRUE") - 1 : sizeof("FALSE") - 1;
+	 str = store->def.boolv ? "true" : "false";
+	 len = strlen(str);
 	 break;
       case ECORE_GETOPT_TYPE_SHORT:
 	 str = buf;
@@ -445,7 +461,7 @@ _ecore_getopt_help_desc_store(FILE *fp, const int base, const int total, int use
      }
 
    used = _ecore_getopt_help_line
-     (fp, base, total, used, "Default: ", sizeof("Default: ") - 1);
+     (fp, base, total, used, _("Default: "), strlen(_("Default: ")));
    used = _ecore_getopt_help_line(fp, base, total, used, str, len);
 
  end:
@@ -468,7 +484,7 @@ _ecore_getopt_help_desc_choices(FILE *fp, const int base, const int total, int u
      fputc(' ', fp);
 
    used = _ecore_getopt_help_line
-     (fp, base, total, used, "Choices: ", sizeof("Choices: ") - 1);
+     (fp, base, total, used, _("Choices: "), strlen(_("Choices: ")));
 
    for (itr = desc->action_param.choices; *itr != NULL; itr++)
      {
@@ -565,7 +581,7 @@ _ecore_getopt_help_options(FILE *fp, const Ecore_Getopt *parser)
 {
    const Ecore_Getopt_Desc *desc;
 
-   fputs("Options:\n", fp);
+   fputs(_("Options:\n"), fp);
 
    for (desc = parser->descs; !_ecore_getopt_desc_is_sentinel(desc); desc++)
      _ecore_getopt_help_desc(fp, desc);
@@ -684,9 +700,9 @@ _ecore_getopt_parse_find_nonargs_base(const Ecore_Getopt *parser, int argc, char
 	if (!desc)
 	  {
 	     if (arg[1] == '-')
-	       fprintf(stderr, "ERROR: unknown option --%s.\n", arg + 2);
+	       fprintf(stderr, _("ERROR: unknown option --%s.\n"), arg + 2);
 	     else
-	       fprintf(stderr, "ERROR: unknown option -%c.\n", arg[1]);
+	       fprintf(stderr, _("ERROR: unknown option -%c.\n"), arg[1]);
 	     if (parser->strict)
 	       {
 		  memmove(argv + dst, nonargs, used * sizeof(char *));
@@ -743,7 +759,7 @@ _ecore_getopt_desc_print_error(const Ecore_Getopt_Desc *desc, const char *fmt, .
 {
    va_list ap;
 
-   fputs("ERROR: ", stderr);
+   fputs(_("ERROR: "), stderr);
 
    if (desc->shortname)
      {
@@ -774,7 +790,8 @@ _ecore_getopt_parse_bool(const char *str, unsigned char *v)
        (strcasecmp(str, "f") == 0) ||
        (strcasecmp(str, "false") == 0) ||
        (strcasecmp(str, "no") == 0) ||
-       (strcasecmp(str, "off") == 0))
+       (strcasecmp(str, "off") == 0)
+       )
      {
 	*v = 0;
 	return 1;
@@ -783,7 +800,8 @@ _ecore_getopt_parse_bool(const char *str, unsigned char *v)
 	    (strcasecmp(str, "t") == 0) ||
 	    (strcasecmp(str, "true") == 0) ||
 	    (strcasecmp(str, "yes") == 0) ||
-	    (strcasecmp(str, "on") == 0))
+	    (strcasecmp(str, "on") == 0)
+	    )
      {
 	*v = 1;
 	return 1;
@@ -818,7 +836,7 @@ _ecore_getopt_parse_store(const Ecore_Getopt *parser __UNUSED__, const Ecore_Get
 
    if (!value->ptrp)
      {
-	_ecore_getopt_desc_print_error(desc, "value has no pointer set.\n");
+	_ecore_getopt_desc_print_error(desc, _("value has no pointer set.\n"));
 	return 0;
      }
 
@@ -847,7 +865,7 @@ _ecore_getopt_parse_store(const Ecore_Getopt *parser __UNUSED__, const Ecore_Get
 	 else
 	   {
 	      _ecore_getopt_desc_print_error
-		(desc, "unknown boolean value %s.\n", arg_val);
+		(desc, _("unknown boolean value %s.\n"), arg_val);
 	      return 0;
 	   }
       case ECORE_GETOPT_TYPE_SHORT:
@@ -890,7 +908,8 @@ _ecore_getopt_parse_store(const Ecore_Getopt *parser __UNUSED__, const Ecore_Get
    return 1;
 
  error:
-   _ecore_getopt_desc_print_error(desc, "invalid number format %s\n", arg_val);
+   _ecore_getopt_desc_print_error
+     (desc, _("invalid number format %s\n"), arg_val);
    return 0;
 
  use_optional:
@@ -933,7 +952,7 @@ _ecore_getopt_parse_store_const(const Ecore_Getopt *parser __UNUSED__, const Eco
 {
    if (!val->ptrp)
      {
-	_ecore_getopt_desc_print_error(desc, "value has no pointer set.\n");
+	_ecore_getopt_desc_print_error(desc, _("value has no pointer set.\n"));
 	return 0;
      }
 
@@ -946,7 +965,7 @@ _ecore_getopt_parse_store_true(const Ecore_Getopt *parser __UNUSED__, const Ecor
 {
    if (!val->boolp)
      {
-	_ecore_getopt_desc_print_error(desc, "value has no pointer set.\n");
+	_ecore_getopt_desc_print_error(desc, _("value has no pointer set.\n"));
 	return 0;
      }
    *val->boolp = 1;
@@ -958,7 +977,7 @@ _ecore_getopt_parse_store_false(const Ecore_Getopt *parser __UNUSED__, const Eco
 {
    if (!val->boolp)
      {
-	_ecore_getopt_desc_print_error(desc, "value has no pointer set.\n");
+	_ecore_getopt_desc_print_error(desc, _("value has no pointer set.\n"));
 	return 0;
      }
    *val->boolp = 0;
@@ -972,7 +991,7 @@ _ecore_getopt_parse_choice(const Ecore_Getopt *parser __UNUSED__, const Ecore_Ge
 
    if (!val->strp)
      {
-	_ecore_getopt_desc_print_error(desc, "value has no pointer set.\n");
+	_ecore_getopt_desc_print_error(desc, _("value has no pointer set.\n"));
 	return 0;
      }
 
@@ -985,7 +1004,7 @@ _ecore_getopt_parse_choice(const Ecore_Getopt *parser __UNUSED__, const Ecore_Ge
        }
 
    _ecore_getopt_desc_print_error
-     (desc, "invalid choice \"%s\". Valid values are: ", arg_val);
+     (desc, _("invalid choice \"%s\". Valid values are: "), arg_val);
 
    pchoice = desc->action_param.choices;
    for (; *pchoice != NULL; pchoice++)
@@ -1009,13 +1028,14 @@ _ecore_getopt_parse_append(const Ecore_Getopt *parser __UNUSED__, const Ecore_Ge
 
    if (!arg_val)
      {
-	_ecore_getopt_desc_print_error(desc, "missing parameter to append.\n");
+	_ecore_getopt_desc_print_error
+	  (desc, _("missing parameter to append.\n"));
 	return 0;
      }
 
    if (!val->listp)
      {
-	_ecore_getopt_desc_print_error(desc, "value has no pointer set.\n");
+	_ecore_getopt_desc_print_error(desc, _("value has no pointer set.\n"));
 	return 0;
      }
 
@@ -1035,7 +1055,7 @@ _ecore_getopt_parse_append(const Ecore_Getopt *parser __UNUSED__, const Ecore_Ge
 	   else
 	     {
 		_ecore_getopt_desc_print_error
-		  (desc, "unknown boolean value %s.\n", arg_val);
+		  (desc, _("unknown boolean value %s.\n"), arg_val);
 		return 0;
 	     }
 	}
@@ -1105,8 +1125,8 @@ _ecore_getopt_parse_append(const Ecore_Getopt *parser __UNUSED__, const Ecore_Ge
 	break;
       default:
 	{
-	  _ecore_getopt_desc_print_error(desc, "could not parse value.\n");
-	  return 0;
+	   _ecore_getopt_desc_print_error(desc, _("could not parse value.\n"));
+	   return 0;
 	}
      }
 
@@ -1114,7 +1134,8 @@ _ecore_getopt_parse_append(const Ecore_Getopt *parser __UNUSED__, const Ecore_Ge
    return 1;
 
  error:
-   _ecore_getopt_desc_print_error(desc, "invalid number format %s\n", arg_val);
+   _ecore_getopt_desc_print_error
+     (desc, _("invalid number format %s\n"), arg_val);
    return 0;
 }
 
@@ -1123,7 +1144,7 @@ _ecore_getopt_parse_count(const Ecore_Getopt *parser __UNUSED__, const Ecore_Get
 {
    if (!val->intp)
      {
-	_ecore_getopt_desc_print_error(desc, "value has no pointer set.\n");
+	_ecore_getopt_desc_print_error(desc, _("value has no pointer set.\n"));
 	return 0;
      }
 
@@ -1153,21 +1174,21 @@ _ecore_getopt_parse_callback(const Ecore_Getopt *parser, const Ecore_Getopt_Desc
      {
 	if ((!arg_val) || (arg_val[0] == '\0'))
 	  {
-	     _ecore_getopt_desc_print_error(desc, "missing parameter.\n");
+	     _ecore_getopt_desc_print_error(desc, _("missing parameter.\n"));
 	     return 0;
 	  }
 
 	if (!val->ptrp)
 	  {
 	     _ecore_getopt_desc_print_error
-	       (desc, "value has no pointer set.\n");
+	       (desc, _("value has no pointer set.\n"));
 	     return 0;
 	  }
      }
 
    if (!cb->func)
      {
-	_ecore_getopt_desc_print_error(desc, "missing callback function!\n");
+	_ecore_getopt_desc_print_error(desc, _("missing callback function!\n"));
 	return 0;
      }
 
@@ -1190,7 +1211,7 @@ _ecore_getopt_parse_version(const Ecore_Getopt *parser, const Ecore_Getopt_Desc 
      (*val->boolp) = 1;
    if (!parser->version)
      {
-	_ecore_getopt_desc_print_error(desc, "no version was defined.\n");
+	_ecore_getopt_desc_print_error(desc, _("no version was defined.\n"));
 	return 0;
      }
    _ecore_getopt_version(stdout, parser);
@@ -1204,7 +1225,7 @@ _ecore_getopt_parse_copyright(const Ecore_Getopt *parser, const Ecore_Getopt_Des
      (*val->boolp) = 1;
    if (!parser->copyright)
      {
-	_ecore_getopt_desc_print_error(desc, "no copyright was defined.\n");
+	_ecore_getopt_desc_print_error(desc, _("no copyright was defined.\n"));
 	return 0;
      }
    _ecore_getopt_copyright(stdout, parser);
@@ -1218,7 +1239,7 @@ _ecore_getopt_parse_license(const Ecore_Getopt *parser, const Ecore_Getopt_Desc 
      (*val->boolp) = 1;
    if (!parser->license)
      {
-	_ecore_getopt_desc_print_error(desc, "no license was defined.\n");
+	_ecore_getopt_desc_print_error(desc, _("no license was defined.\n"));
 	return 0;
      }
    _ecore_getopt_license(stdout, parser);
@@ -1272,7 +1293,7 @@ _ecore_getopt_parse_arg_long(const Ecore_Getopt *parser, Ecore_Getopt_Value *val
    desc = _ecore_getopt_parse_find_long(parser, arg);
    if (!desc)
      {
-	fprintf(stderr, "ERROR: unknown option --%s, ignored.\n", arg);
+	fprintf(stderr, _("ERROR: unknown option --%s, ignored.\n"), arg);
 	if (parser->strict)
 	  return 0;
 
@@ -1304,7 +1325,8 @@ _ecore_getopt_parse_arg_long(const Ecore_Getopt *parser, Ecore_Getopt_Value *val
 
 	if ((!arg_val) && (arg_req == ECORE_GETOPT_DESC_ARG_REQUIREMENT_YES))
 	  {
-	     fprintf(stderr, "ERROR: option --%s requires an argument!\n", arg);
+	     fprintf
+	       (stderr, _("ERROR: option --%s requires an argument!\n"), arg);
 	     if (parser->strict)
 	       return 0;
 	     return 1;
@@ -1339,7 +1361,8 @@ _ecore_getopt_parse_arg_short(const Ecore_Getopt *parser, Ecore_Getopt_Value *va
 	desc = _ecore_getopt_parse_find_short(parser, arg[0]);
 	if (!desc)
 	  {
-	     fprintf(stderr, "ERROR: unknown option -%c, ignored.\n", arg[0]);
+	     fprintf
+	       (stderr, _("ERROR: unknown option -%c, ignored.\n"), arg[0]);
 	     if (parser->strict)
 	       return 0;
 
@@ -1376,8 +1399,9 @@ _ecore_getopt_parse_arg_short(const Ecore_Getopt *parser, Ecore_Getopt_Value *va
 	     if ((!arg_val) &&
 		 (arg_req == ECORE_GETOPT_DESC_ARG_REQUIREMENT_YES))
 	       {
-		  fprintf(stderr, "ERROR: option -%c requires an argument!\n",
-			  opt);
+		  fprintf
+		    (stderr, _("ERROR: option -%c requires an argument!\n"),
+		     opt);
 		  if (parser->strict)
 		    return 0;
 		  return 1;
@@ -1558,6 +1582,10 @@ _ecore_getopt_find_help(const Ecore_Getopt *parser)
  *
  * This function may reorder @a argv elements.
  *
+ * Translation of help strings (description), metavar, usage, license
+ * and copyright may be translated, standard/global gettext() call
+ * will be applied on them if ecore was compiled with such support.
+ *
  * @param parser description of how to work.
  * @param value where to store values, it is assumed that this is a vector
  *        of the same size as @c parser->descs. Values should be previously
@@ -1575,12 +1603,12 @@ ecore_getopt_parse(const Ecore_Getopt *parser, Ecore_Getopt_Value *values, int a
 
    if (!parser)
      {
-	fputs("ERROR: no parser provided.\n", stderr);
+	fputs(_("ERROR: no parser provided.\n"), stderr);
 	return -1;
      }
    if (!values)
      {
-	fputs("ERROR: no values provided.\n", stderr);
+	fputs(_("ERROR: no values provided.\n"), stderr);
 	return -1;
      }
 
@@ -1589,7 +1617,7 @@ ecore_getopt_parse(const Ecore_Getopt *parser, Ecore_Getopt_Value *values, int a
 
    if (argc < 1)
      {
-	fputs("ERROR: no arguments provided.\n", stderr);
+	fputs(_("ERROR: no arguments provided.\n"), stderr);
 	return -1;
      }
 
@@ -1615,15 +1643,15 @@ ecore_getopt_parse(const Ecore_Getopt *parser, Ecore_Getopt_Value *values, int a
  error:
    {
       const Ecore_Getopt_Desc *help;
-      fputs("ERROR: invalid options found.", stderr);
+      fputs(_("ERROR: invalid options found."), stderr);
 
       help = _ecore_getopt_find_help(parser);
       if (!help)
 	fputc('\n', stderr);
       else if (help->longname)
-	fprintf(stderr, " See --%s.\n", help->longname);
+	fprintf(stderr, _(" See --%s.\n"), help->longname);
       else
-	fprintf(stderr, " See -%c.\n", help->shortname);
+	fprintf(stderr, _(" See -%c.\n"), help->shortname);
    }
 
    return -1;
@@ -1660,7 +1688,7 @@ ecore_getopt_callback_geometry_parse(const Ecore_Getopt *parser __UNUSED__, cons
 
    if (sscanf(str, "%d:%d:%d:%d", &v->x, &v->y, &v->w, &v->h) != 4)
      {
-	fprintf(stderr, "ERROR: incorrect geometry value '%s'\n", str);
+	fprintf(stderr, _("ERROR: incorrect geometry value '%s'\n"), str);
 	return 0;
      }
 
@@ -1677,13 +1705,13 @@ ecore_getopt_callback_geometry_parse(const Ecore_Getopt *parser __UNUSED__, cons
  * @c callback_data value is ignored, you can safely use @c NULL.
  */
 unsigned char
-ecore_getopt_callback_size_parse(const Ecore_Getopt *parser, const Ecore_Getopt_Desc *desc, const char *str, void *data, Ecore_Getopt_Value *storage)
+ecore_getopt_callback_size_parse(const Ecore_Getopt *parser __UNUSED__, const Ecore_Getopt_Desc *desc __UNUSED__, const char *str, void *data __UNUSED__, Ecore_Getopt_Value *storage)
 {
    Eina_Rectangle *v = (Eina_Rectangle *)storage->ptrp;
 
    if (sscanf(str, "%dx%d", &v->w, &v->h) != 2)
      {
-	fprintf(stderr, "ERROR: incorrect size value '%s'\n", str);
+	fprintf(stderr, _("ERROR: incorrect size value '%s'\n"), str);
 	return 0;
      }
    v->x = 0;

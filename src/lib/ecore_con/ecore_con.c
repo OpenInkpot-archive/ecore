@@ -6,8 +6,10 @@
 # include <config.h>
 #endif
 
+#include <sys/types.h>
 #include <sys/stat.h>
 #include <arpa/inet.h>
+#include <netinet/tcp.h>
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <errno.h>
@@ -62,7 +64,7 @@ EAPI int ECORE_CON_EVENT_CLIENT_DATA = 0;
 EAPI int ECORE_CON_EVENT_SERVER_DATA = 0;
 
 static Eina_List *servers = NULL;
-static int init_count = 0;
+static int _ecore_con_init_count = 0;
 
 #define LENGTH_OF_SOCKADDR_UN(s) (strlen((s)->sun_path) + (size_t)(((struct sockaddr_un *)NULL)->sun_path))
 #define LENGTH_OF_ABSTRACT_SOCKADDR_UN(s, path) (strlen(path) + 1 + (size_t)(((struct sockaddr_un *)NULL)->sun_path))
@@ -83,9 +85,12 @@ static int init_count = 0;
 EAPI int
 ecore_con_init(void)
 {
-   if (++init_count != 1) return init_count;
+   if (++_ecore_con_init_count != 1)
+     return _ecore_con_init_count;
 
-   ecore_init();
+   if (!ecore_init())
+     return --_ecore_con_init_count;
+
    ECORE_CON_EVENT_CLIENT_ADD = ecore_event_type_new();
    ECORE_CON_EVENT_CLIENT_DEL = ecore_event_type_new();
    ECORE_CON_EVENT_SERVER_ADD = ecore_event_type_new();
@@ -98,7 +103,7 @@ ecore_con_init(void)
    ecore_con_dns_init();
    ecore_con_info_init();
 
-   return init_count;
+   return _ecore_con_init_count;
 }
 
 /**
@@ -110,7 +115,8 @@ ecore_con_init(void)
 EAPI int
 ecore_con_shutdown(void)
 {
-   if (--init_count != 0) return init_count;
+   if (--_ecore_con_init_count != 0)
+     return _ecore_con_init_count;
 
    while (servers)
      _ecore_con_server_free(eina_list_data_get(servers));
@@ -121,7 +127,7 @@ ecore_con_shutdown(void)
 
    ecore_shutdown();
 
-   return init_count;
+   return _ecore_con_init_count;
 }
 
 /**
@@ -278,7 +284,7 @@ ecore_con_server_add(Ecore_Con_Type compl_type, const char *name, int port,
 	if (!svr->fd_handler) goto error;
      }
 
-   if (type == ECORE_CON_REMOTE_TCP)
+   if (type == ECORE_CON_REMOTE_TCP || type == ECORE_CON_REMOTE_NODELAY)
      {
         /* TCP */
         if (!ecore_con_info_tcp_listen(svr, _ecore_con_cb_tcp_listen, svr)) goto error;
@@ -365,7 +371,8 @@ ecore_con_server_connect(Ecore_Con_Type compl_type, const char *name, int port,
 
    type = compl_type & ECORE_CON_TYPE;
 
-   if ((type == ECORE_CON_REMOTE_TCP || type == ECORE_CON_REMOTE_UDP) && (port < 0)) return NULL;
+   if ((type == ECORE_CON_REMOTE_TCP || type == ECORE_CON_REMOTE_NODELAY
+	|| type == ECORE_CON_REMOTE_UDP || ECORE_CON_REMOTE_BROADCAST) && (port < 0)) return NULL;
 
    if ((type == ECORE_CON_LOCAL_USER) || (type == ECORE_CON_LOCAL_SYSTEM) ||
        (type == ECORE_CON_LOCAL_ABSTRACT))
@@ -460,12 +467,12 @@ ecore_con_server_connect(Ecore_Con_Type compl_type, const char *name, int port,
 	  }
      }
 
-   if (type == ECORE_CON_REMOTE_TCP)
+   if (type == ECORE_CON_REMOTE_TCP || type == ECORE_CON_REMOTE_NODELAY)
      {
         /* TCP */
         if (!ecore_con_info_tcp_connect(svr, _ecore_con_cb_tcp_connect, svr)) goto error;
      }
-   else if (type == ECORE_CON_REMOTE_UDP)
+   else if (type == ECORE_CON_REMOTE_UDP || type == ECORE_CON_REMOTE_BROADCAST)
      {
         /* UDP and MCAST */
         if (!ecore_con_info_udp_connect(svr, _ecore_con_cb_udp_connect, svr)) goto error;
@@ -720,7 +727,7 @@ ecore_con_client_send(Ecore_Con_Client *cl, const void *data, int size)
 
    if(cl->server && cl->server->type == ECORE_CON_REMOTE_UDP)
      {
-       sendto(cl->server->fd, data, size, 0, (struct sockaddr *) cl->data, sizeof(struct sockaddr_in));
+       sendto(cl->server->fd, data, size, 0, (struct sockaddr *) cl->client_addr, sizeof(struct sockaddr_in));
      }
    else if (cl->buf)
      {
@@ -777,11 +784,11 @@ ecore_con_client_del(Ecore_Con_Client *cl)
 	return NULL;
      }
 
-   if(cl->data && cl->server && (cl->server->type == ECORE_CON_REMOTE_UDP ||
+   if(cl->client_addr && cl->server && (cl->server->type == ECORE_CON_REMOTE_UDP ||
 				 cl->server->type == ECORE_CON_REMOTE_MCAST))
-     free(cl->data);
-   else
-     data = cl->data;
+     free(cl->client_addr);
+
+   data = cl->data;
 
    cl->data = NULL;
    cl->delete_me = 1;
@@ -795,7 +802,8 @@ ecore_con_client_del(Ecore_Con_Client *cl)
      }
    else
      {
-        cl->server->clients = eina_list_remove(cl->server->clients, cl);
+        if (cl->server)
+	  cl->server->clients = eina_list_remove(cl->server->clients, cl);
 	_ecore_con_client_free(cl);
      }
    return data;
@@ -975,6 +983,13 @@ _ecore_con_cb_tcp_listen(void *data, Ecore_Con_Info *net_info)
    lin.l_onoff = 1;
    lin.l_linger = 0;
    if (setsockopt(svr->fd, SOL_SOCKET, SO_LINGER, &lin, sizeof(struct linger)) < 0) goto error;
+   if (svr->type == ECORE_CON_REMOTE_NODELAY)
+     {
+	int flag = 1;
+
+	if (setsockopt(svr->fd, IPPROTO_TCP, TCP_NODELAY, (char *) &flag, sizeof(int)) < 0)
+	  goto error;
+     }
    if (bind(svr->fd, net_info->info.ai_addr, net_info->info.ai_addrlen) < 0) goto error;
    if (listen(svr->fd, 4096) < 0) goto error;
    svr->fd_handler =
@@ -1055,6 +1070,13 @@ _ecore_con_cb_tcp_connect(void *data, Ecore_Con_Info *net_info)
    if (fcntl(svr->fd, F_SETFD, FD_CLOEXEC) < 0) goto error;
    if (setsockopt(svr->fd, SOL_SOCKET, SO_REUSEADDR, &curstate, sizeof(curstate)) < 0)
      goto error;
+   if (svr->type == ECORE_CON_REMOTE_NODELAY)
+     {
+	int flag = 1;
+
+	if (setsockopt(svr->fd, IPPROTO_TCP, TCP_NODELAY, (char *) &flag, sizeof(int)) < 0)
+	  goto error;
+     }
    if (connect(svr->fd, net_info->info.ai_addr, net_info->info.ai_addrlen) < 0)
      {
        if (errno != EINPROGRESS)
@@ -1088,7 +1110,7 @@ _ecore_con_cb_udp_connect(void *data, Ecore_Con_Info *net_info)
 {
    Ecore_Con_Server   *svr;
    int                 curstate = 0;
-
+   int		       broadcast = 1;
    svr = data;
 
    if (!net_info) goto error;
@@ -1096,8 +1118,16 @@ _ecore_con_cb_udp_connect(void *data, Ecore_Con_Info *net_info)
    if (svr->fd < 0) goto error;
    if (fcntl(svr->fd, F_SETFL, O_NONBLOCK) < 0) goto error;
    if (fcntl(svr->fd, F_SETFD, FD_CLOEXEC) < 0) goto error;
-   if (setsockopt(svr->fd, SOL_SOCKET, SO_REUSEADDR, &curstate, sizeof(curstate)) < 0)
-     goto error;
+
+   if(svr->type == ECORE_CON_REMOTE_BROADCAST)
+     {
+       if (setsockopt(svr->fd, SOL_SOCKET, SO_BROADCAST, &broadcast, sizeof(broadcast)) < 0) goto error;
+     }
+   else
+     {
+       if (setsockopt(svr->fd, SOL_SOCKET, SO_REUSEADDR, &curstate, sizeof(curstate)) < 0) goto error;
+     }
+
    if (connect(svr->fd, net_info->info.ai_addr, net_info->info.ai_addrlen) < 0)
      goto error;
    else
@@ -1427,13 +1457,13 @@ _ecore_con_svr_udp_handler(void *data, Ecore_Fd_Handler *fd_handler)
 	       cl->fd = 0;
 	       cl->fd_handler = NULL;
 	       cl->server = svr;
-	       cl->data = calloc(1, sizeof(client_addr));
-	       if(cl->data == NULL)
+	       cl->client_addr = calloc(1, sizeof(client_addr));
+	       if(cl->client_addr == NULL)
 		 {
 		   free(cl);
 		   return 1;
 		 }
-	       memcpy(cl->data,  &client_addr, sizeof(client_addr));
+	       memcpy(cl->client_addr,  &client_addr, sizeof(client_addr));
 	       ECORE_MAGIC_SET(cl, ECORE_MAGIC_CON_CLIENT);
 	       svr->clients = eina_list_append(svr->clients, cl);
 
@@ -1449,7 +1479,7 @@ _ecore_con_svr_udp_handler(void *data, Ecore_Fd_Handler *fd_handler)
 	       inbuf = malloc(num);
 	       if(inbuf == NULL)
 		 {
-		   free(cl->data);
+		   free(cl->client_addr);
 		   free(cl);
 		   return 1;
 		 }

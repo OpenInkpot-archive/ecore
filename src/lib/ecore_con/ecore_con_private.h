@@ -51,6 +51,7 @@ struct _Ecore_Con_Client
    unsigned char    *buf;
    char             *ip;
    int               event_count;
+   struct sockaddr_in *client_addr;
 #if USE_GNUTLS
    gnutls_session    session;
 #elif USE_OPENSSL
@@ -102,6 +103,8 @@ struct _Ecore_Con_Url
    ECORE_MAGIC;
    CURL              *curl_easy;
    struct curl_slist *headers;
+   Eina_List         *additional_headers;
+   Eina_List         *response_headers;
    char              *url;
 
    Ecore_Con_Url_Time condition;

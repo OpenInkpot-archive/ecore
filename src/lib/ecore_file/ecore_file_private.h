@@ -1,3 +1,6 @@
+#ifndef ECORE_FILE_PRIVATE_H_
+#define ECORE_FILE_PRIVATE_H_
+
 #ifndef _FILE_OFFSET_BITS
 # define _FILE_OFFSET_BITS  64
 #endif
@@ -16,8 +19,8 @@
 #include "Ecore_File.h"
 
 /* ecore_file_monitor */
-int ecore_file_monitor_init(void);
-int ecore_file_monitor_shutdown(void);
+int  ecore_file_monitor_init(void);
+void ecore_file_monitor_shutdown(void);
 
 #define ECORE_FILE_MONITOR(x) ((Ecore_File_Monitor *)(x))
 
@@ -54,6 +57,18 @@ Ecore_File_Monitor *ecore_file_monitor_inotify_add(const char *path,
 							void *data);
 void                ecore_file_monitor_inotify_del(Ecore_File_Monitor *ecore_file_monitor);
 #endif
+ 
+#ifdef HAVE_NOTIFY_WIN32
+int                 ecore_file_monitor_win32_init(void);
+int                 ecore_file_monitor_win32_shutdown(void);
+Ecore_File_Monitor *ecore_file_monitor_win32_add(const char *path,
+                                                 void      (*func) (void               *data,
+                                                                    Ecore_File_Monitor *ecore_file_monitor,
+                                                                    Ecore_File_Event    event,
+                                                                    const char         *path),
+                                                 void       *data);
+void                ecore_file_monitor_win32_del(Ecore_File_Monitor *ecore_file_monitor);
+#endif
 
 #ifdef HAVE_POLL
 int                 ecore_file_monitor_poll_init(void);
@@ -66,12 +81,14 @@ Ecore_File_Monitor *ecore_file_monitor_poll_add(const char *path,
 						void *data);
 void                ecore_file_monitor_poll_del(Ecore_File_Monitor *ecore_file_monitor);
 
+#endif
+
 /* ecore_file_path */
-int ecore_file_path_init(void);
-int ecore_file_path_shutdown(void);
+void ecore_file_path_init(void);
+void ecore_file_path_shutdown(void);
 
 /* ecore_file_download */
-int ecore_file_download_init(void);
-int ecore_file_download_shutdown(void);
+int  ecore_file_download_init(void);
+void ecore_file_download_shutdown(void);
 
 #endif

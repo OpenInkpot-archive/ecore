@@ -13,7 +13,6 @@
 #include "ecore_private.h"
 #include "Ecore_Input.h"
 #include "Ecore.h"
-#include "Ecore_Data.h"
 #include "Ecore_Sdl_Keys.h"
 
 #include <eina_rbtree.h>
@@ -67,17 +66,20 @@ _ecore_sdl_pressed_node(const Ecore_SDL_Pressed *node,
 EAPI int
 ecore_sdl_init(const char *name __UNUSED__)
 {
-   if(!_ecore_sdl_init_count)
-     {
-	ECORE_SDL_EVENT_GOT_FOCUS         = ecore_event_type_new();
-	ECORE_SDL_EVENT_LOST_FOCUS        = ecore_event_type_new();
-	ECORE_SDL_EVENT_RESIZE            = ecore_event_type_new();
-	ECORE_SDL_EVENT_EXPOSE            = ecore_event_type_new();
+   if(++_ecore_sdl_init_count != 1)
+     return _ecore_sdl_init_count;
 
-	SDL_EnableKeyRepeat(200, 100);
-     }
-   ecore_event_init();
-   return ++_ecore_sdl_init_count;
+   if (!ecore_event_init())
+     return --_ecore_sdl_init_count;
+
+   ECORE_SDL_EVENT_GOT_FOCUS  = ecore_event_type_new();
+   ECORE_SDL_EVENT_LOST_FOCUS = ecore_event_type_new();
+   ECORE_SDL_EVENT_RESIZE     = ecore_event_type_new();
+   ECORE_SDL_EVENT_EXPOSE     = ecore_event_type_new();
+
+   SDL_EnableKeyRepeat(200, 100);
+
+   return _ecore_sdl_init_count;
 }
 
 /**
@@ -89,8 +91,11 @@ ecore_sdl_init(const char *name __UNUSED__)
 EAPI int
 ecore_sdl_shutdown(void)
 {
-   _ecore_sdl_init_count--;
+   if (--_ecore_sdl_init_count != 0);
+   return _ecore_sdl_init_count;
+
    ecore_event_shutdown();
+
    return _ecore_sdl_init_count;
 }
 

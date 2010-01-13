@@ -15,6 +15,7 @@
 #include "ecore_evas_private.h"
 #include "Ecore_Evas.h"
 
+int _ecore_evas_log_dom = -1;
 static int _ecore_evas_init_count = 0;
 static Ecore_Fd_Handler *_ecore_evas_async_events_fd = NULL;
 static int _ecore_evas_async_events_fd_handler(void *data, Ecore_Fd_Handler *fd_handler);
@@ -129,6 +130,12 @@ ecore_evas_engine_type_supported_get(Ecore_Evas_Engine_Type engine)
 #else
 	return 0;
 #endif
+      case ECORE_EVAS_ENGINE_QUARTZ:
+#ifdef BUILD_ECORE_EVAS_QUARTZ
+	 return 1;
+#else
+	 return 0;
+#endif
       default:
 	return 0;
 	break;
@@ -140,65 +147,82 @@ ecore_evas_engine_type_supported_get(Ecore_Evas_Engine_Type engine)
  * Init the Evas system.
  * @return greater than 0 on success, 0 on failure
  *
- * Set up the Evas wrapper system.
+ * Set up the Evas wrapper system. Init Evas and Ecore libraries.
  */
 EAPI int
 ecore_evas_init(void)
 {
-   if (_ecore_evas_init_count == 0)
+   int fd;
+
+   if (++_ecore_evas_init_count != 1)
+     return _ecore_evas_init_count;
+
+   if (!evas_init())
+     return --_ecore_evas_init_count;
+
+   if (!ecore_init())
+     goto shutdown_evas;
+
+   _ecore_evas_log_dom = eina_log_domain_register("Ecore_Evas", ECORE_EVAS_DEFAULT_LOG_COLOR);
+   if(_ecore_evas_log_dom < 0) 
      {
-	int fd;
-
-	evas_init ();
-	ecore_init();
-
-	fd = evas_async_events_fd_get();
-	if (fd > 0)
-	  _ecore_evas_async_events_fd = ecore_main_fd_handler_add(fd,
-								  ECORE_FD_READ,
-								  _ecore_evas_async_events_fd_handler, NULL,
-								  NULL, NULL);
+	EINA_LOG_ERR("Impossible to create a log domain for Ecore_Evas.\n");
+	goto shutdown_ecore;
      }
-   return ++_ecore_evas_init_count;
+
+   fd = evas_async_events_fd_get();
+   if (fd > 0)
+     _ecore_evas_async_events_fd = ecore_main_fd_handler_add(fd,
+							     ECORE_FD_READ,
+							     _ecore_evas_async_events_fd_handler, NULL,
+							     NULL, NULL);
+   return _ecore_evas_init_count;
+
+ shutdown_ecore:
+   ecore_shutdown();
+ shutdown_evas:
+   evas_shutdown();
+
+   return --_ecore_evas_init_count;
 }
 
 /**
  * Shut down the Evas system.
  * @return 0 if ecore evas is fully shut down, or > 0 if it still needs to be shut down
  *
- * This closes the Evas system down.
+ * This closes the Evas wrapper system down. Shut down Evas and Ecore libraries.
  */
 EAPI int
 ecore_evas_shutdown(void)
 {
-   _ecore_evas_init_count--;
-   if (_ecore_evas_init_count == 0)
-     {
+   if (--_ecore_evas_init_count != 0)
+     return _ecore_evas_init_count;
+
 #ifdef BUILD_ECORE_EVAS_X11
-	while (_ecore_evas_x_shutdown());
+   while (_ecore_evas_x_shutdown());
 #endif
 #ifdef BUILD_ECORE_EVAS_WIN32
-	while (_ecore_evas_win32_shutdown());
+   while (_ecore_evas_win32_shutdown());
 #endif
 #ifdef BUILD_ECORE_EVAS_FB
-	while (_ecore_evas_fb_shutdown());
+   while (_ecore_evas_fb_shutdown());
 #endif
 #ifdef BUILD_ECORE_EVAS_SOFTWARE_BUFFER
-	while (_ecore_evas_buffer_shutdown());
+   while (_ecore_evas_buffer_shutdown());
 #endif
 #ifdef BUILD_ECORE_EVAS_DIRECTFB
-	while (_ecore_evas_directfb_shutdown());
+   while (_ecore_evas_directfb_shutdown());
 #endif
 #ifdef BUILD_ECORE_EVAS_SOFTWARE_16_WINCE
-	while (_ecore_evas_wince_shutdown());
+   while (_ecore_evas_wince_shutdown());
 #endif
-	if (_ecore_evas_async_events_fd)
-	  ecore_main_fd_handler_del(_ecore_evas_async_events_fd);
+   if (_ecore_evas_async_events_fd)
+     ecore_main_fd_handler_del(_ecore_evas_async_events_fd);
 
-	ecore_shutdown();
-	evas_shutdown();
-     }
-   if (_ecore_evas_init_count < 0) _ecore_evas_init_count = 0;
+   eina_log_domain_unregister(_ecore_evas_log_dom);
+   ecore_shutdown();
+   evas_shutdown();
+
    return _ecore_evas_init_count;
 }
 
@@ -299,18 +323,18 @@ _ecore_evas_constructor_software_x11(int x, int y, int w, int h, const char *ext
 }
 #endif
 
-#ifdef BUILD_ECORE_EVAS_SOFTWARE_XCB
+#ifdef BUILD_ECORE_EVAS_QUARTZ
 static Ecore_Evas *
-_ecore_evas_constructor_software_xcb(int x, int y, int w, int h, const char *extra_options)
+_ecore_evas_constructor_quartz(int x, int y, int w, int h, const char *extra_options)
 {
-   unsigned int parent = 0;
-   char *disp_name = NULL;
+   char *name = NULL;
    Ecore_Evas *ee;
 
-   _ecore_evas_parse_extra_options_x(extra_options, &disp_name, &parent);
-   ee = ecore_evas_software_x11_new(disp_name, parent, x, y, w, h);
-   free(disp_name);
+   _ecore_evas_parse_extra_options_str(extra_options, "name=", &name);
+   ee = ecore_evas_quartz_new(name, w, h);
+   free(name);
 
+   if (ee) ecore_evas_move(ee, x, y);
    return ee;
 }
 #endif
@@ -479,25 +503,25 @@ _ecore_evas_constructor_software_16_ddraw(int x, int y, int w, int h, const char
 
 #ifdef BUILD_ECORE_EVAS_SOFTWARE_16_WINCE
 static Ecore_Evas *
-_ecore_evas_constructor_software_16_wince(int x, int y, int w, int h, const char *extra_options)
+_ecore_evas_constructor_software_16_wince(int x, int y, int w, int h, const char *extra_options __UNUSED__)
 {
    return ecore_evas_software_wince_new(NULL, x, y, w, h);
 }
 
 static Ecore_Evas *
-_ecore_evas_constructor_software_16_wince_fb(int x, int y, int w, int h, const char *extra_options)
+_ecore_evas_constructor_software_16_wince_fb(int x, int y, int w, int h, const char *extra_options __UNUSED__)
 {
    return ecore_evas_software_wince_fb_new(NULL, x, y, w, h);
 }
 
 static Ecore_Evas *
-_ecore_evas_constructor_software_16_wince_gapi(int x, int y, int w, int h, const char *extra_options)
+_ecore_evas_constructor_software_16_wince_gapi(int x, int y, int w, int h, const char *extra_options __UNUSED__)
 {
    return ecore_evas_software_wince_gapi_new(NULL, x, y, w, h);
 }
 
 static Ecore_Evas *
-_ecore_evas_constructor_software_16_wince_gdi(int x, int y, int w, int h, const char *extra_options)
+_ecore_evas_constructor_software_16_wince_gdi(int x, int y, int w, int h, const char *extra_options __UNUSED__)
 {
    return ecore_evas_software_wince_gdi_new(NULL, x, y, w, h);
 }
@@ -557,6 +581,11 @@ static const struct ecore_evas_engine _engines[] = {
   {"software_16_wince_fb", _ecore_evas_constructor_software_16_wince_fb},
   {"software_16_wince_gapi", _ecore_evas_constructor_software_16_wince_gapi},
   {"software_16_wince_gdi", _ecore_evas_constructor_software_16_wince_gdi},
+#endif
+
+  /* Apple */
+#ifdef BUILD_ECORE_EVAS_QUARTZ
+  {"quartz", _ecore_evas_constructor_quartz},
 #endif
 
   /* Last chance to have a window */
@@ -634,7 +663,7 @@ _ecore_evas_new_auto_discover(int x, int y, int w, int h, const char *extra_opti
  *        consider ';' as the command terminator, so you need to escape
  *        it or use quotes.
  *
- * @param Ecore_Evas instance or NULL if creation failed.
+ * @return Ecore_Evas instance or NULL if creation failed.
  */
 EAPI Ecore_Evas *
 ecore_evas_new(const char *engine_name, int x, int y, int w, int h, const char *extra_options)
@@ -730,10 +759,10 @@ ecore_evas_data_get(const Ecore_Evas *ee, const char *key)
 /**
  * Store user data in an Ecore_Evas structure.
  *
- * @param eeThe Ecore_Evas to store the user data in.
- * @param keyA unique string to associate the user data against. Cannot
+ * @param ee The Ecore_Evas to store the user data in.
+ * @param key A unique string to associate the user data against. Cannot
  * be NULL.
- * @param dataA pointer to the user data to store.
+ * @param data A pointer to the user data to store.
  *
  * This function associates the @p data with a @p key which is stored by
  * the Ecore_Evas @p ee. Be aware that a call to ecore_evas_free() will
@@ -2323,8 +2352,8 @@ ecore_evas_sticky_get(const Ecore_Evas *ee)
 /**
  * Set if this evas should ignore events
  *
- * @param ee The Ecore_Evas whose window's to ignore events
- * @param sticky The Ecore_Evas new ignore state
+ * @param ee The Ecore_Evas whose window's to ignore events.
+ * @param ignore The Ecore_Evas new ignore state.
  *
  */
 EAPI void

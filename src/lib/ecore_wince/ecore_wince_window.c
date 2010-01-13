@@ -37,12 +37,12 @@ ecore_wince_window_new(Ecore_WinCE_Window *parent,
    HWND                        window;
    RECT                        rect;
 
-   EINA_ERROR_PINFO("creating window\n");
+   INF("creating window");
 
    w = (struct _Ecore_WinCE_Window *)calloc(1, sizeof(struct _Ecore_WinCE_Window));
    if (!w)
      {
-        EINA_ERROR_PERR("malloc() failed\n");
+        ERR("malloc() failed");
         return NULL;
      }
 
@@ -52,7 +52,7 @@ ecore_wince_window_new(Ecore_WinCE_Window *parent,
    rect.bottom = height;
    if (!AdjustWindowRectEx(&rect, WS_CAPTION | WS_SYSMENU | WS_VISIBLE, FALSE, WS_EX_TOPMOST))
      {
-        EINA_ERROR_PERR("AdjustWindowRectEx() failed\n");
+        ERR("AdjustWindowRectEx() failed");
         free(w);
         return NULL;
      }
@@ -67,14 +67,14 @@ ecore_wince_window_new(Ecore_WinCE_Window *parent,
                            NULL, _ecore_wince_instance, NULL);
    if (!window)
      {
-        EINA_ERROR_PERR("CreateWindowEx() failed\n");
+        ERR("CreateWindowEx() failed");
         free(w);
         return NULL;
      }
 
    if (!_ecore_wince_hardware_keys_register(window))
      {
-        EINA_ERROR_PERR("_ecore_wince_hardware_keys_register() failed\n");
+        ERR("_ecore_wince_hardware_keys_register() failed");
         DestroyWindow(window);
         free(w);
         return NULL;
@@ -85,7 +85,7 @@ ecore_wince_window_new(Ecore_WinCE_Window *parent,
    SetLastError(0);
    if (!SetWindowLong(window, GWL_USERDATA, (LONG)w) && (GetLastError() != 0))
      {
-        EINA_ERROR_PERR("SetWindowLong() failed\n");
+        ERR("SetWindowLong() failed");
         DestroyWindow(window);
         free(w);
         return NULL;
@@ -101,7 +101,7 @@ ecore_wince_window_free(Ecore_WinCE_Window *window)
 {
    if (!window) return;
 
-   EINA_ERROR_PINFO("destroying window\n");
+   INF("destroying window");
 
    DestroyWindow(((struct _Ecore_WinCE_Window *)window)->window);
    free(window);
@@ -127,12 +127,12 @@ ecore_wince_window_move(Ecore_WinCE_Window *window,
    if (!window || ((struct _Ecore_WinCE_Window *)window)->fullscreen)
      return;
 
-   EINA_ERROR_PINFO("moving window (%dx%d)\n", x, y);
+   INF("moving window (%dx%d)", x, y);
 
    w = ((struct _Ecore_WinCE_Window *)window)->window;
    if (!GetWindowRect(w, &rect))
      {
-        EINA_ERROR_PERR("GetWindowRect() failed\n");
+        ERR("GetWindowRect() failed");
         return;
      }
 
@@ -141,7 +141,7 @@ ecore_wince_window_move(Ecore_WinCE_Window *window,
                    rect.bottom - rect.top,
                    TRUE))
      {
-        EINA_ERROR_PERR("MoveWindow() failed\n");
+        ERR("MoveWindow() failed");
      }
 }
 
@@ -160,12 +160,12 @@ ecore_wince_window_resize(Ecore_WinCE_Window *window,
    if (!window || ((struct _Ecore_WinCE_Window *)window)->fullscreen)
      return;
 
-   EINA_ERROR_PINFO("resizing window (%dx%d)\n", width, height);
+   INF("resizing window (%dx%d)", width, height);
 
    w = (struct _Ecore_WinCE_Window *)window;
    if (!GetWindowRect(w->window, &rect))
      {
-        EINA_ERROR_PERR("GetWindowRect() failed\n");
+        ERR("GetWindowRect() failed");
         return;
      }
 
@@ -177,17 +177,17 @@ ecore_wince_window_resize(Ecore_WinCE_Window *window,
    rect.bottom = height;
    if (!(style = GetWindowLong(w->window, GWL_STYLE)))
      {
-        EINA_ERROR_PERR("GetWindowLong() failed\n");
+        ERR("GetWindowLong() failed");
         return;
      }
    if (!(exstyle = GetWindowLong(w->window, GWL_EXSTYLE)))
      {
-        EINA_ERROR_PERR("GetWindowLong() failed\n");
+        ERR("GetWindowLong() failed");
         return;
      }
    if (!AdjustWindowRectEx(&rect, style, FALSE, exstyle))
      {
-        EINA_ERROR_PERR("AdjustWindowRectEx() failed\n");
+        ERR("AdjustWindowRectEx() failed");
         return;
      }
 
@@ -196,7 +196,7 @@ ecore_wince_window_resize(Ecore_WinCE_Window *window,
                    rect.bottom - rect.top,
                    FALSE))
      {
-        EINA_ERROR_PERR("MoveWindow() failed\n");
+        ERR("MoveWindow() failed");
      }
 }
 
@@ -215,7 +215,7 @@ ecore_wince_window_move_resize(Ecore_WinCE_Window *window,
    if (!window || ((struct _Ecore_WinCE_Window *)window)->fullscreen)
      return;
 
-   EINA_ERROR_PINFO("moving and resizing window (%dx%d %dx%d)\n", x, y, width, height);
+   INF("moving and resizing window (%dx%d %dx%d)", x, y, width, height);
 
    w = ((struct _Ecore_WinCE_Window *)window);
    rect.left = 0;
@@ -224,17 +224,17 @@ ecore_wince_window_move_resize(Ecore_WinCE_Window *window,
    rect.bottom = height;
    if (!(style = GetWindowLong(w->window, GWL_STYLE)))
      {
-        EINA_ERROR_PERR("GetWindowLong() failed\n");
+        ERR("GetWindowLong() failed");
         return;
      }
    if (!(exstyle = GetWindowLong(w->window, GWL_EXSTYLE)))
      {
-        EINA_ERROR_PERR("GetWindowLong() failed\n");
+        ERR("GetWindowLong() failed");
         return;
      }
    if (!AdjustWindowRectEx(&rect, style, FALSE, exstyle))
      {
-        EINA_ERROR_PERR("AdjustWindowRectEx() failed\n");
+        ERR("AdjustWindowRectEx() failed");
         return;
      }
 
@@ -243,7 +243,7 @@ ecore_wince_window_move_resize(Ecore_WinCE_Window *window,
               rect.bottom - rect.top,
               TRUE))
      {
-        EINA_ERROR_PERR("MoveWindow() failed\n");
+        ERR("MoveWindow() failed");
      }
 }
 
@@ -252,20 +252,20 @@ ecore_wince_window_show(Ecore_WinCE_Window *window)
 {
    if (!window) return;
 
-   EINA_ERROR_PINFO("showing window\n");
+   INF("showing window");
 
    if (!ShowWindow(((struct _Ecore_WinCE_Window *)window)->window, SW_SHOWNORMAL))
      {
-        EINA_ERROR_PERR("ShowWindow() failed\n");
+        ERR("ShowWindow() failed");
         return;
      }
    if (!UpdateWindow(((struct _Ecore_WinCE_Window *)window)->window))
      {
-        EINA_ERROR_PERR("UpdateWindow() failed\n");
+        ERR("UpdateWindow() failed");
      }
    if (!SendMessage(((struct _Ecore_WinCE_Window *)window)->window, WM_SHOWWINDOW, 1, 0))
      {
-        EINA_ERROR_PERR("SendMessage() failed\n");
+        ERR("SendMessage() failed");
      }
 }
 
@@ -274,16 +274,16 @@ ecore_wince_window_hide(Ecore_WinCE_Window *window)
 {
    if (!window) return;
 
-   EINA_ERROR_PINFO("hiding window\n");
+   INF("hiding window");
 
    if (!ShowWindow(((struct _Ecore_WinCE_Window *)window)->window, SW_HIDE))
      {
-        EINA_ERROR_PERR("ShowWindow() failed\n");
+        ERR("ShowWindow() failed");
         return;
      }
    if (!SendMessage(((struct _Ecore_WinCE_Window *)window)->window, WM_SHOWWINDOW, 0, 0))
      {
-        EINA_ERROR_PERR("SendMessage() failed\n");
+        ERR("SendMessage() failed");
      }
 }
 
@@ -297,14 +297,14 @@ ecore_wince_window_title_set(Ecore_WinCE_Window *window,
 
    if (!title || !title[0]) return;
 
-   EINA_ERROR_PINFO("setting window title\n");
+   INF("setting window title");
 
    wtitle = evil_char_to_wchar(title);
    if (!wtitle) return;
 
    if (!SetWindowText(((struct _Ecore_WinCE_Window *)window)->window, wtitle))
      {
-        EINA_ERROR_PERR("SetWindowText() failed\n");
+        ERR("SetWindowText() failed");
      }
    free(wtitle);
 }
@@ -317,7 +317,7 @@ ecore_wince_window_backend_set(Ecore_WinCE_Window *window, int backend)
    if (!window)
      return;
 
-   EINA_ERROR_PINFO("setting backend\n");
+   INF("setting backend");
 
    w = (struct _Ecore_WinCE_Window *)window;
    w->backend = backend;
@@ -331,7 +331,7 @@ ecore_wince_window_suspend_set(Ecore_WinCE_Window *window, int (*suspend)(int))
    if (!window)
      return;
 
-   EINA_ERROR_PINFO("setting suspend callback\n");
+   INF("setting suspend callback");
 
    w = (struct _Ecore_WinCE_Window *)window;
    w->suspend = suspend;
@@ -345,7 +345,7 @@ ecore_wince_window_resume_set(Ecore_WinCE_Window *window, int (*resume)(int))
    if (!window)
      return;
 
-   EINA_ERROR_PINFO("setting resume callback\n");
+   INF("setting resume callback");
 
    w = (struct _Ecore_WinCE_Window *)window;
    w->resume = resume;
@@ -362,7 +362,7 @@ ecore_wince_window_geometry_get(Ecore_WinCE_Window *window,
    int  w;
    int  h;
 
-   EINA_ERROR_PINFO("getting window geometry\n");
+   INF("getting window geometry");
 
    if (!window)
      {
@@ -377,7 +377,7 @@ ecore_wince_window_geometry_get(Ecore_WinCE_Window *window,
    if (!GetClientRect(((struct _Ecore_WinCE_Window *)window)->window,
                       &rect))
      {
-        EINA_ERROR_PERR("GetClientRect() failed\n");
+        ERR("GetClientRect() failed");
 
         if (x) *x = 0;
         if (y) *y = 0;
@@ -393,7 +393,7 @@ ecore_wince_window_geometry_get(Ecore_WinCE_Window *window,
    if (!GetWindowRect(((struct _Ecore_WinCE_Window *)window)->window,
                       &rect))
      {
-        EINA_ERROR_PERR("GetWindowRect() failed\n");
+        ERR("GetWindowRect() failed");
 
         if (x) *x = 0;
         if (y) *y = 0;
@@ -416,7 +416,7 @@ ecore_wince_window_size_get(Ecore_WinCE_Window *window,
 {
    RECT rect;
 
-   EINA_ERROR_PINFO("getting window size\n");
+   INF("getting window size");
 
    if (!window)
      {
@@ -429,7 +429,7 @@ ecore_wince_window_size_get(Ecore_WinCE_Window *window,
    if (!GetClientRect(((struct _Ecore_WinCE_Window *)window)->window,
                       &rect))
      {
-        EINA_ERROR_PERR("GetClientRect() failed\n");
+        ERR("GetClientRect() failed");
 
         if (width) *width = 0;
         if (height) *height = 0;
@@ -454,7 +454,7 @@ ecore_wince_window_fullscreen_set(Ecore_WinCE_Window *window,
        ((!ew->fullscreen) && (!on)))
      return;
 
-   EINA_ERROR_PINFO("setting fullscreen: %s\n", on ? "yes" : "no");
+   INF("setting fullscreen: %s", on ? "yes" : "no");
 
    ew->fullscreen = !!on;
    w = ew->window;
@@ -464,7 +464,7 @@ ecore_wince_window_fullscreen_set(Ecore_WinCE_Window *window,
         /* save the position and size of the window */
         if (!GetWindowRect(w, &ew->rect))
           {
-             EINA_ERROR_PERR("GetWindowRect() failed\n");
+             ERR("GetWindowRect() failed");
              return;
           }
 
@@ -472,21 +472,21 @@ ecore_wince_window_fullscreen_set(Ecore_WinCE_Window *window,
         task_bar = FindWindow(L"HHTaskBar", NULL);
         if (!task_bar)
           {
-             EINA_ERROR_PINFO("FindWindow(): can not find task bar\n");
+             INF("FindWindow(): can not find task bar");
           }
         if (!ShowWindow(task_bar, SW_HIDE))
           {
-             EINA_ERROR_PINFO("ShowWindow(): task bar already hidden\n");
+             INF("ShowWindow(): task bar already hidden");
           }
         if (!EnableWindow(task_bar, FALSE))
           {
-             EINA_ERROR_PINFO("EnableWindow(): input already disabled\n");
+             INF("EnableWindow(): input already disabled");
           }
 
         /* style: visible + popup */
         if (!SetWindowLong(w, GWL_STYLE, WS_POPUP | WS_VISIBLE))
           {
-             EINA_ERROR_PINFO("SetWindowLong() failed\n");
+             INF("SetWindowLong() failed");
           }
 
         /* resize window to fit the entire screen */
@@ -495,7 +495,7 @@ ecore_wince_window_fullscreen_set(Ecore_WinCE_Window *window,
                           GetSystemMetrics(SM_CXSCREEN), GetSystemMetrics(SM_CYSCREEN),
                           SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED))
           {
-             EINA_ERROR_PINFO("SetWindowPos() failed\n");
+             INF("SetWindowPos() failed");
           }
         /*
          * It seems that SetWindowPos is not sufficient.
@@ -507,7 +507,7 @@ ecore_wince_window_fullscreen_set(Ecore_WinCE_Window *window,
                         GetSystemMetrics(SM_CXSCREEN), GetSystemMetrics(SM_CYSCREEN),
                         TRUE))
           {
-             EINA_ERROR_PINFO("MoveWindow() failed\n");
+             INF("MoveWindow() failed");
           }
      }
    else
@@ -516,21 +516,21 @@ ecore_wince_window_fullscreen_set(Ecore_WinCE_Window *window,
         task_bar = FindWindow(L"HHTaskBar", NULL);
         if (!task_bar)
           {
-             EINA_ERROR_PINFO("FindWindow(): can not find task bar\n");
+             INF("FindWindow(): can not find task bar");
           }
         if (!ShowWindow(task_bar, SW_SHOW))
           {
-             EINA_ERROR_PINFO("ShowWindow(): task bar already visible\n");
+             INF("ShowWindow(): task bar already visible");
           }
         if (!EnableWindow(task_bar, TRUE))
           {
-             EINA_ERROR_PINFO("EnableWindow():  input already enabled\n");
+             INF("EnableWindow():  input already enabled");
           }
 
         /* style: visible + caption + sysmenu */
         if (!SetWindowLong(w, GWL_STYLE, WS_CAPTION | WS_SYSMENU | WS_VISIBLE))
           {
-             EINA_ERROR_PINFO("SetWindowLong() failed\n");
+             INF("SetWindowLong() failed");
           }
         /* restaure the position and size of the window */
         if (!SetWindowPos(w, HWND_TOPMOST,
@@ -540,7 +540,7 @@ ecore_wince_window_fullscreen_set(Ecore_WinCE_Window *window,
                           ew->rect.bottom - ew->rect.top,
                           SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED))
           {
-             EINA_ERROR_PINFO("SetWindowLong() failed\n");
+             INF("SetWindowLong() failed");
           }
         /*
          * It seems that SetWindowPos is not sufficient.
@@ -554,7 +554,7 @@ ecore_wince_window_fullscreen_set(Ecore_WinCE_Window *window,
                         ew->rect.bottom - ew->rect.top,
                         TRUE))
           {
-             EINA_ERROR_PINFO("MoveWindow() failed\n");
+             INF("MoveWindow() failed");
           }
      }
 }
@@ -572,14 +572,14 @@ _ecore_wince_hardware_keys_register(HWND window)
    core_dll = LoadLibrary(L"coredll.dll");
    if (!core_dll)
      {
-        EINA_ERROR_PERR("LoadLibrary() failed\n");
+        ERR("LoadLibrary() failed");
         return 0;
      }
 
    unregister_fct = (UnregisterFunc1Proc)GetProcAddress(core_dll, L"UnregisterFunc1");
    if (!unregister_fct)
      {
-        EINA_ERROR_PERR("GetProcAddress() failed\n");
+        ERR("GetProcAddress() failed");
         FreeLibrary(core_dll);
         return 0;
      }

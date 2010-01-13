@@ -1,6 +1,8 @@
 #ifndef _ECORE_H
 #define _ECORE_H
 
+#include <Eina.h>
+
 #ifdef EAPI
 # undef EAPI
 #endif
@@ -51,13 +53,14 @@
 
 #ifdef _WIN32
 # include <winsock2.h>
-#elif defined (__FreeBSD__) && (__FreeBSD_version >= 420001)
+#elif (defined (__FreeBSD__) && (__FreeBSD_version >= 420001)) || defined (__OpenBSD__)
 # include <sys/select.h>
+# include <signal.h>
 #else
-# include <sys/types.h>
 # include <sys/time.h>
 # include <signal.h>
 #endif
+#include <sys/types.h>
 
 #ifndef TRUE
 # define TRUE 1
@@ -118,14 +121,13 @@ extern "C" {
      };
    typedef enum _Ecore_Poller_Type Ecore_Poller_Type;
 
-#ifndef _WIN32
    typedef void Ecore_Exe; /**< A handle for spawned processes */
-#endif
    typedef void Ecore_Timer; /**< A handle for timers */
    typedef void Ecore_Idler; /**< A handle for idlers */
    typedef void Ecore_Idle_Enterer; /**< A handle for idle enterers */
    typedef void Ecore_Idle_Exiter; /**< A handle for idle exiters */
-   typedef void Ecore_Fd_Handler; /**< A handle for Fd hanlders */
+   typedef void Ecore_Fd_Handler; /**< A handle for Fd handlers */
+   typedef void Ecore_Win32_Handler; /**< A handle for HANDLE handlers on Windows */
    typedef void Ecore_Event_Handler; /**< A handle for an event handler */
    typedef void Ecore_Event_Filter; /**< A handle for an event filter */
    typedef void Ecore_Event; /**< A handle for an event */
@@ -142,6 +144,7 @@ extern "C" {
    typedef struct _Ecore_Exe_Event_Del         Ecore_Exe_Event_Del; /**< Spawned Exe exit event */
    typedef struct _Ecore_Exe_Event_Data_Line   Ecore_Exe_Event_Data_Line; /**< Lines from a child process */
    typedef struct _Ecore_Exe_Event_Data        Ecore_Exe_Event_Data; /**< Data from a child process */
+   typedef struct _Ecore_Thread                Ecore_Thread;
 
    struct _Ecore_Event_Signal_User /** User signal event */
      {
@@ -192,7 +195,6 @@ extern "C" {
 #endif
      };
 
-#ifndef _WIN32
    struct _Ecore_Exe_Event_Add /** Process add event */
      {
 	Ecore_Exe *exe; /**< The handle to the added process */
@@ -208,7 +210,9 @@ extern "C" {
 	unsigned int  exited    : 1; /** < set to 1 if the process exited of its own accord */
 	unsigned int  signalled : 1; /** < set to 1 id the process exited due to uncaught signal */
 	void         *ext_data; /**< Extension data - not used */
+#ifndef _WIN32
 	siginfo_t     data; /**< Signal info */
+#endif
      };
 
    struct _Ecore_Exe_Event_Data_Line /**< Lines from a child process */
@@ -224,7 +228,6 @@ extern "C" {
 	int   size; /**< the size of this data in bytes */
 	Ecore_Exe_Event_Data_Line *lines; /**< an array of line data if line buffered, the last one has it's line member set to NULL */
      };
-#endif
 
    EAPI int  ecore_init(void);
    EAPI int  ecore_shutdown(void);
@@ -244,12 +247,11 @@ extern "C" {
    EAPI void                *ecore_event_current_event_get(void);
 
 
-#ifndef _WIN32
    EAPI void        ecore_exe_run_priority_set(int pri);
    EAPI int         ecore_exe_run_priority_get(void);
    EAPI Ecore_Exe  *ecore_exe_run(const char *exe_cmd, const void *data);
    EAPI Ecore_Exe  *ecore_exe_pipe_run(const char *exe_cmd, Ecore_Exe_Flags flags, const void *data);
-   EAPI int         ecore_exe_send(Ecore_Exe *exe, void *data, int size);
+   EAPI int         ecore_exe_send(Ecore_Exe *exe, const void *data, int size);
    EAPI void        ecore_exe_close_stdin(Ecore_Exe *exe);
    EAPI void        ecore_exe_auto_limits_set(Ecore_Exe *exe, int start_bytes, int end_bytes, int start_lines, int end_lines);
    EAPI Ecore_Exe_Event_Data *ecore_exe_event_data_get(Ecore_Exe *exe, Ecore_Exe_Flags flags);
@@ -268,7 +270,6 @@ extern "C" {
    EAPI void        ecore_exe_kill(Ecore_Exe *exe);
    EAPI void        ecore_exe_signal(Ecore_Exe *exe, int num);
    EAPI void        ecore_exe_hup(Ecore_Exe *exe);
-#endif
 
    EAPI Ecore_Idler *ecore_idler_add(int (*func) (void *data), const void *data);
    EAPI void        *ecore_idler_del(Ecore_Idler *idler);
@@ -285,6 +286,8 @@ extern "C" {
    EAPI void              ecore_main_loop_select_func_set(int (*func)(int nfds, fd_set *readfds, fd_set *writefds, fd_set *exceptfds, struct timeval *timeout));
    EAPI void             *ecore_main_loop_select_func_get(void);
 
+   EAPI Eina_Bool         ecore_main_loop_glib_integrate(void);
+
    EAPI void              ecore_main_loop_begin(void);
    EAPI void              ecore_main_loop_quit(void);
    EAPI Ecore_Fd_Handler *ecore_main_fd_handler_add(int fd, Ecore_Fd_Handler_Flags flags, int (*func) (void *data, Ecore_Fd_Handler *fd_handler), const void *data, int (*buf_func) (void *buf_data, Ecore_Fd_Handler *fd_handler), const void *buf_data);
@@ -294,11 +297,17 @@ extern "C" {
    EAPI int               ecore_main_fd_handler_active_get(Ecore_Fd_Handler *fd_handler, Ecore_Fd_Handler_Flags flags);
    EAPI void              ecore_main_fd_handler_active_set(Ecore_Fd_Handler *fd_handler, Ecore_Fd_Handler_Flags flags);
 
+   EAPI Ecore_Win32_Handler *ecore_main_win32_handler_add(void *h, int (*func) (void *data, Ecore_Win32_Handler *wh), const void *data);
+   EAPI void                *ecore_main_win32_handler_del(Ecore_Win32_Handler *win32_handler);
+
    EAPI Ecore_Pipe  *ecore_pipe_add(void (*handler) (void *data, void *buffer, unsigned int nbyte), const void *data);
    EAPI void        *ecore_pipe_del(Ecore_Pipe *p);
    EAPI int          ecore_pipe_write(Ecore_Pipe *p, const void *buffer, unsigned int nbytes);
    EAPI void         ecore_pipe_write_close(Ecore_Pipe *p);
    EAPI void         ecore_pipe_read_close(Ecore_Pipe *p);
+
+   EAPI Ecore_Thread *ecore_thread_run(void (*func_heavy)(void *data), void (*func_end)(void *data), void (*func_cancel)(void *data), const void *data);
+   EAPI Eina_Bool     ecore_thread_cancel(Ecore_Thread *thread);
 
    EAPI double ecore_time_get(void);
    EAPI double ecore_loop_time_get(void);

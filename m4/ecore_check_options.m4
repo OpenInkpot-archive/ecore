@@ -84,6 +84,37 @@ else
    m4_default([$3], [:])
 fi
 ])
+ 
+dnl use: ECORE_CHECK_NOTIFY_WIN32(default-enabled[, ACTION-IF-FOUND[, ACTION-IF-NOT-FOUND]])
+AC_DEFUN([ECORE_CHECK_NOTIFY_WIN32],
+[
+_ecore_want_notify_win32=$1
+_ecore_have_notify_win32="no"
+
+AC_ARG_ENABLE(notify-win32,
+   [AC_HELP_STRING([--disable-notify-win32], [disable Windows notification in the ecore_file module])],
+   [
+    if test "x${enableval}" = "xyes" ; then
+       _ecore_want_notify_win32="yes"
+    else
+       _ecore_want_notify_win32="no"
+    fi
+   ])
+
+AC_MSG_CHECKING(whether Windows notification is to be used for filemonitoring)
+AC_MSG_RESULT(${_ecore_want_notify_win32})
+
+if test "x${_ecore_want_notify_win32}" = "xyes" ; then
+   AC_DEFINE([HAVE_NOTIFY_WIN32], [1], [ File monitoring with Windows notification ])
+   _ecore_have_notify_win32="yes"
+fi
+
+if test "x${_ecore_have_notify_win32}" = "xyes" ; then
+   m4_default([$2], [:])
+else
+   m4_default([$3], [:])
+fi
+])
 
 dnl use: ECORE_CHECK_CURL(default-enabled[, ACTION-IF-FOUND[, ACTION-IF-NOT-FOUND]])
 AC_DEFUN([ECORE_CHECK_CURL],
@@ -189,21 +220,24 @@ fi
 dnl use: ECORE_CHECK_TSLIB(default-enabled[, ACTION-IF-FOUND[, ACTION-IF-NOT-FOUND]])
 AC_DEFUN([ECORE_CHECK_TSLIB],
 [
+_tslib_requirement=""
 _ecore_want_tslib=$1
 _ecore_have_tslib="no"
 TSLIB_LIBS=""
 TSLIB_CFLAGS=""
 
 if test "x${_ecore_want_tslib}" = "xyes" -o "x${_ecore_want_tslib}" = "xauto" ; then
-   PKG_CHECK_MODULES(TSLIB, tslib-1.0,
+   PKG_CHECK_MODULES([TSLIB], [tslib-1.0],
      [
       AC_DEFINE(HAVE_TSLIB, 1, [Build Ecore_FB Touchscreen Code])
-      _ecore_have_ts="yes"
+      _ecore_have_tslib="yes"
+      _tslib_requirement="tslib-1.0"
      ],[
-      PKG_CHECK_MODULES(TSLIB, tslib,
+      PKG_CHECK_MODULES([TSLIB], [tslib],
         [
          AC_DEFINE(HAVE_TSLIB, 1, [Build Ecore_FB Touchscreen Code])
-         _ecore_have_ts="yes"
+         _ecore_have_tslib="yes"
+         _tslib_requirement="tslib"
         ],[
          AC_CHECK_HEADER([tslib.h],
            [
@@ -212,16 +246,16 @@ if test "x${_ecore_want_tslib}" = "xyes" -o "x${_ecore_want_tslib}" = "xauto" ; 
                TSLIB_LIBS="-lts" 
                TSLIB_CFLAGS=""
                AC_DEFINE(HAVE_TSLIB, 1, [Build Ecore_FB Touchscreen Code])
-               _ecore_have_ts="yes"
+               _ecore_have_tslib="yes"
               ],[
                AC_CHECK_LIB([tslib], [ts_open],
                  [
                   TSLIB_LIBS="-ltslib"
                   TSLIB_CFLAGS=""
                   AC_DEFINE(HAVE_TSLIB, 1, [Build Ecore_FB Touchscreen Code])
-                  _ecore_have_ts="yes"
+                  _ecore_have_tslib="yes"
                  ],[
-                  _ecore_have_ts="no"
+                  _ecore_have_tslib="no"
                  ])
               ])
            ])

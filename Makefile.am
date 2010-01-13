@@ -2,40 +2,61 @@
 
 ACLOCAL_AMFLAGS = -I m4
 
-SUBDIRS = doc src
+SUBDIRS = doc src po
 
-MAINTAINERCLEANFILES = Makefile.in aclocal.m4 config.guess \
-                       config.h.in config.sub configure install-sh \
-		       ltconfig ltmain.sh missing mkinstalldirs \
-		       stamp-h.in  build-stamp configure-stamp depcomp \
-		       README \
-		       ecore.spec \
-		       ecore-con.pc \
-		       ecore-config.pc \
-		       ecore-directfb.pc\
-		       ecore-evas.pc \
-		       ecore-fb.pc \
-		       ecore-file.pc \
-		       ecore-imf.pc \
-		       ecore-imf-evas.pc \
-		       ecore-ipc.pc \
-		       ecore-job.pc \
-		       ecore-txt.pc \
-		       ecore-x.pc \
-		       ecore-win32.pc \
-		       ecore-sdl.pc \
-		       ecore-input.pc \
-		       ecore-quartz.pc \
-		       ecore-wince.pc \
-		       ecore.pc \
-		       $(PACKAGE_TARNAME)-$(PACKAGE_VERSION).tar.gz \
-		       $(PACKAGE_TARNAME)-$(PACKAGE_VERSION).tar.bz2 \
-		       $(PACKAGE_TARNAME)-$(PACKAGE_VERSION)-doc.tar.bz2 \
-		       m4/libtool.m4 \
-		       m4/lt~obsolete.m4 \
-		       m4/ltoptions.m4 \
-		       m4/ltsugar.m4 \
-		       m4/ltversion.m4
+
+MAINTAINERCLEANFILES = \
+ABOUT-NLS \
+Makefile.in \
+aclocal.m4 \
+autom4te.cache \
+config.guess \
+config.h.in \
+config.h.in~ \
+config.rpath \
+config.sub \
+configure \
+depcomp \
+install-sh \
+ltmain.sh \
+missing \
+mkinstalldirs \
+$(PACKAGE_TARNAME)-$(PACKAGE_VERSION).tar.gz \
+$(PACKAGE_TARNAME)-$(PACKAGE_VERSION).tar.bz2 \
+$(PACKAGE_TARNAME)-$(PACKAGE_VERSION)-doc.tar.bz2 \
+m4/libtool.m4 \
+m4/lt~obsolete.m4 \
+m4/ltoptions.m4 \
+m4/ltsugar.m4 \
+m4/ltversion.m4 \
+m4/codeset.m4 \
+m4/gettext.m4 \
+m4/glibc21.m4 \
+m4/iconv.m4 \
+m4/intdiv0.m4 \
+m4/inttypes_h.m4 \
+m4/inttypes.m4 \
+m4/inttypes-pri.m4 \
+m4/isc-posix.m4 \
+m4/lcmessage.m4 \
+m4/lib-ld.m4 \
+m4/lib-link.m4 \
+m4/lib-prefix.m4 \
+m4/nls.m4 \
+m4/po.m4 \
+m4/progtest.m4 \
+m4/stdint_h.m4 \
+m4/uintmax_t.m4 \
+m4/ulonglong.m4 \
+po/boldquot.sed \
+po/en@boldquot.header \
+po/en@quot.header \
+po/insert-header.sin \
+po/Makefile.in.in \
+po/Makevars.template \
+po/quot.sed \
+po/remove-potcdate.sin \
+po/Rules-quot
 
 bin_SCRIPTS = 
 
@@ -61,83 +82,80 @@ EXTRA_DIST = AUTHORS COPYING COPYING-PLAIN \
 	     ecore-wince.pc.in \
 	     ecore.spec.in ecore.spec
 
+pkgconfigdir = $(libdir)/pkgconfig
+pkgconfig_DATA = ecore.pc
+
 if BUILD_ECORE_CON
-pcon = ecore-con.pc
+pkgconfig_DATA += ecore-con.pc
 endif
 
 if BUILD_ECORE_CONFIG
-pconfig = ecore-config.pc
+pkgconfig_DATA += ecore-config.pc
 endif
 
 if BUILD_ECORE_DIRECTFB
-pdfb = ecore-directfb.pc
+pkgconfig_DATA += ecore-directfb.pc
 endif
 
 if BUILD_ECORE_EVAS
-pevas = ecore-evas.pc
+pkgconfig_DATA += ecore-evas.pc
 endif
 
 if BUILD_ECORE_FB
-pfb = ecore-fb.pc
+pkgconfig_DATA += ecore-fb.pc
 endif
 
 if BUILD_ECORE_FILE
-pfile = ecore-file.pc
+pkgconfig_DATA += ecore-file.pc
 endif
 
 if BUILD_ECORE_IMF
-pimf = ecore-imf.pc
+pkgconfig_DATA += ecore-imf.pc
 endif
 
 if BUILD_ECORE_IMF_EVAS
-pimfevas = ecore-imf-evas.pc
+pkgconfig_DATA += ecore-imf-evas.pc
 endif
 
 if BUILD_ECORE_INPUT
-pinput = ecore-input.pc
+pkgconfig_DATA += ecore-input.pc
 endif
 
 if BUILD_ECORE_IPC
-pipc = ecore-ipc.pc
+pkgconfig_DATA += ecore-ipc.pc
 endif
 
 if BUILD_ECORE_JOB
-pjob = ecore-job.pc
+pkgconfig_DATA += ecore-job.pc
 endif
 
 if BUILD_ECORE_TXT
-ptxt = ecore-txt.pc
+pkgconfig_DATA += ecore-txt.pc
 endif
 
 if BUILD_ECORE_X
-px = ecore-x.pc
+pkgconfig_DATA += ecore-x.pc
 endif
 
 if BUILD_ECORE_WIN32
-pwin32 = ecore-win32.pc
+pkgconfig_DATA += ecore-win32.pc
 endif
 
 if BUILD_ECORE_WINCE
-pwince = ecore-wince.pc
+pkgconfig_DATA += ecore-wince.pc
 endif
 
 if BUILD_ECORE_SDL
-psdl = ecore-sdl.pc
+pkgconfig_DATA += ecore-sdl.pc
 endif
 
 if BUILD_ECORE_QUARTZ
-pquartz = ecore-quartz.pc
+pkgconfig_DATA += ecore-quartz.pc
 endif
 
 if BUILD_ECORE_X_XCB
-px = ecore-x.pc
+pkgconfig_DATA += ecore-x.pc
 endif
-
-pkgconfigdir = $(libdir)/pkgconfig
-pkgconfig_DATA = \
-	ecore.pc $(pcon) $(pconfig) $(pdfb) $(pevas) \
-	$(pfb) $(pfile) $(pimf) $(pimfevas) $(pinput) $(pipc) $(pjob) \
-	$(ptxt) $(px) $(pwin32) $(pwince) $(psdl) $(pquartz)
 
 .PHONY: doc
 

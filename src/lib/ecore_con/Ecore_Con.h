@@ -85,6 +85,8 @@ extern "C" {
 	ECORE_CON_REMOTE_TCP,
 	ECORE_CON_REMOTE_MCAST,
 	ECORE_CON_REMOTE_UDP,
+	ECORE_CON_REMOTE_BROADCAST,
+	ECORE_CON_REMOTE_NODELAY,
 	ECORE_CON_USE_SSL2 = (1 << 4),
 	ECORE_CON_USE_SSL3 = (1 << 5),
 	ECORE_CON_USE_TLS  = (1 << 6)
@@ -208,9 +210,13 @@ extern "C" {
    EAPI int               ecore_con_url_init(void);
    EAPI int               ecore_con_url_shutdown(void);
    EAPI Ecore_Con_Url    *ecore_con_url_new(const char *url);
+   EAPI Ecore_Con_Url    *ecore_con_url_custom_new(const char *url, const char *custom_request);
    EAPI void              ecore_con_url_destroy(Ecore_Con_Url *url_con);
    EAPI void              ecore_con_url_data_set(Ecore_Con_Url *url_con, void *data);
    EAPI void             *ecore_con_url_data_get(Ecore_Con_Url *url_con);
+   EAPI void              ecore_con_url_additional_header_add(Ecore_Con_Url *url_con, const char *key, const char *value);
+   EAPI void              ecore_con_url_additional_headers_clear(Ecore_Con_Url *url_con);
+   EAPI const Eina_List  *ecore_con_url_response_headers_get(Ecore_Con_Url *url_con);
    EAPI int               ecore_con_url_url_set(Ecore_Con_Url *url_con, const char *url);
    EAPI void		  ecore_con_url_fd_set(Ecore_Con_Url *url_con, int fd);
    EAPI int		  ecore_con_url_received_bytes_get(Ecore_Con_Url *url_con);
@@ -218,9 +224,9 @@ extern "C" {
    EAPI void              ecore_con_url_time(Ecore_Con_Url *url_con, Ecore_Con_Url_Time condition, time_t tm);
 
 #ifdef HAVE_NETDB_H
-   EAPI int               ecore_con_dns_lookup(const char *name,
-					       void (*done_cb)(void *data, struct hostent *hostent),
-					       void *data);
+   EINA_DEPRECATED EAPI int ecore_con_dns_lookup(const char *name,
+						 void (*done_cb)(void *data, struct hostent *hostent),
+						 void *data);
    EAPI int		  ecore_con_info_get(Ecore_Con_Server *svr, Ecore_Con_Info_Cb done_cb, void *data, struct addrinfo *hints);
 #endif
 

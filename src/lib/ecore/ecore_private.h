@@ -11,6 +11,12 @@
 # include <signal.h>
 #endif
 
+#ifdef _WIN32
+# define WIN32_LEAN_AND_MEAN
+# include <windows.h>
+# undef WIN32_LEAN_AND_MEAN
+#endif
+
 #include <Eina.h>
 
 #ifdef EAPI
@@ -81,6 +87,7 @@
 #define ECORE_MAGIC_ANIMATOR        0xf7643ea5
 #define ECORE_MAGIC_POLLER          0xf7568127
 #define ECORE_MAGIC_PIPE            0xf7458226
+#define ECORE_MAGIC_WIN32_HANDLER   0xf7e8f1a3
 
 
 #define ECORE_MAGIC                 Ecore_Magic  __magic
@@ -207,9 +214,7 @@ enum _Ecore_Poller_Type
 };
 typedef enum _Ecore_Poller_Type Ecore_Poller_Type;
 
-#ifndef _WIN32
 typedef struct _Ecore_Exe           Ecore_Exe;
-#endif
 typedef struct _Ecore_Timer         Ecore_Timer;
 typedef struct _Ecore_Idler         Ecore_Idler;
 typedef struct _Ecore_Idle_Enterer  Ecore_Idle_Enterer;
@@ -221,6 +226,11 @@ typedef struct _Ecore_Event         Ecore_Event;
 typedef struct _Ecore_Animator      Ecore_Animator;
 typedef struct _Ecore_Pipe          Ecore_Pipe;
 typedef struct _Ecore_Poller        Ecore_Poller;
+#ifdef _WIN32
+typedef struct _Ecore_Win32_Handler Ecore_Win32_Handler;
+#else
+typedef void                        Ecore_Win32_Handler;
+#endif
 
 #ifndef _WIN32
 struct _Ecore_Exe
@@ -266,11 +276,13 @@ struct _Ecore_Timer
    double          in;
    double          at;
    double          pending;
+   int           (*func) (void *data);
+   void           *data;
+
    unsigned char   delete_me : 1;
    unsigned char   just_added : 1;
    unsigned char   frozen : 1;
-   int           (*func) (void *data);
-   void           *data;
+   unsigned char   running : 1;
 };
 
 struct _Ecore_Idler
@@ -317,6 +329,18 @@ struct _Ecore_Fd_Handler
    void                   (*prep_func) (void *data, Ecore_Fd_Handler *fd_handler);
    void                    *prep_data;
 };
+
+#ifdef _WIN32
+struct _Ecore_Win32_Handler
+{
+   EINA_INLIST;
+   ECORE_MAGIC;
+   HANDLE         h;
+   int          (*func) (void *data, Ecore_Win32_Handler *win32_handler);
+   void          *data;
+   int            delete_me : 1;
+};
+#endif
 
 struct _Ecore_Event_Handler
 {
@@ -418,12 +442,9 @@ int           _ecore_signal_count_get(void);
 void          _ecore_signal_call(void);
 #endif
 
-#ifdef _WIN32
-static inline void _ecore_exe_init(void) { }
-static inline void _ecore_exe_shutdown(void) { }
-#else
 void          _ecore_exe_init(void);
 void          _ecore_exe_shutdown(void);
+#ifndef _WIN32
 Ecore_Exe    *_ecore_exe_find(pid_t pid);
 void         *_ecore_exe_event_del_new(void);
 void          _ecore_exe_event_del_free(void *data, void *ev);
@@ -444,7 +465,11 @@ void          _ecore_fps_debug_init(void);
 void          _ecore_fps_debug_shutdown(void);
 void          _ecore_fps_debug_runtime_add(double t);
 
+void _ecore_thread_init(void);
+void _ecore_thread_shutdown(void);
 
+void _ecore_glib_init(void);
+void _ecore_glib_shutdown(void);
 
 extern int    _ecore_fps_debug;
 extern double _ecore_loop_time;
