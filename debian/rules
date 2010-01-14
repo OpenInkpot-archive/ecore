@@ -5,16 +5,39 @@ include /usr/share/cdbs/1/rules/debhelper.mk
 
 DEB_CONFIGURE_SCRIPT := ./autogen.sh
 DEB_DH_STRIP_ARGS := --dbg-package=libecore-dbg
-DEB_CONFIGURE_EXTRA_FLAGS := --host=$(DEB_HOST_GNU_TYPE) \
+
+DEB_CONFIGURE_EXTRA_FLAGS := --disable-rpath \
+	--disable-nls \
+	--enable-abstract-sockets \
+	--disable-doc \
+	--enable-glib \
 	--enable-ecore-x-xcb \
-	--enable-ecore-fb \
-	--enable-ecore-evas-fb \
-	--disable-ecore-directfb \
-	--disable-ecore-evas-dfb \
-	--disable-rpath \
-	--disable-openssl \
+	--disable-pthread \
+	--enable-atfile-source \
+	--disable-ecore-job \
+	--disable-curl \
 	--disable-gnutls \
-	--disable-doc
+	--disable-openssl \
+	--enable-poll \
+	--enable-inotify \
+	--enable-ecore-evas-software-buffer \
+	--enable-ecore-evas-software-x11 \
+	--disable-ecore-evas-xrender-x11 \
+	--disable-ecore-evas-opengl-x11 \
+	--disable-ecore-evas-software-16-x11 \
+	--disable-ecore-evas-xrender-xcb \
+	--disable-ecore-evas-software-gdi \
+	--disable-ecore-evas-software-ddraw \
+	--disable-ecore-evas-direct3d \
+	--disable-ecore-evas-opengl-glew \
+	--disable-ecore-evas-software-16-ddraw \
+	--disable-ecore-evas-quartz \
+	--disable-ecore-evas-software-sdl \
+	--disable-ecore-evas-directfb \
+	--disable-ecore-evas-fb \
+	--disable-ecore-evas-software-16-wince \
+	--host=$(DEB_HOST_GNU_TYPE)
+
 DEB_MAKE_CLEAN_TARGET := distclean
 CFLAGS += -fvisibility=hidden
 LDFLAGS += -fvisibility=hidden
