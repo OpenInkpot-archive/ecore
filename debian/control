@@ -7,9 +7,9 @@ Standards-Version: 3.8.2
 Homepage: http://enlightenment.org
 XS-Vcs-Git: http://git.openinkpot.org/ecore.git
 XS-Vcs-Browser: http://git.openinkpot.org/ecore.git
-Build-Depends: debhelper (>= 6), cdbs, automake, pkg-config, libtool, libeina-dev (>= 0.9.9.063-1), libeet-dev (>= 1.0.0), libevas-dev (>= 0.9.9.063-4), libjpeg62-dev, libxcb1-dev, libxcb-icccm1-dev | libxcb-icccm0-dev, libxcb-image0-dev, libxcb-keysyms1-dev | libxcb-keysyms0-dev, libxcb-composite0-dev, libxcb-damage0-dev, libxcb-dpms0-dev, libxcb-randr0-dev, libxcb-render0-dev, libxcb-screensaver0-dev, libxcb-shape0-dev, libxcb-sync0-dev, libxcb-xfixes0-dev, libxcb-xinerama0-dev, libxcb-xtest0-dev, libpixman-1-dev, libglib2.0-dev
+Build-Depends: debhelper (>= 6), cdbs, automake, pkg-config, libtool, libeina-dev (>= 0.9.9.063-1), libeet-dev (>= 1.0.0), libevas-dev (>= 0.9.9.063-4), libjpeg62-dev, libxcb1-dev, libxcb-icccm1-dev, libxcb-image0-dev, libxcb-keysyms1-dev, libxcb-composite0-dev, libxcb-damage0-dev, libxcb-dpms0-dev, libxcb-randr0-dev, libxcb-render0-dev, libxcb-screensaver0-dev, libxcb-shape0-dev, libxcb-sync0-dev, libxcb-xfixes0-dev, libxcb-xinerama0-dev, libxcb-xtest0-dev, libpixman-1-dev, libglib2.0-dev
 XCS-Cross-Host-Build-Depends: debhelper (>= 6), cdbs, cdbs-embedded, automake, pkg-config, libtool
-XCS-Cross-Build-Depends: libeina-dev (>= 0.9.9.063-1), libeet-dev (>= 1.0.0), libevas-dev (>= 0.9.9.063-4), libjpeg62-dev, libxcb1-dev, libxcb-icccm1-dev | libxcb-icccm0-dev, libxcb-image0-dev, libxcb-keysyms1-dev | libxcb-keysyms0-dev, libxcb-composite0-dev, libxcb-damage0-dev, libxcb-dpms0-dev, libxcb-randr0-dev, libxcb-render0-dev, libxcb-screensaver0-dev, libxcb-shape0-dev, libxcb-sync0-dev, libxcb-xfixes0-dev, libxcb-xinerama0-dev, libxcb-xtest0-dev, libpixman-1-dev, libglib2.0-dev
+XCS-Cross-Build-Depends: libeina-dev (>= 0.9.9.063-1), libeet-dev (>= 1.0.0), libevas-dev (>= 0.9.9.063-4), libjpeg62-dev, libxcb1-dev, libxcb-icccm1-dev, libxcb-image0-dev, libxcb-keysyms1-dev, libxcb-composite0-dev, libxcb-damage0-dev, libxcb-dpms0-dev, libxcb-randr0-dev, libxcb-render0-dev, libxcb-screensaver0-dev, libxcb-shape0-dev, libxcb-sync0-dev, libxcb-xfixes0-dev, libxcb-xinerama0-dev, libxcb-xtest0-dev, libpixman-1-dev, libglib2.0-dev
 
 Package: libecore-svn-05
 Architecture: any
@@ -140,15 +140,19 @@ Depends: ${misc:Depends},
          libecore-con-svn-05 (= ${binary:Version}),
          libecore-config-svn-05 (= ${binary:Version}),
          libecore-evas-svn-05 (= ${binary:Version}),
-         libecore-fb-svn-05 (= ${binary:Version}),
          libecore-file-svn-05 (= ${binary:Version}),
          libecore-imf-svn-05 (= ${binary:Version}),
          libecore-input-svn-05 (= ${binary:Version}),
          libecore-ipc-svn-05 (= ${binary:Version}),
-         libecore-job-svn-05 (= ${binary:Version}),
          libecore-txt-svn-05 (= ${binary:Version}),
          libecore-x-svn-05 (= ${binary:Version}),
-         libeet-dev, libevas-dev (>= 0.9.9.60), libeina-dev
+         libeet-dev, libevas-dev (>= 0.9.9.60), libeina-dev, libglib2.0-dev,
+         libxcb-test0-dev, libxcb-xinerama0-dev, libxcb-xfixes0-dev,
+         libxcb-sync0-dev, libxcb-shape0-dev, libxcb-screensaver0-dev,
+         libxcb-render0-dev, libxcb-randr0-dev, libxcb-dpms0-dev,
+         libxcb-damage0-dev, libxcb-composite0-dev, libxcb1-dev,
+         libxcb-icccm1-dev, libxcb-image0-dev, libxcb-keysyms1-dev,
+         libpixman-1-dev
 Description: Ecore headers and static libraries
  This is the core event abstraction layer and X abstraction layer that makes
  doing selections, Xdnd, general X stuff, and event loops, timeouts and idle
