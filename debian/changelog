@@ -1,3 +1,10 @@
+ecore (0.9.9.063-1) zelazny; urgency=low
+
+  * svn-05 snapshot
+  * Refresh patches.
+
+ -- Mikhail Gusarov <dottedmag@dottedmag.net>  Thu, 14 Jan 2010 08:09:09 +0600
+
 ecore (0.9.9.062-4) asimov; urgency=low
 
   * Fix memory leak when pressed key is not found in _hack_get_key table
