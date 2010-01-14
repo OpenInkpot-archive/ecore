@@ -1,3 +1,9 @@
+ecore (0.9.9.063-3) zelazny; urgency=low
+
+  * Add missing dependencies to -dev package to applease pkg-config.
+
+ -- Mikhail Gusarov <dottedmag@dottedmag.net>  Thu, 14 Jan 2010 09:01:49 +0600
+
 ecore (0.9.9.063-2) zelazny; urgency=low
 
   * Build-depend on evas 0.9.9.063-4 to enable ecore_evas and other
