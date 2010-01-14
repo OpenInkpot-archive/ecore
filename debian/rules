@@ -14,7 +14,7 @@ DEB_CONFIGURE_EXTRA_FLAGS := --disable-rpath \
 	--enable-ecore-x-xcb \
 	--disable-pthread \
 	--enable-atfile-source \
-	--disable-ecore-job \
+	--enable-ecore-job \
 	--disable-curl \
 	--disable-gnutls \
 	--disable-openssl \
