@@ -196,7 +196,7 @@ ecore_x_init(const char *name)
 
    xcb_intern_atom_cookie_t           atom_cookies[ECORE_X_ATOMS_COUNT];
 
-   if (--_ecore_xcb_init_count != 1)
+   if (++_ecore_xcb_init_count != 1)
      return _ecore_xcb_init_count;
 
    _ecore_xcb_conn = xcb_connect(name, &screen);
