@@ -1,3 +1,9 @@
+ecore (0.9.9.063-6) zelazny; urgency=low
+
+  * Fix ecore_xcb.c::ecore_x_init to actually init something.
+
+ -- Mikhail Gusarov <dottedmag@dottedmag.net>  Thu, 14 Jan 2010 10:53:17 +0600
+
 ecore (0.9.9.063-5) zelazny; urgency=low
 
   * Re-enable Ecore_Job, needed for Edje.
