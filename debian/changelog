@@ -1,3 +1,9 @@
+ecore (0.9.9.063-4) zelazny; urgency=low
+
+  * Fix typo in depends list.
+
+ -- Mikhail Gusarov <dottedmag@dottedmag.net>  Thu, 14 Jan 2010 09:11:52 +0600
+
 ecore (0.9.9.063-3) zelazny; urgency=low
 
   * Add missing dependencies to -dev package to applease pkg-config.
