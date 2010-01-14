@@ -2891,7 +2891,7 @@ _ecore_x_window_prop_string_utf8_get(Ecore_X_Window window __UNUSED__,
    char                     *str;
    int                       length;
 
-   reply = _ecore_xcb_reply_get((Ecore_Xcb_Reply_Cb)xcb_get_property_reply);
+   reply = _ecore_xcb_reply_get();
    if (!reply) return NULL;
 
    if ((reply->format != 8) ||
