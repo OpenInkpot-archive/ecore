@@ -1,3 +1,9 @@
+ecore (0.9.9.063-6+b1) zelazny; urgency=low
+
+  * Rebuild due to glib2.0 package rename.
+
+ -- Mikhail Gusarov <dottedmag@dottedmag.net>  Mon, 18 Jan 2010 22:39:30 +0600
+
 ecore (0.9.9.063-6) zelazny; urgency=low
 
   * Fix ecore_xcb.c::ecore_x_init to actually init something.
