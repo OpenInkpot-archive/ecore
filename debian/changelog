@@ -1,3 +1,10 @@
+ecore (0.9.9.063-7) zelazny; urgency=low
+
+  * Build ecore as host/tools package.
+  * Fix buildability with older xcb-icccm.
+
+ -- Mikhail Gusarov <dottedmag@dottedmag.net>  Wed, 20 Jan 2010 17:37:20 +0600
+
 ecore (0.9.9.063-6+b1) zelazny; urgency=low
 
   * Rebuild due to glib2.0 package rename.
