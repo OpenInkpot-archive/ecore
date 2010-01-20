@@ -818,8 +818,8 @@ ecore_x_window_prop_protocol_isset(Ecore_X_Window      window,
    if (!xcb_get_wm_protocols(_ecore_xcb_conn, window, &protos_count, &protos))
 	return ret;
 
-   for (i = 0; i < protos->atoms_len; i++)
-	if (protos->atoms[i] == proto)
+   for (i = 0; i < protos_count; i++)
+	if (protos[i] == proto)
 	  {
 	     ret = 1;
 	     break;
@@ -872,22 +872,22 @@ ecore_x_window_prop_protocol_list_get(Ecore_X_Window window,
    if (!xcb_get_wm_protocols(_ecore_xcb_conn, window, &protos_count, &protos))
      return NULL;
 
-   if ((!protos) || (protos->atoms_len == 0)) return NULL;
+   if (protos_count == 0) return NULL;
 
-   prot_ret = calloc(1, protos->atoms_len * sizeof(Ecore_X_WM_Protocol));
+   prot_ret = calloc(1, protos_count * sizeof(Ecore_X_WM_Protocol));
    if (!prot_ret)
      {
 	free(protos);
 	return NULL;
      }
-   for (i = 0; i < protos->atoms_len; i++)
+   for (i = 0; i < protos_count; i++)
      {
 	Ecore_X_WM_Protocol j;
 
 	prot_ret[i] = -1;
 	for (j = 0; j < ECORE_X_WM_PROTOCOL_NUM; j++)
 	  {
-	     if (_ecore_xcb_atoms_wm_protocols[j] == protos->atoms[i])
+	     if (_ecore_xcb_atoms_wm_protocols[j] == protos[i])
 	       prot_ret[i] = j;
 	  }
      }
