@@ -1,3 +1,9 @@
+ecore (0.9.9.063-8) zelazny; urgency=low
+
+  * Fixed bug with non-handling Alt modifier (OI#760)
+
+ -- Mikhail Gusarov <dottedmag@dottedmag.net>  Sun, 24 Jan 2010 23:52:17 +0600
+
 ecore (0.9.9.063-7) zelazny; urgency=low
 
   * Build ecore as host/tools package.
