@@ -995,7 +995,16 @@ _ecore_xcb_key_mask_get(xcb_keysym_t sym)
          {
             int mask;
 
-            mask = masks[j];
+            /*
+             * This index is 'i' despite the fact there are 8 entries in 'masks'
+             * and j runs 0..7.
+             *
+             * The actual logic is to find necessary modifier by looking at the
+             * stuff returned from GetModifierMappingKeycodes, which may return
+             * 8 or less keycodes, so the outer loop is restricted by
+             * mod_keys_len.
+             */
+            mask = masks[i];
             free(reply);
             xcb_key_symbols_free(symbols);
             return mask;
