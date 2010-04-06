@@ -76,7 +76,7 @@ ecore_strbuf_append(Ecore_Strbuf *buf, const char *str)
 
   l = ecore_strlcpy(buf->buf + buf->len, str, buf->size - buf->len);
 
-  while (l > buf->size - buf->len)
+  while (l >= buf->size - buf->len)
     {
         /* we successfully appended this much */
         off += buf->size - buf->len - 1;
