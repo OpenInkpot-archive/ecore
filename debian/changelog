@@ -1,3 +1,9 @@
+ecore (0.9.9.063-9) zelazny; urgency=low
+
+  * Fixed bug with ecore_strbuf_append not copying full string (OI#877)
+
+ -- Mikhail Gusarov <dottedmag@dottedmag.net>  Tue, 06 Apr 2010 20:22:40 +0700
+
 ecore (0.9.9.063-8) zelazny; urgency=low
 
   * Fixed bug with non-handling Alt modifier (OI#760)
