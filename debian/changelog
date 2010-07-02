@@ -1,3 +1,9 @@
+ecore (0.9.9.49898-1) zelazny; urgency=low
+
+  * svn-06 snapshot
+
+ -- Alexander Kerner <lunohod@openinkpot.org>  Fri, 02 Jul 2010 22:54:39 +0200
+
 ecore (0.9.9.063-9) zelazny; urgency=low
 
   * Fixed bug with ecore_strbuf_append not copying full string (OI#877)
