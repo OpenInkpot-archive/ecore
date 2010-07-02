@@ -7,12 +7,12 @@ Standards-Version: 3.8.2
 Homepage: http://enlightenment.org
 XS-Vcs-Git: http://git.openinkpot.org/ecore.git
 XS-Vcs-Browser: http://git.openinkpot.org/ecore.git
-Build-Depends: debhelper (>= 6), cdbs, automake, pkg-config, libtool, libeina-dev (>= 0.9.9.063-1), libeet-dev (>= 1.0.0), libevas-dev (>= 0.9.9.063-4), libjpeg62-dev, libxcb1-dev, libxcb-icccm1-dev | libxcb-icccm0-dev, libxcb-image0-dev, libxcb-keysyms1-dev | libxcb-keysyms0-dev, libxcb-composite0-dev, libxcb-damage0-dev, libxcb-dpms0-dev, libxcb-randr0-dev, libxcb-render0-dev, libxcb-screensaver0-dev, libxcb-shape0-dev, libxcb-sync0-dev, libxcb-xfixes0-dev, libxcb-xinerama0-dev, libxcb-xtest0-dev, libpixman-1-dev, libglib2.0-dev
+Build-Depends: debhelper (>= 6), cdbs, automake, pkg-config, libtool, libeina-dev (>= 0.9.9.49898), libeet-dev (>= 1.3.2), libevas-dev (>= 0.9.9.49898), libjpeg62-dev, libxcb1-dev, libxcb-icccm1-dev | libxcb-icccm0-dev, libxcb-image0-dev, libxcb-keysyms1-dev | libxcb-keysyms0-dev, libxcb-composite0-dev, libxcb-damage0-dev, libxcb-dpms0-dev, libxcb-randr0-dev, libxcb-render0-dev, libxcb-screensaver0-dev, libxcb-shape0-dev, libxcb-sync0-dev, libxcb-xfixes0-dev, libxcb-xinerama0-dev, libxcb-xtest0-dev, libpixman-1-dev, libglib2.0-dev
 XCS-Cross-Host-Build-Depends: debhelper (>= 6), cdbs, cdbs-embedded, automake, pkg-config, libtool
-XCS-Cross-Build-Depends: libeina-dev (>= 0.9.9.063-1), libeet-dev (>= 1.0.0), libevas-dev (>= 0.9.9.063-4), libjpeg62-dev, libxcb1-dev, libxcb-icccm1-dev, libxcb-image0-dev, libxcb-keysyms1-dev, libxcb-composite0-dev, libxcb-damage0-dev, libxcb-dpms0-dev, libxcb-randr0-dev, libxcb-render0-dev, libxcb-screensaver0-dev, libxcb-shape0-dev, libxcb-sync0-dev, libxcb-xfixes0-dev, libxcb-xinerama0-dev, libxcb-xtest0-dev, libpixman-1-dev, libglib2.0-dev
+XCS-Cross-Build-Depends: libeina-dev (>= 0.9.9.49898), libeet-dev (>= 1.3.2), libevas-dev (>= 0.9.9.49898), libjpeg62-dev, libxcb1-dev, libxcb-icccm1-dev, libxcb-image0-dev, libxcb-keysyms1-dev, libxcb-composite0-dev, libxcb-damage0-dev, libxcb-dpms0-dev, libxcb-randr0-dev, libxcb-render0-dev, libxcb-screensaver0-dev, libxcb-shape0-dev, libxcb-sync0-dev, libxcb-xfixes0-dev, libxcb-xinerama0-dev, libxcb-xtest0-dev, libpixman-1-dev, libglib2.0-dev
 XCS-Cross-Mode: both
 
-Package: libecore-svn-05
+Package: libecore-svn-06
 Architecture: any
 Depends: ${misc:Depends}, ${shlibs:Depends}
 Description: Core abstraction layer for enlightenment DR 0.17
@@ -22,7 +22,7 @@ Description: Core abstraction layer for enlightenment DR 0.17
  can make use of the work put into Ecore to make this job easy for
  applications.
 
-Package: libecore-con-svn-05
+Package: libecore-con-svn-06
 Architecture: any
 Depends: ${misc:Depends}, ${shlibs:Depends}
 Description: Ecore Connection Library
@@ -34,7 +34,7 @@ Description: Ecore Connection Library
  .
  This package contains the Ecore Connection Library.
 
-Package: libecore-config-svn-05
+Package: libecore-config-svn-06
 Architecture: any
 Depends: ${misc:Depends}, ${shlibs:Depends}
 Description: Ecore Enlightened Property Library
@@ -46,7 +46,7 @@ Description: Ecore Enlightened Property Library
  .
  This package contains the Enlightened Property Library.
 
-Package: libecore-evas-svn-05
+Package: libecore-evas-svn-06
 Architecture: any
 Depends: ${misc:Depends}, ${shlibs:Depends}
 Description: Ecore Evas Wrapper Library
@@ -58,7 +58,7 @@ Description: Ecore Evas Wrapper Library
  .
  This package contains the Ecore Evas wrapper functions.
  
-Package: libecore-file-svn-05
+Package: libecore-file-svn-06
 Architecture: any
 Depends: ${misc:Depends}, ${shlibs:Depends}
 Description: Ecore File Library
@@ -70,7 +70,7 @@ Description: Ecore File Library
  .
  This package contains the Ecore File Library.
 
-Package: libecore-imf-svn-05
+Package: libecore-imf-svn-06
 Architecture: any
 Depends: ${misc:Depends}, ${shlibs:Depends}
 Description: Ecore Input Method Framework module
@@ -83,7 +83,7 @@ Description: Ecore Input Method Framework module
  This package contains the Ecore Input Method Framework module, and the Evas
  helper functions for it.
 
-Package: libecore-input-svn-05
+Package: libecore-input-svn-06
 Architecture: any
 Depends: ${misc:Depends}, ${shlibs:Depends}
 Description: Ecore input functions
@@ -95,7 +95,7 @@ Description: Ecore input functions
  .
  This package contains the Ecore Input Library.
 
-Package: libecore-ipc-svn-05
+Package: libecore-ipc-svn-06
 Architecture: any
 Depends: ${misc:Depends}, ${shlibs:Depends}
 Description: Ecore inter-process communication functions
@@ -107,7 +107,7 @@ Description: Ecore inter-process communication functions
  .
  This package contains the Ecore inter-process communication functions.
 
-Package: libecore-x-svn-05
+Package: libecore-x-svn-06
 Architecture: any
 Depends: ${misc:Depends}, ${shlibs:Depends}
 Description: Ecore functions for dealing with the X Windows System
@@ -125,16 +125,16 @@ Architecture: any
 Section: libdevel
 Suggests: libecore-doc
 Depends: ${misc:Depends},
-         libecore-svn-05 (= ${binary:Version}),
-         libecore-con-svn-05 (= ${binary:Version}),
-         libecore-config-svn-05 (= ${binary:Version}),
-         libecore-evas-svn-05 (= ${binary:Version}),
-         libecore-file-svn-05 (= ${binary:Version}),
-         libecore-imf-svn-05 (= ${binary:Version}),
-         libecore-input-svn-05 (= ${binary:Version}),
-         libecore-ipc-svn-05 (= ${binary:Version}),
-         libecore-x-svn-05 (= ${binary:Version}),
-         libeet-dev, libevas-dev (>= 0.9.9.60), libeina-dev, libglib2.0-dev,
+         libecore-svn-06 (= ${binary:Version}),
+         libecore-con-svn-06 (= ${binary:Version}),
+         libecore-config-svn-06 (= ${binary:Version}),
+         libecore-evas-svn-06 (= ${binary:Version}),
+         libecore-file-svn-06 (= ${binary:Version}),
+         libecore-imf-svn-06 (= ${binary:Version}),
+         libecore-input-svn-06 (= ${binary:Version}),
+         libecore-ipc-svn-06 (= ${binary:Version}),
+         libecore-x-svn-06 (= ${binary:Version}),
+         libeet-dev, libevas-dev (>= 0.9.9.49898), libeina-dev, libglib2.0-dev,
          libxcb-xtest0-dev, libxcb-xinerama0-dev, libxcb-xfixes0-dev,
          libxcb-sync0-dev, libxcb-shape0-dev, libxcb-screensaver0-dev,
          libxcb-render0-dev, libxcb-randr0-dev, libxcb-dpms0-dev,
@@ -168,7 +168,7 @@ Package: libecore-dbg
 Architecture: any
 Section: debug
 Priority: extra
-Depends: ${misc:Depends}, libecore-svn-05 (= ${binary:Version})
+Depends: ${misc:Depends}, libecore-svn-06 (= ${binary:Version})
 Description: Debugging symbols for libecore
  This is the core event abstraction layer and X abstraction layer that makes
  doing selections, Xdnd, general X stuff, and event loops, timeouts and idle
