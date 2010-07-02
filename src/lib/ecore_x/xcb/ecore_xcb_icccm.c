@@ -9,54 +9,14 @@
  * client.
  */
 
+#include <stdlib.h>
+#include <stdio.h>
 #include <string.h>
 
 #include <xcb/xcb_icccm.h>
 
 #include "ecore_xcb_private.h"
 #include "Ecore_X_Atoms.h"
-
-#ifdef ECORE_XCB_ICCCM02
-
-/* A bit of magic to make xcb-icccm < 0.2.1 look more like xcb-icccm >= 0.2.1 */
-
-/* Bit-compatible version of unexported xcb_size_hints_t */
-struct e_xcb_size_hints_t
-{
-   uint32_t flags;
-   int32_t x, y;
-   int32_t width, height;
-   int32_t min_width, min_height;
-   int32_t max_width, max_height;
-   int32_t width_inc, height_inc;
-   int32_t min_aspect_num, min_aspect_den;
-   int32_t max_aspect_num, max_aspect_den;
-   int32_t base_width, base_height;
-   int32_t win_gravity;
-};
-
-typedef struct e_xcb_size_hints_t e_xcb_size_hints_t;
-
-#define xcb_size_hints_t e_xcb_size_hints_t
-
-struct e_xcb_wm_hints_t
-{
-   int32_t flags;
-   uint32_t input;
-   int32_t initial_state;
-   xcb_pixmap_t icon_pixmap;
-   xcb_window_t icon_window;
-   int32_t icon_x, icon_y;
-   xcb_pixmap_t icon_mask;
-   xcb_window_t window_group;
-};
-
-typedef struct e_xcb_wm_hints_t e_xcb_wm_hints_t;
-
-#define xcb_wm_hints_t e_xcb_wm_hints_t
-
-#endif
-
 
 
 /**
@@ -95,9 +55,8 @@ static int _ecore_x_icccm_size_hints_get (const void       *reply,
       s |= (XCB_SIZE_HINT_BASE_SIZE | XCB_SIZE_HINT_P_WIN_GRAVITY);
    else
      {
-        hints->base_width = 0;
-        hints->base_height = 0;
-        hints->win_gravity = 0;
+        xcb_size_hints_set_base_size(hints, 0, 0);
+        xcb_size_hints_set_win_gravity(hints, 0);
      }
    /* FIXME: is it necessary ? */
    /* hints->flags &= s; */         /* get rid of unwanted bits */
@@ -312,6 +271,7 @@ ecore_x_icccm_hints_set(Ecore_X_Window            window,
 {
    xcb_wm_hints_t hints;
 
+   memset(&hints, 0, sizeof(hints));
    xcb_wm_hints_set_input(&hints, accepts_focus);
    if (initial_state == ECORE_X_WINDOW_STATE_HINT_WITHDRAWN)
       xcb_wm_hints_set_withdrawn(&hints);
@@ -424,14 +384,14 @@ ecore_x_icccm_hints_get(Ecore_X_Window             window __UNUSED__,
        (reply->format != 32))
       return 0;
 
-   memcpy(&hints, xcb_get_property_value(reply), reply->value_len);
-   hints_flags = hints.flags;
-   hints_input = hints.input;
-   hints_initial_state = hints.initial_state;
-   hints_icon_pixmap = hints.icon_pixmap;
-   hints_icon_mask = hints.icon_mask;
-   hints_icon_window = hints.icon_window;
-   hints_window_group = hints.window_group;
+       memcpy(&hints, xcb_get_property_value(reply), reply->value_len);
+       hints_flags = hints.flags;
+       hints_input = hints.input;
+       hints_initial_state = hints.initial_state;
+       hints_icon_pixmap = hints.icon_pixmap;
+       hints_icon_mask = hints.icon_mask;
+       hints_icon_window = hints.icon_window;
+       hints_window_group = hints.window_group;
 
    if ((hints_flags & XCB_WM_HINT_INPUT) && (accepts_focus))
      {
@@ -543,8 +503,8 @@ ecore_x_icccm_size_pos_hints_set(Ecore_X_Window  window,
 				 double          min_aspect,
                                  double          max_aspect)
 {
-   xcb_get_property_reply_t *reply;
    xcb_size_hints_t          hint;
+   xcb_get_property_reply_t *reply;
 
    reply = _ecore_xcb_reply_get();
    if (!reply                                      ||
@@ -555,45 +515,43 @@ ecore_x_icccm_size_pos_hints_set(Ecore_X_Window  window,
        (reply->value_len < 15))
       return;
 
-   hint.flags =0;
+   hint.flags = 0;
    if (request_pos)
      {
-        hint.flags = XCB_SIZE_HINT_US_POSITION;
+       hint.flags = XCB_SIZE_HINT_US_POSITION;
      }
    if (gravity != ECORE_X_GRAVITY_NW)
      {
-        hint.win_gravity = (uint8_t)gravity;
+	hint.win_gravity = (uint8_t)gravity;
      }
    if ((min_w > 0) || (min_h > 0))
      {
-        hint.min_width = min_w;
-        hint.min_height = min_h;
+	hint.min_width = min_w;
+	hint.min_height = min_h;
      }
    if ((max_w > 0) || (max_h > 0))
      {
-        hint.max_width = max_w;
-        hint.max_height = max_h;
+	hint.max_width = max_w;
+	hint.max_height = max_h;
      }
    if ((base_w > 0) || (base_h > 0))
      {
-        hint.base_width = base_w;
-        hint.base_height = base_h;
+	hint.base_width = base_w;
+	hint.base_height = base_h;
      }
    if ((step_x > 1) || (step_y > 1))
      {
-        hint.width_inc = step_x;
-        hint.height_inc = step_y;
+	hint.width_inc = step_x;
+	hint.height_inc = step_y;
      }
    if ((min_aspect > 0.0) || (max_aspect > 0.0))
      {
-	xcb_size_hints_set_aspect(
-            &hint,
+	xcb_size_hints_set_aspect(&hint,
                                   (int32_t)(min_aspect * 10000),
                                   10000,
                                   (int32_t)(max_aspect * 10000),
                                   10000);
      }
-
    xcb_set_wm_normal_hints(_ecore_xcb_conn, window, &hint);
 }
 
@@ -636,6 +594,7 @@ ecore_x_icccm_size_pos_hints_get(Ecore_X_Window   window __UNUSED__,
 {
    xcb_size_hints_t          hint;
    xcb_get_property_reply_t *reply;
+   uint32_t                  flags;
    int32_t                   minw = 0;
    int32_t                   minh = 0;
    int32_t                   maxw = 32767;
@@ -646,7 +605,6 @@ ecore_x_icccm_size_pos_hints_get(Ecore_X_Window   window __UNUSED__,
    int32_t                   stepy = -1;
    double                    mina = 0.0;
    double                    maxa = 0.0;
-   uint32_t                  flags;
 
    if (request_pos) *request_pos = 0;
    if (gravity) *gravity = ECORE_X_GRAVITY_NW;
@@ -661,12 +619,13 @@ ecore_x_icccm_size_pos_hints_get(Ecore_X_Window   window __UNUSED__,
    if (min_aspect) *min_aspect = mina;
    if (max_aspect) *max_aspect = maxa;
 
+
    reply = _ecore_xcb_reply_get();
    if (!reply)
-     goto err;
+     return 0;
 
    if (!_ecore_x_icccm_size_hints_get(reply, ECORE_X_ATOM_WM_NORMAL_HINTS, &hint))
-     goto err;
+     return 0;
 
    flags = hint.flags;
      if ((flags & XCB_SIZE_HINT_US_POSITION) || (flags & XCB_SIZE_HINT_P_POSITION))
@@ -704,7 +663,7 @@ ecore_x_icccm_size_pos_hints_get(Ecore_X_Window   window __UNUSED__,
      }
    if (flags & XCB_SIZE_HINT_P_RESIZE_INC)
      {
-	stepx = hint.width_inc;
+        stepx = hint.width_inc;
         stepy = hint.height_inc;
 	if (stepx < 1)
 	   stepx = 1;
@@ -741,9 +700,6 @@ ecore_x_icccm_size_pos_hints_get(Ecore_X_Window   window __UNUSED__,
       *max_aspect = maxa;
 
    return 1;
-
-err:
-   return 0;
 }
 
 /**
@@ -772,9 +728,6 @@ ecore_x_icccm_title_set(Ecore_X_Window window,
 /*       XmbTextListToTextProperty(_ecore_xcb_conn, list, 1, XStdICCTextStyle, */
 /*				&xprop); */
 /* #endif */
-
-	if(!title)
-		return;
 
   xcb_change_property(_ecore_xcb_conn, XCB_PROP_MODE_REPLACE, window,
                       ECORE_X_ATOM_WM_NAME, ECORE_X_ATOM_STRING, 8,
@@ -1060,10 +1013,6 @@ ecore_x_icccm_name_class_set(Ecore_X_Window window,
    char *s;
    int   length_name;
    int   length_class;
-
-   if(!(class && name))
-      return;
-
 
    length_name = strlen(name);
    length_class = strlen(class);
@@ -1495,7 +1444,7 @@ ecore_x_icccm_icon_name_get(Ecore_X_Window window __UNUSED__)
    reply = _ecore_xcb_reply_get();
    if (!reply) return NULL;
 
-   printf ("[XCB] reply->bytes_afer (should be 0): %d\n", ((xcb_get_property_reply_t *)reply)->bytes_after);
+   ERR("reply->bytes_afer (should be 0): %d", ((xcb_get_property_reply_t *)reply)->bytes_after);
 
    if (reply->type == ECORE_X_ATOM_UTF8_STRING)
      {

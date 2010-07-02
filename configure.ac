@@ -1,8 +1,26 @@
-# get rid of that stupid cache mechanism
-rm -f config.cache
+##--##--##--##--##--##--##--##--##--##--##--##--##--##--##--##--##
+##--##--##--##--##--##--##--##--##--##--##--##--##--##--##--##--##
+m4_define([v_maj], [0])
+m4_define([v_min], [9])
+m4_define([v_mic], [9])
+m4_define([v_rev], m4_esyscmd([(svnversion "${SVN_REPO_PATH:-.}" | grep -v export || echo 0) | awk -F : '{printf("%s\n", $1);}' | tr -d ' :MSP\n']))
+m4_if(v_rev, [0], [m4_define([v_rev], m4_esyscmd([git log 2> /dev/null | (grep -m1 git-svn-id || echo 0) | sed -e 's/.*@\([0-9]*\).*/\1/' | tr -d '\n']))])
+##--   When released, remove the dnl on the below line
+dnl m4_undefine([v_rev])
+##--   When doing snapshots - change soname. remove dnl on below line
+m4_define([relname], [ver-svn-06])
+m4_define([v_rel], [-release relname])
+##--##--##--##--##--##--##--##--##--##--##--##--##--##--##--##--##
+m4_ifdef([v_rev], [m4_define([v_ver], [v_maj.v_min.v_mic.v_rev])],
+[m4_define([v_ver], [v_maj.v_min.v_mic])])
+m4_define([lt_rev], m4_eval(v_maj + v_min))
+m4_define([lt_cur], v_mic)
+m4_define([lt_age], v_min)
+##--##--##--##--##--##--##--##--##--##--##--##--##--##--##--##--##
+##--##--##--##--##--##--##--##--##--##--##--##--##--##--##--##--##
 
-AC_INIT([ecore], [0.9.9.063], [enlightenment-devel@lists.sourceforge.net])
-release="ver-svn-05"
+AC_INIT([ecore], [v_ver], [enlightenment-devel@lists.sourceforge.net])
+release="ver-svn-06"
 AC_PREREQ([2.52])
 AC_CONFIG_SRCDIR([configure.ac])
 AC_CONFIG_MACRO_DIR([m4])
@@ -20,59 +38,51 @@ AC_LIBTOOL_WIN32_DLL
 define([AC_LIBTOOL_LANG_F77_CONFIG], [:])dnl
 AC_PROG_LIBTOOL
 
-VMAJ=`echo $PACKAGE_VERSION | awk -F. '{printf("%s", $1);}'`
-VMIN=`echo $PACKAGE_VERSION | awk -F. '{printf("%s", $2);}'`
-VMIC=`echo $PACKAGE_VERSION | awk -F. '{printf("%s", $3);}'`
-SNAP=`echo $PACKAGE_VERSION | awk -F. '{printf("%s", $4);}'`
-version_info=`expr $VMAJ + $VMIN`":$VMIC:$VMIN"
+##--##--##--##--##--##--##--##--##--##--##--##--##--##--##--##--##
+##--##--##--##--##--##--##--##--##--##--##--##--##--##--##--##--##
+m4_ifdef([v_rev], , [m4_define([v_rev], [0])])
+m4_ifdef([v_rel], , [m4_define([v_rel], [])])
+AC_DEFINE_UNQUOTED(VERS_MAJ, [v_maj], [Major version])
+AC_DEFINE_UNQUOTED(VERS_MIN, [v_min], [Minor version])
+AC_DEFINE_UNQUOTED(VERS_MIC, [v_mic], [Micro version])
+AC_DEFINE_UNQUOTED(VERS_REV, [v_rev], [Revison])
+version_info="lt_rev:lt_cur:lt_age"
+release_info="v_rel"
 AC_SUBST(version_info)
+AC_SUBST(release_info)
+##--##--##--##--##--##--##--##--##--##--##--##--##--##--##--##--##
+##--##--##--##--##--##--##--##--##--##--##--##--##--##--##--##--##
 
+m4_ifdef([AM_GNU_GETTEXT_VERSION], [
 AM_GNU_GETTEXT_VERSION([0.12.1])
+])
+
+m4_ifdef([AM_GNU_GETTEXT], [
 AM_GNU_GETTEXT([external])
+po_makefile_in=po/Makefile.in
+AM_CONDITIONAL([HAVE_PO], [true])
+],[
+AM_CONDITIONAL([HAVE_PO], [false])
+])
+AC_SUBST(LTLIBINTL)
 
-case "$host_os" in
-   mingw32ce* | cegcc*)
-      ;;
-   *)
-      ecore_config_release_info="-release $release"
-      ecore_con_release_info="-release $release"
-      ecore_directfb_release_info="-release $release"
-      ecore_evas_release_info="-release $release"
-      ecore_fb_release_info="-release $release"
-      ecore_file_release_info="-release $release"
-      ecore_imf_evas_release_info="-release $release"
-      ecore_imf_release_info="-release $release"
-      ecore_input_release_info="-release $release"
-      ecore_ipc_release_info="-release $release"
-      ecore_job_release_info="-release $release"
-      ecore_quartz_release_info="-release $release"
-      ecore_release_info="-release $release"
-      ecore_sdl_release_info="-release $release"
-      ecore_txt_release_info="-release $release"
-      ecore_win32_release_info="-release $release"
-      ecore_x_release_info="-release $release"
-      ;;
-esac
-AC_SUBST(ecore_config_release_info)
-AC_SUBST(ecore_con_release_info)
-AC_SUBST(ecore_directfb_release_info)
-AC_SUBST(ecore_evas_release_info)
-AC_SUBST(ecore_fb_release_info)
-AC_SUBST(ecore_file_release_info)
-AC_SUBST(ecore_imf_evas_release_info)
-AC_SUBST(ecore_imf_release_info)
-AC_SUBST(ecore_input_release_info)
-AC_SUBST(ecore_ipc_release_info)
-AC_SUBST(ecore_job_release_info)
-AC_SUBST(ecore_quartz_release_info)
-AC_SUBST(ecore_release_info)
-AC_SUBST(ecore_sdl_release_info)
-AC_SUBST(ecore_txt_release_info)
-AC_SUBST(ecore_win32_release_info)
-AC_SUBST(ecore_wince_release_info)
-AC_SUBST(ecore_x_release_info)
+EFL_CHECK_PATH_MAX
 
-AC_DEFINE_UNQUOTED(SHARED_LIB_SUFFIX, "$shrext_cmds", [Suffix for shared objects])
+with_max_log_level="<unset>"
+AC_ARG_WITH(internal-maximum-log-level,
+   [AC_HELP_STRING([--with-internal-maximum-log-level=NUMBER],
+                   [limit ecore internal log level to the given number, any call to EINA_LOG() with values greater than this will be compiled out, ignoring runtime settings, but saving function calls.])],
+   [
+    if test "x${withval}" != "xno"; then
+       if echo "${withval}" | grep '^[[0-9]]\+$' >/dev/null 2>/dev/null; then
+          AC_MSG_NOTICE([ignoring any EINA_LOG() with level greater than ${withval}])
+          AC_DEFINE_UNQUOTED(EINA_LOG_LEVEL_MAXIMUM, ${withval}, [if set, logging is limited to this amount.])
+          with_max_log_level="${withval}"
+       else
+          AC_MSG_ERROR([--with-internal-maximum-log-level takes a decimal number, got "${withval}" instead.])
+       fi
+    fi
+    ], [:])
 
 
 ### Default options with respect to host
@@ -82,6 +92,7 @@ want_curl="no"
 want_abstract_sockets="no"
 want_gnutls="no"
 want_openssl="no"
+want_cares="no"
 want_cipher="no"
 want_signature="no"
 want_poll="yes"
@@ -91,9 +102,7 @@ want_tslib="no"
 want_glib="no"
 
 # core modules
-want_ecore_job="yes"
-want_ecore_txt="yes"
-want_ecore_con="no"
+want_ecore_con="yes"
 want_ecore_ipc="no"
 want_ecore_file="yes"
 want_ecore_config="no"
@@ -105,11 +114,27 @@ want_evas_simple_x11="no"
 want_ecore_x_xcb="no"
 want_ecore_x="no"
 want_ecore_win32="no"
-want_ecore_quartz="no"
+want_ecore_cocoa="no"
 want_ecore_sdl="no"
 want_ecore_fb="no"
 want_ecore_directfb="no"
 want_ecore_wince="no"
+
+# ecore_x options (both xlib and xcb)
+want_ecore_x_composite="yes"
+want_ecore_x_damage="yes"
+want_ecore_x_dpms="yes"
+want_ecore_x_randr="yes"
+want_ecore_x_render="yes"
+want_ecore_x_screensaver="yes"
+want_ecore_x_shape="yes"
+want_ecore_x_sync="yes"
+want_ecore_x_xfixes="yes"
+want_ecore_x_xinerama="yes"
+want_ecore_x_xprint="yes"
+want_ecore_x_xtest="yes"
+want_ecore_x_cursor="yes"
+want_ecore_x_input="yes"
 
 # ecore_evas modules
 want_ecore_evas="yes"
@@ -125,14 +150,16 @@ want_ecore_evas_software_ddraw="no"
 want_ecore_evas_direct3d="no"
 want_ecore_evas_opengl_glew="no"
 want_ecore_evas_software_16_ddraw="no"
-want_ecore_evas_quartz="no"
+want_ecore_evas_cocoa="no"
 want_ecore_evas_software_sdl="no"
+want_ecore_evas_gl_sdl="no"
 want_ecore_evas_directfb="no"
 want_ecore_evas_fb="no"
 want_ecore_evas_software_16_wince="no"
 
 case "$host_os" in
    mingw32ce* | cegcc*)
+      want_ecore_con="no"
       want_ecore_wince="yes"
       want_ecore_evas_software_16_wince="yes"
       ;;
@@ -140,6 +167,7 @@ case "$host_os" in
       want_notify_win32="yes"
       want_curl="yes"
       want_glib="auto"
+      want_ecore_con="no"
       want_ecore_imf="yes"
       want_ecore_win32="yes"
       want_ecore_evas_software_gdi="yes"
@@ -148,19 +176,19 @@ case "$host_os" in
       want_ecore_evas_opengl_glew="yes"
       want_ecore_evas_software_16_ddraw="auto"
       want_ecore_evas_software_sdl="yes"
+      want_ecore_evas_gl_sdl="yes"
       ;;
    darwin*)
       want_curl="yes"
       want_glib="auto"
       want_gnutls="auto"
       want_openssl="auto"
-      want_ecore_con="yes"
       want_ecore_ipc="yes"
-      want_ecore_config="yes"
       want_ecore_imf="yes"
-      want_ecore_quartz="yes"
-      want_ecore_evas_quartz="yes"
+      want_ecore_cocoa="yes"
+      want_ecore_evas_cocoa="yes"
       want_ecore_evas_software_sdl="yes"
+      want_ecore_evas_gl_sdl="yes"
       ;;
    *)
       want_curl="yes"
@@ -172,9 +200,7 @@ case "$host_os" in
       want_signature="yes"
       want_inotify="yes"
       want_tslib="yes"
-      want_ecore_con="yes"
       want_ecore_ipc="yes"
-      want_ecore_config="yes"
       want_ecore_imf="yes"
       want_ecore_x="yes"
       want_ecore_evas_software_x11="yes"
@@ -184,6 +210,7 @@ case "$host_os" in
       want_ecore_evas_software_xcb="yes"
       want_ecore_evas_xrender_xcb="yes"
       want_ecore_evas_software_sdl="yes"
+      want_ecore_evas_gl_sdl="yes"
       want_ecore_evas_directfb="yes"
       want_ecore_evas_fb="yes"
       ;;
@@ -199,16 +226,24 @@ requirements_ecore_file=""
 requirements_ecore_imf=""
 requirements_ecore_imf_evas=""
 requirements_ecore_input=""
+requirements_ecore_input_evas=""
 requirements_ecore_ipc=""
-requirements_ecore_job=""
-requirements_ecore_quartz=""
+requirements_ecore_cocoa=""
 requirements_ecore_sdl=""
-requirements_ecore_txt=""
 requirements_ecore_x=""
 requirements_ecore_win32=""
 requirements_ecore_wince=""
 
 ### Additional options to configure
+
+want_glib_integration_always=no
+AC_ARG_ENABLE(glib-integration-always,
+  AC_HELP_STRING([--enable-glib-integration-always], [enable glib integration when ecore_init() is called always]),
+  [want_glib_integration_always=$enableval])
+
+if test "x${want_glib_integration_always}" = "xyes" ; then
+  AC_DEFINE([GLIB_INTEGRATION_ALWAYS], [1], [Always integrate glib if support compiled])
+fi
 
 # abstract sockets (ecore_con.c)
 AC_ARG_ENABLE([abstract-sockets],
@@ -232,6 +267,26 @@ AC_ARG_ENABLE(simple-x11,
   AC_HELP_STRING([--enable-simple-x11], [enable simple x11 linking]),
   [want_evas_simple_x11=$enableval])
 
+# XIM
+AC_ARG_ENABLE([xim],
+   [AC_HELP_STRING([--disable-xim], [disable X Input Method.])],
+   [
+    if test "x${enableval}" = "xyes" ; then
+       want_xim="yes"
+    else
+       want_xim="no"
+    fi
+   ],
+   [want_xim="yes"])
+
+if test "x${want_xim}" = "xyes" ; then
+   AC_DEFINE([ENABLE_XIM], [1], [Enable X Input Method])
+fi
+
+# Unit tests
+
+EFL_CHECK_TESTS([enable_tests="yes"], [enable_tests="no"])
+
 
 ### Checks for programs
 
@@ -245,6 +300,11 @@ m4_ifdef([AC_PROG_OBJC],
     AC_SUBST([OBJC])
     AC_SUBST([OBJCFLAGS])
    ])
+m4_ifndef([am__fastdepOBJC], [
+    AM_CONDITIONAL([am__fastdepOBJC], [false])
+    AC_SUBST([cocoa_ldflags])
+])
+
 AC_PROG_CXX
 AC_PROG_CC
 
@@ -280,15 +340,12 @@ case "$host_os" in
       requirements_ecore_file="evil ${requirements_ecore_file}"
       requirements_ecore_imf="evil ${requirements_ecore_imf}"
       requirements_ecore_imf_evas="evil ${requirements_ecore_imf_evas}"
-      requirements_ecore_job="evil ${requirements_ecore_job}"
-      requirements_ecore_txt="evil ${requirements_ecore_txt}"
       EFL_ECORE_BUILD="-DEFL_ECORE_BUILD"
-      EFL_ECORE_JOB_BUILD="-DEFL_ECORE_JOB_BUILD"
-      EFL_ECORE_TXT_BUILD="-DEFL_ECORE_TXT_BUILD"
       EFL_ECORE_FILE_BUILD="-DEFL_ECORE_FILE_BUILD"
       EFL_ECORE_EVAS_BUILD="-DEFL_ECORE_EVAS_BUILD"
       EFL_ECORE_IMF_BUILD="-DEFL_ECORE_IMF_BUILD"
       EFL_ECORE_INPUT_BUILD="-DEFL_ECORE_INPUT_BUILD"
+      EFL_ECORE_INPUT_EVAS_BUILD="-DEFL_ECORE_INPUT_EVAS_BUILD"
       ;;
 esac
 
@@ -310,12 +367,11 @@ case "$host_os" in
 esac
 
 AC_SUBST(EFL_ECORE_BUILD)
-AC_SUBST(EFL_ECORE_JOB_BUILD)
-AC_SUBST(EFL_ECORE_TXT_BUILD)
 AC_SUBST(EFL_ECORE_FILE_BUILD)
 AC_SUBST(EFL_ECORE_EVAS_BUILD)
 AC_SUBST(EFL_ECORE_IMF_BUILD)
 AC_SUBST(EFL_ECORE_INPUT_BUILD)
+AC_SUBST(EFL_ECORE_INPUT_EVAS_BUILD)
 AC_SUBST(EFL_ECORE_WINCE_BUILD)
 AC_SUBST(EFL_ECORE_WIN32_BUILD)
 AC_SUBST(EFL_ECORE_SDL_BUILD)
@@ -354,9 +410,9 @@ requirements_ecore_file="ecore eina-0 ${requirements_ecore_file}"
 requirements_ecore_imf="ecore eina-0 ${requirements_ecore_imf}"
 requirements_ecore_imf_evas="ecore eina-0 ${requirements_ecore_imf_evas}"
 requirements_ecore_input="ecore eina-0 ${requirements_ecore_input}"
+requirements_ecore_input_evas="ecore eina-0 ${requirements_ecore_input_evas}"
 requirements_ecore_ipc="ecore eina-0 ${requirements_ecore_ipc}"
-requirements_ecore_job="ecore eina-0 ${requirements_ecore_job}"
-requirements_ecore_quartz="ecore eina-0 ${requirements_ecore_quartz}"
+requirements_ecore_cocoa="ecore eina-0 ${requirements_ecore_cocoa}"
 requirements_ecore_sdl="ecore eina-0 ${requirements_ecore_sdl}"
 requirements_ecore_win32="ecore eina-0 ${requirements_ecore_win32}"
 requirements_ecore_wince="ecore eina-0 ${requirements_ecore_wince}"
@@ -365,7 +421,7 @@ requirements_ecore_x="ecore eina-0 ${requirements_ecore_x}"
 
 # glib support (main loop integration)
 AC_ARG_ENABLE([glib],
-   [AC_HELP_STRING([--disable-glib], [enable glib support. @<:@default=detect@:>@])],
+   [AC_HELP_STRING([--disable-glib], [disable glib support. @<:@default=detect@:>@])],
    [want_glib=$enableval], [])
 
 if test "x$want_glib" != "xno"; then
@@ -381,47 +437,6 @@ elif test "x$have_glib" = "xyes"; then
 fi
 
 
-# iconv library (ecore_txt)
-
-iconv_cflags=""
-iconv_libs=""
-have_iconv="no"
-AC_ARG_WITH([iconv-link],
-   AC_HELP_STRING([--with-iconv-link=ICONV_LINK], [explicitly specify an iconv link option]),
-   [
-    iconv_libs=$withval
-    have_iconv="yes"
-   ]
-)
-
-if test "x${have_iconv}" = "xno" ; then
-   AC_CHECK_LIB(c, iconv,
-      [have_iconv="yes"]   )
-
-   if ! test "x${have_iconv}" = "xyes" ; then
-      AC_CHECK_LIB(iconv, iconv,
-         [
-          iconv_libs="-liconv"
-          have_iconv="yes"
-         ])
-   fi
-
-   if test "x$have_iconv" != "xyes"; then
-      AC_CHECK_LIB(iconv_plug, iconv,
-         [
-          iconv_libs="-liconv -liconv_plug"
-          have_iconv="yes"
-         ])
-   fi
-
-fi
-AC_MSG_CHECKING(for explicit iconv link options)
-AC_MSG_RESULT($iconv_libs)
-
-AC_SUBST(iconv_cflags)
-AC_SUBST(iconv_libs)
-
-
 # SDL library (ecore_sdl)
 
 have_sdl="no"
@@ -435,12 +450,12 @@ AC_ARG_WITH([sdl-config],
 
 AC_PATH_PROG([SDL_CONFIG], ["sdl-config"], [""], [$PATH])
 
-if test -z "$SDL_CONFIG" ; then
+if test -n "$SDL_CONFIG" ; then
    SDL_CFLAGS=`$SDL_CONFIG --cflags`
    SDL_LIBS=`$SDL_CONFIG --libs`
    AC_SUBST(SDL_CFLAGS)
    AC_SUBST(SDL_LIBS)
-   have_sdl="no"
+   have_sdl="yes"
 else
    PKG_CHECK_MODULES([SDL], [sdl >= 1.2.0], [have_sdl="yes"], [have_sdl="no"])
 fi
@@ -481,9 +496,94 @@ x_libs="";
 
 ecore_x_libs_private=""
 
+AC_ARG_ENABLE(ecore-x-composite,
+   [AC_HELP_STRING([--disable-ecore-x-composite],
+       [disable the ecore_x support for Xcomposite extension.
+        @<:@default=detect@:>@])],
+   [want_ecore_x_composite=$enableval])
+
+AC_ARG_ENABLE(ecore-x-damage,
+   [AC_HELP_STRING([--disable-ecore-x-damage],
+       [disable the ecore_x support for Xdamage extension.
+        @<:@default=detect@:>@])],
+   [want_ecore_x_damage=$enableval])
+
+AC_ARG_ENABLE(ecore-x-dpms,
+   [AC_HELP_STRING([--disable-ecore-x-dpms],
+       [disable the ecore_x support for Xdpms extension.
+        @<:@default=detect@:>@])],
+   [want_ecore_x_dpms=$enableval])
+
+AC_ARG_ENABLE(ecore-x-randr,
+   [AC_HELP_STRING([--disable-ecore-x-randr],
+       [disable the ecore_x support for Xrandr extension.
+        @<:@default=detect@:>@])],
+   [want_ecore_x_randr=$enableval])
+
+AC_ARG_ENABLE(ecore-x-render,
+   [AC_HELP_STRING([--disable-ecore-x-render],
+       [disable the ecore_x support for Xrender extension.
+        @<:@default=detect@:>@])],
+   [want_ecore_x_render=$enableval])
+
+AC_ARG_ENABLE(ecore-x-screensaver,
+   [AC_HELP_STRING([--disable-ecore-x-screensaver],
+       [disable the ecore_x support for Xscreensaver extension.
+        @<:@default=detect@:>@])],
+   [want_ecore_x_screensaver=$enableval])
+
+AC_ARG_ENABLE(ecore-x-shape,
+   [AC_HELP_STRING([--disable-ecore-x-shape],
+       [disable the ecore_x support for Xshape extension.
+        @<:@default=detect@:>@])],
+   [want_ecore_x_shape=$enableval])
+
+AC_ARG_ENABLE(ecore-x-sync,
+   [AC_HELP_STRING([--disable-ecore-x-sync],
+       [disable the ecore_x support for Xsync extension.
+        @<:@default=detect@:>@])],
+   [want_ecore_x_sync=$enableval])
+
+AC_ARG_ENABLE(ecore-x-xfixes,
+   [AC_HELP_STRING([--disable-ecore-x-xfixes],
+       [disable the ecore_x support for Xfixes extension.
+        @<:@default=detect@:>@])],
+   [want_ecore_x_xfixes=$enableval])
+
+AC_ARG_ENABLE(ecore-x-xinerama,
+   [AC_HELP_STRING([--disable-ecore-x-xinerama],
+       [disable the ecore_x support for Xinerama extension.
+        @<:@default=detect@:>@])],
+   [want_ecore_x_xinerama=$enableval])
+
+AC_ARG_ENABLE(ecore-x-xprint,
+   [AC_HELP_STRING([--disable-ecore-x-xprint],
+       [disable the ecore_x support for Xprint extension.
+        @<:@default=detect@:>@])],
+   [want_ecore_x_xprint=$enableval])
+
+AC_ARG_ENABLE(ecore-x-xtest,
+   [AC_HELP_STRING([--disable-ecore-x-xtest],
+       [disable the ecore_x support for Xtest extension.
+        @<:@default=detect@:>@])],
+   [want_ecore_x_xtest=$enableval])
+
+AC_ARG_ENABLE(ecore-x-cursor,
+   [AC_HELP_STRING([--disable-ecore-x-cursor],
+       [disable the ecore_x support for Xcursor extension.
+        @<:@default=detect@:>@])],
+   [want_ecore_x_cursor=$enableval])
+
+AC_ARG_ENABLE(ecore-x-input,
+   [AC_HELP_STRING([--disable-ecore-x-input],
+       [disable the ecore_x support for Xinput/Xinput2 extension.
+        @<:@default=detect@:>@])],
+   [want_ecore_x_input=$enableval])
+
+
 AC_ARG_ENABLE(ecore-x-xcb,
    [AC_HELP_STRING([--enable-ecore-x-xcb],
-       [enable the ecore_x module with XCB backend. [[default=disabled]]])],
+       [enable the ecore_x module with XCB backend. @<:@default=disabled@:>@])],
    [want_ecore_x_xcb=$enableval],
    [want_ecore_x_xcb="no"])
 
@@ -497,81 +597,137 @@ if test "x$want_ecore_x_xcb" = "xyes" ; then
     [ have_ecore_x_xcb="no" ])
 
   if test "x$have_ecore_x_xcb" = "xyes" ; then
-    PKG_CHECK_EXISTS([xcb-icccm >= 0.3],
-      [],
-      [ AC_DEFINE(ECORE_XCB_ICCCM02, 1, [xcb-icccm < 0.2]) ])
+    if test "x$want_ecore_x_composite" != "xno"; then
+      PKG_CHECK_MODULES(XCB_COMPOSITE, xcb-composite,
+        [ have_ecore_x_xcb_composite="yes"
+          requirements_ecore_x="xcb-composite ${requirements_ecore_x}"
+          AC_DEFINE(ECORE_XCB_COMPOSITE, 1, [Build support for XCB composite]) ],
+        [ have_ecore_x_xcb_composite="no" ])
+    else
+      have_ecore_x_xcb_composite="no"
+      AC_MSG_NOTICE("composite extension explicitly disabled")
+    fi
 
-    PKG_CHECK_MODULES(XCB_COMPOSITE, xcb-composite,
-      [ have_ecore_x_xcb_composite="yes"
-        requirements_ecore_x="xcb-composite ${requirements_ecore_x}"
-        AC_DEFINE(ECORE_XCB_COMPOSITE, 1, [Build support for XCB composite]) ],
-      [ have_ecore_x_xcb_composite="no" ])
+    if test "x$want_ecore_x_damage" != "xno"; then
+      PKG_CHECK_MODULES(XCB_DAMAGE, xcb-damage,
+        [ have_ecore_x_xcb_damage="yes"
+          requirements_ecore_x="xcb-damage ${requirements_ecore_x}"
+          AC_DEFINE(ECORE_XCB_DAMAGE, 1, [Build support for XCB damage]) ],
+        [ have_ecore_x_xcb_damage="no" ])
+    else
+      have_ecore_x_xcb_damage="no"
+      AC_MSG_NOTICE("damage extension explicitly disabled")
+    fi
 
-    PKG_CHECK_MODULES(XCB_DAMAGE, xcb-damage,
-      [ have_ecore_x_xcb_damage="yes"
-        requirements_ecore_x="xcb-damage ${requirements_ecore_x}"
-        AC_DEFINE(ECORE_XCB_DAMAGE, 1, [Build support for XCB damage]) ],
-      [ have_ecore_x_xcb_damage="no" ])
+    if test "x$want_ecore_x_dpms" != "xno"; then
+      PKG_CHECK_MODULES(XCB_DPMS, xcb-dpms,
+        [ have_ecore_x_xcb_dpms="yes"
+          requirements_ecore_x="xcb-dpms ${requirements_ecore_x}"
+          AC_DEFINE(ECORE_XCB_DPMS, 1, [Build support for XCB dpms]) ],
+        [ have_ecore_x_xcb_dpms="no" ])
+    else
+      have_ecore_x_xcb_dpms="no"
+      AC_MSG_NOTICE("dpms extension explicitly disabled")
+    fi
 
-    PKG_CHECK_MODULES(XCB_DPMS, xcb-dpms,
-      [ have_ecore_x_xcb_dpms="yes"
-        requirements_ecore_x="xcb-dpms ${requirements_ecore_x}"
-        AC_DEFINE(ECORE_XCB_DPMS, 1, [Build support for XCB dpms]) ],
-      [ have_ecore_x_xcb_dpms="no" ])
+    if test "x$want_ecore_x_randr" != "xno"; then
+      PKG_CHECK_MODULES(XCB_RANDR, xcb-randr,
+        [ have_ecore_x_xcb_randr="yes"
+          requirements_ecore_x="xcb-randr ${requirements_ecore_x}"
+          AC_DEFINE(ECORE_XCB_RANDR, 1, [Build support for XCB randr]) ],
+        [ have_ecore_x_xcb_randr="no" ])
+    else
+      have_ecore_x_xcb_randr="no"
+      AC_MSG_NOTICE("randr extension explicitly disabled")
+    fi
 
-    PKG_CHECK_MODULES(XCB_RANDR, xcb-randr,
-      [ have_ecore_x_xcb_randr="yes"
-        requirements_ecore_x="xcb-randr ${requirements_ecore_x}"
-        AC_DEFINE(ECORE_XCB_RANDR, 1, [Build support for XCB randr]) ],
-      [ have_ecore_x_xcb_randr="no" ])
+    if test "x$want_ecore_x_render" != "xno"; then
+      PKG_CHECK_MODULES(XCB_RENDER, xcb-render,
+        [ have_ecore_x_xcb_render="yes"
+          requirements_ecore_x="xcb-render ${requirements_ecore_x}"
+          AC_DEFINE(ECORE_XCB_RENDER, 1, [Build support for XCB render]) ],
+        [ have_ecore_x_xcb_render="no" ])
+    else
+      have_ecore_x_xcb_render="no"
+      AC_MSG_NOTICE("render extension explicitly disabled")
+    fi
 
-    PKG_CHECK_MODULES(XCB_RENDER, xcb-render,
-      [ have_ecore_x_xcb_render="yes"
-        requirements_ecore_x="xcb-render ${requirements_ecore_x}"
-        AC_DEFINE(ECORE_XCB_RENDER, 1, [Build support for XCB render]) ],
-      [ have_ecore_x_xcb_render="no" ])
+    if test "x$want_ecore_x_screensaver" != "xno"; then
+      PKG_CHECK_MODULES(XCB_SCREENSAVER, xcb-screensaver,
+        [ have_ecore_x_xcb_screensaver="yes"
+          requirements_ecore_x="xcb-screensaver ${requirements_ecore_x}"
+          AC_DEFINE(ECORE_XCB_SCREENSAVER, 1, [Build support for XCB screensaver]) ],
+        [ have_ecore_x_xcb_screensaver="no" ])
+    else
+      have_ecore_x_xcb_screensaver="no"
+      AC_MSG_NOTICE("screensaver extension explicitly disabled")
+    fi
 
-    PKG_CHECK_MODULES(XCB_SCREENSAVER, xcb-screensaver,
-      [ have_ecore_x_xcb_screensaver="yes"
-        requirements_ecore_x="xcb-screensaver ${requirements_ecore_x}"
-        AC_DEFINE(ECORE_XCB_SCREENSAVER, 1, [Build support for XCB screensaver]) ],
-      [ have_ecore_x_xcb_screensaver="no" ])
+    if test "x$want_ecore_x_shape" != "xno"; then
+      PKG_CHECK_MODULES(XCB_SHAPE, xcb-shape,
+        [ have_ecore_x_xcb_shape="yes"
+          requirements_ecore_x="xcb-shape ${requirements_ecore_x}"
+          AC_DEFINE(ECORE_XCB_SHAPE, 1, [Build support for XCB shape]) ],
+        [ have_ecore_x_xcb_shape="no" ])
+    else
+      have_ecore_x_xcb_shape="no"
+      AC_MSG_NOTICE("shape extension explicitly disabled")
+    fi
 
-    PKG_CHECK_MODULES(XCB_SHAPE, xcb-shape,
-      [ have_ecore_x_xcb_shape="yes"
-        requirements_ecore_x="xcb-shape ${requirements_ecore_x}"
-        AC_DEFINE(ECORE_XCB_SHAPE, 1, [Build support for XCB shape]) ],
-      [ have_ecore_x_xcb_shape="no" ])
+    if test "x$want_ecore_x_sync" != "xno"; then
+      PKG_CHECK_MODULES(XCB_SYNC, xcb-sync,
+        [ have_ecore_x_xcb_sync="yes"
+          requirements_ecore_x="xcb-sync ${requirements_ecore_x}"
+          AC_DEFINE(ECORE_XCB_SYNC, 1, [Build support for XCB sync]) ],
+        [ have_ecore_x_xcb_sync="no" ])
+    else
+      have_ecore_x_xcb_sync="no"
+      AC_MSG_NOTICE("sync extension explicitly disabled")
+    fi
 
-    PKG_CHECK_MODULES(XCB_SYNC, xcb-sync,
-      [ have_ecore_x_xcb_sync="yes"
-        requirements_ecore_x="xcb-sync ${requirements_ecore_x}"
-        AC_DEFINE(ECORE_XCB_SYNC, 1, [Build support for XCB sync]) ],
-      [ have_ecore_x_xcb_sync="no" ])
+    if test "x$want_ecore_x_xfixes" != "xno"; then
+      PKG_CHECK_MODULES(XCB_XFIXES, xcb-xfixes,
+        [ have_ecore_x_xcb_xfixes="yes"
+          requirements_ecore_x="xcb-xfixes ${requirements_ecore_x}"
+          AC_DEFINE(ECORE_XCB_FIXES, 1, [Build support for XCB xfixes]) ],
+        [ have_ecore_x_xcb_xfixes="no" ])
+    else
+      have_ecore_x_xcb_xfixes="no"
+      AC_MSG_NOTICE("xfixes extension explicitly disabled")
+    fi
 
-    PKG_CHECK_MODULES(XCB_XFIXES, xcb-xfixes,
-      [ have_ecore_x_xcb_xfixes="yes"
-        requirements_ecore_x="xcb-xfixes ${requirements_ecore_x}"
-        AC_DEFINE(ECORE_XCB_FIXES, 1, [Build support for XCB xfixes]) ],
-      [ have_ecore_x_xcb_xfixes="no" ])
+    if test "x$want_ecore_x_xinerama" != "xno"; then
+      PKG_CHECK_MODULES(XCB_XINERAMA, xcb-xinerama,
+        [ have_ecore_x_xcb_xinerama="yes"
+          requirements_ecore_x="xcb-xinerama ${requirements_ecore_x}"
+          AC_DEFINE(ECORE_XCB_XINERAMA, 1, [Build support for XCB xinerama]) ],
+        [ have_ecore_x_xcb_xinerama="no" ])
+    else
+      have_ecore_x_xcb_xinerama="no"
+      AC_MSG_NOTICE("xinerama extension explicitly disabled")
+    fi
 
-    PKG_CHECK_MODULES(XCB_XINERAMA, xcb-xinerama,
-      [ have_ecore_x_xcb_xinerama="yes"
-        requirements_ecore_x="xcb-xinerama ${requirements_ecore_x}"
-        AC_DEFINE(ECORE_XCB_XINERAMA, 1, [Build support for XCB xinerama]) ],
-      [ have_ecore_x_xcb_xinerama="no" ])
+    if test "x$want_ecore_x_xprint" != "xno"; then
+      PKG_CHECK_MODULES(XCB_XPRINT, xcb-xprint,
+        [ have_ecore_x_xcb_xprint="yes"
+          requirements_ecore_x="xcb-xprint ${requirements_ecore_x}"
+          AC_DEFINE(ECORE_XCB_XPRINT, 1, [Build support for XCB xprint]) ],
+        [ have_ecore_x_xcb_xprint="no" ])
+    else
+      have_ecore_x_xcb_xprint="no"
+      AC_MSG_NOTICE("xprint extension explicitly disabled")
+    fi
 
-    PKG_CHECK_MODULES(XCB_XPRINT, xcb-xprint,
-      [ have_ecore_x_xcb_xprint="yes"
-        requirements_ecore_x="xcb-xprint ${requirements_ecore_x}"
-        AC_DEFINE(ECORE_XCB_XPRINT, 1, [Build support for XCB xprint]) ],
-      [ have_ecore_x_xcb_xprint="no" ])
-
-    PKG_CHECK_MODULES(XCB_XTEST, xcb-xtest,
-      [ have_ecore_x_xcb_xtest="yes"
-        requirements_ecore_x="xcb-xtest ${requirements_ecore_x}"
-        AC_DEFINE(ECORE_XCB_XTEST, 1, [Build support for XCB xtest]) ],
-      [ have_ecore_x_xcb_xtest="no" ])
+    if test "x$want_ecore_x_xtest" != "xno"; then
+      PKG_CHECK_MODULES(XCB_XTEST, xcb-xtest,
+        [ have_ecore_x_xcb_xtest="yes"
+          requirements_ecore_x="xcb-xtest ${requirements_ecore_x}"
+          AC_DEFINE(ECORE_XCB_XTEST, 1, [Build support for XCB xtest]) ],
+        [ have_ecore_x_xcb_xtest="no" ])
+    else
+      have_ecore_x_xcb_xtest="no"
+      AC_MSG_NOTICE("xtest extension explicitly disabled")
+    fi
 
     AC_DEFINE(HAVE_ECORE_X_XCB, 1, [Defined to 1 if XCB is enabled.])
 
@@ -605,51 +761,60 @@ if ! test "x$have_ecore_x_xcb" = "xyes" ; then
     use_Xcursor="no"
     PCFLAGS=$CFLAGS
     CFLAGS="$x_cflags $x_includes"
-    AC_CHECK_HEADER(X11/Xcursor/Xcursor.h,
-      [
-        AC_CHECK_LIB(Xcursor, XcursorImageLoadCursor,
-          [
-            AC_DEFINE(ECORE_XCURSOR, 1, [Build support for Xcursor])
-            Xcursor_cflags=""
-            Xcursor_libs="-lXcursor"
-            use_Xcursor="yes"
-          ], [
-            Xcursor_cflags=""
-            Xcursor_libs=""
-            use_Xcursor="no"
-          ], [
-            $x_libs -lXrender
-          ]
-        )
-      ], [
-        Xcursor_cflags=""
-        Xcursor_libs=""
-        use_Xcursor="no"
-      ], [
-        #include <X11/Xlib.h>
-      ]
-    )
-    CFLAGS=$PCFLAGS
+
+    if test "x$want_ecore_x_cursor" = "xyes"; then
+      AC_CHECK_HEADER(X11/Xcursor/Xcursor.h,
+        [
+          AC_CHECK_LIB(Xcursor, XcursorImageLoadCursor,
+            [
+              AC_DEFINE(ECORE_XCURSOR, 1, [Build support for Xcursor])
+              Xcursor_cflags=""
+              Xcursor_libs="-lXcursor"
+              use_Xcursor="yes"
+            ], [
+              Xcursor_cflags=""
+              Xcursor_libs=""
+              use_Xcursor="no"
+            ], [
+              $x_libs -lXrender
+            ]
+          )
+        ], [
+          Xcursor_cflags=""
+          Xcursor_libs=""
+          use_Xcursor="no"
+        ], [
+          #include <X11/Xlib.h>
+        ]
+      )
+      CFLAGS=$PCFLAGS
+    else
+      Xcursor_cflags=""
+      Xcursor_libs=""
+      use_Xcursor="no"
+      AC_MSG_NOTICE("Xcursor explicitly disabled")
+    fi
 
     AC_SUBST(Xcursor_cflags)
     AC_SUBST(Xcursor_libs)
 
-    ECORE_CHECK_X_EXTENSION([Xkb], [XKB.h], [X11], [XkbSetDetectableAutoRepeat])
-    ECORE_CHECK_X_EXTENSION([Xcomposite], [Xcomposite.h], [Xcomposite], [XCompositeQueryExtension])
-    ECORE_CHECK_X_EXTENSION([Xdamage], [Xdamage.h], [Xdamage], [XDamageSubtract])
-    ECORE_CHECK_X_EXTENSION([Xdpms], [dpms.h], [Xdpms], [DPMSQueryExtension])
+    ECORE_CHECK_X_EXTENSION([Xkb], [XKB.h], [X11], [XkbSetDetectableAutoRepeat], [$want_ecore_x_xkb])
+    ECORE_CHECK_X_EXTENSION([Xcomposite], [Xcomposite.h], [Xcomposite], [XCompositeQueryExtension], [$want_ecore_x_composite])
+    ECORE_CHECK_X_EXTENSION([Xdamage], [Xdamage.h], [Xdamage], [XDamageSubtract], [$want_ecore_x_damage])
+    ECORE_CHECK_X_EXTENSION([Xdpms], [dpms.h], [Xdpms], [DPMSQueryExtension], [$want_ecore_x_dpms])
     if test "x$use_xdpms" = "xno" ; then
-      ECORE_CHECK_X_EXTENSION([Xdpms], [dpms.h], [Xext], [DPMSQueryExtension])
+      ECORE_CHECK_X_EXTENSION([Xdpms], [dpms.h], [Xext], [DPMSQueryExtension], [$want_ecore_x_dpms])
     fi
-    ECORE_CHECK_X_EXTENSION([Xfixes], [Xfixes.h], [Xfixes], [XFixesExpandRegion])
-    ECORE_CHECK_X_EXTENSION([Xinerama], [Xinerama.h], [Xinerama], [XineramaQueryScreens])
-    ECORE_CHECK_X_EXTENSION([Xprint], [Print.h], [Xp], [XpQueryScreens])
-    ECORE_CHECK_X_EXTENSION([Xrandr], [Xrandr.h], [Xrandr], [XRRGetScreenResourcesCurrent])
-    ECORE_CHECK_X_EXTENSION([Xrender], [Xrender.h], [Xrender], [XRenderFindVisualFormat])
-    ECORE_CHECK_X_EXTENSION([Xtest], [XTest.h], [Xtst], [XTestFakeKeyEvent])
-    ECORE_CHECK_X_EXTENSION([Xss], [scrnsaver.h], [Xss], [XScreenSaverSelectInput])
+    ECORE_CHECK_X_EXTENSION([Xfixes], [Xfixes.h], [Xfixes], [XFixesExpandRegion], [$want_ecore_x_xfixes])
+    ECORE_CHECK_X_EXTENSION([Xinerama], [Xinerama.h], [Xinerama], [XineramaQueryScreens], [$want_ecore_x_xinerama])
+    ECORE_CHECK_X_EXTENSION([Xprint], [Print.h], [Xp], [XpQueryScreens], [$want_ecore_x_xprint])
+    ECORE_CHECK_X_EXTENSION([Xrandr], [Xrandr.h], [Xrandr], [XRRGetScreenResourcesCurrent], [$want_ecore_x_randr])
+    ECORE_CHECK_X_EXTENSION([Xrender], [Xrender.h], [Xrender], [XRenderFindVisualFormat], [$want_ecore_x_render])
+    ECORE_CHECK_X_EXTENSION([Xtest], [XTest.h], [Xtst], [XTestFakeKeyEvent], [$want_ecore_x_xtest])
+    ECORE_CHECK_X_EXTENSION([Xss], [scrnsaver.h], [Xss], [XScreenSaverSelectInput], [$want_ecore_x_screensaver])
+    ECORE_CHECK_X_EXTENSION([Xi2], [XInput2.h], [Xi], [XIQueryDevice], [$want_ecore_x_input])
 
-    ecore_x_libs_private="${Xcursor_libs} ${XKB_LIBS} ${XCOMPOSITE_LIBS} ${XDAMAGE_LIBS} ${XDPMS_LIBS} ${XFIXES_LIBS} ${XINERAMA_LIBS} ${XPRINT_LIBS} ${XRANDR_LIBS} ${XRENDER_LIBS} ${XTEST_LIBS} ${XSS_LIBS} "
+    ecore_x_libs_private="${Xcursor_libs} ${XKB_LIBS} ${XCOMPOSITE_LIBS} ${XDAMAGE_LIBS} ${XDPMS_LIBS} ${XFIXES_LIBS} ${XINERAMA_LIBS} ${XPRINT_LIBS} ${XRANDR_LIBS} ${XRENDER_LIBS} ${XTEST_LIBS} ${XSS_LIBS} ${XI2_LIBS}"
 
     AC_DEFINE(HAVE_ECORE_X_XLIB, 1, [Defined to 1 if Xlib is enabled.])
     have_x="yes"
@@ -667,7 +832,7 @@ AM_CONDITIONAL(BUILD_ECORE_X_XLIB, test $have_ecore_x_xlib = yes)
 AM_CONDITIONAL(BUILD_ECORE_X_XCB, test $have_ecore_x_xcb = yes)
 
 
-# Evas library (ecore_config, ecore_input, ecore_imf_evas and ecore_evas)
+# Evas library (ecore_config, ecore_input_evas, ecore_imf_evas and ecore_evas)
 
 PKG_CHECK_MODULES([EVAS], [evas >= 0.9.9],
    [have_evas="yes"],
@@ -678,43 +843,52 @@ PKG_CHECK_MODULES([EVAS], [evas >= 0.9.9],
 
 AC_HEADER_SYS_WAIT
 
+have_addrinfo="no"
 case "$host_os" in
    mingw* | cegcc*)
       AC_DEFINE(HAVE_DLFCN_H, 1, [Define to 1 if you have the <dlfcn.h> header file.])
       AC_DEFINE(HAVE_SYS_MMAN_H, 1, [Define to 1 if you have the <sys/mman.h> header file.])
       AC_DEFINE(HAVE_SYS_TIME_H, 1, [Define to 1 if you have the <sys/time.h> header file.])
+      have_addrinfo="yes"
       ;;
    *)
-      AC_CHECK_HEADERS([dlfcn.h features.h langinfo.h locale.h netdb.h netinet/in.h sys/time.h sys/mman.h signal.h sys/resource.h])
+      AC_CHECK_HEADERS([dlfcn.h features.h langinfo.h locale.h sys/time.h sys/mman.h signal.h sys/resource.h])
       ;;
 esac
+
+# ecore_con
+
+AC_CHECK_HEADERS([arpa/inet.h arpa/nameser.h netinet/tcp.h netinet/in.h sys/socket.h sys/un.h ws2tcpip.h netdb.h])
+
+if test "x${ac_cv_header_netdb_h}" = "xyes" ; then
+   have_addrinfo="yes"
+fi
 
 # Framebuffer (ecore_fb)
 have_fb="no"
 AC_CHECK_HEADER([linux/fb.h],
    [AC_CHECK_HEADER([linux/input.h], [have_fb="yes"])])
 
-# Quartz header files (ecore_quartz)
+# Cocoa header files (ecore_cocoa)
 
-quartz_ldflags="";
-have_quartz="no"
-
-if test "x${have_gnu_objc}" = "xyes" ; then
-   AC_LANG_PUSH([Objective C])
-   AC_CHECK_HEADER([Cocoa/Cocoa.h],
-      [
-       have_quartz="yes"
-       quartz_ldflags="-framework Cocoa"
-      ],
-      [have_quartz="no"])
-   AC_LANG_POP([Objective C])
-fi
-
-AC_SUBST(quartz_ldflags)
+cocoa_ldflags="";
+have_cocoa="no"
+m4_ifdef([AC_PROG_OBJC], [
+    if test "x${have_gnu_objc}" = "xyes" ; then
+       AC_LANG_PUSH([Objective C])
+       AC_CHECK_HEADER([Cocoa/Cocoa.h],
+          [
+           have_cocoa="yes"
+           cocoa_ldflags="-framework Cocoa"
+          ])
+       AC_LANG_POP([Objective C])
+    fi
+])
+AC_SUBST(cocoa_ldflags)
 
 # basic pthread support
 
-EFL_CHECK_PTHREAD([have_pthread="yes"], [have_pthread="no"])
+EFL_CHECK_PTHREAD([no], [have_pthread="yes"], [have_pthread="no"])
 
 ### Checks for types
 AC_CHECK_SIZEOF(int, 4)
@@ -742,7 +916,7 @@ case "$host_os" in
       WIN32_CFLAGS="-mwin32"
       ;;
    mingw*)
-      WIN32_CPPFLAGS="-D_WIN32_WINNT=0x0500"
+      WIN32_CPPFLAGS="-D_WIN32_WINNT=0x0501"
       ;;
 esac
 AC_SUBST(WIN32_CPPFLAGS)
@@ -785,22 +959,26 @@ if test "x$have_atfile_source" != "xno"; then
                 ])
 fi
 
+### Checks for optionnal feature
+AC_CHECK_FUNC(mallinfo,
+	[
+	  have_mallinfo=yes
+	  AC_DEFINE(HAVE_MALLINFO, 1, [Gather memory statistic])
+	], [
+	  have_mallinfo=no
+	])
+
 ### Ecore modules
 
 ## Core modules
 
-# ecore_job
-ECORE_CHECK_MODULE([Job], [${want_ecore_job}])
-
-# ecore_txt
-ECORE_CHECK_MODULE([Txt], [${want_ecore_txt}], [$have_iconv])
-
 # ecore_con
-ECORE_CHECK_MODULE([Con], [${want_ecore_con}])
+ECORE_CHECK_MODULE([con], [${want_ecore_con}], [Con], [${have_addrinfo}])
 
 have_curl="no"
 have_gnutls="no"
 have_openssl="no"
+have_cares="no"
 if test "x${have_ecore_con}" = "xyes" ; then
 
    ECORE_CHECK_CURL([${want_curl}],
@@ -829,14 +1007,24 @@ if test "x${have_ecore_con}" = "xyes" ; then
          # depends on ecore_con anyway.
       fi
    fi
+
+   ECORE_CHECK_CARES([${want_cares}],
+      [
+       have_cares="yes"
+       requirements_ecore_con="libcares ${requirements_ecore_con}"
+      ],
+      [have_cares="no"])
+
 fi
 
+AM_CONDITIONAL([HAVE_CARES], [test "x${have_cares}" = "xyes"])
+
 # ecore_ipc
-ECORE_CHECK_MODULE([Ipc], [${want_ecore_ipc}], [${have_ecore_con}],
+ECORE_CHECK_MODULE([ipc], [${want_ecore_ipc}], [Ipc], [${have_ecore_con}],
    [requirements_ecore_ipc="ecore-con ${requirements_ecore_ipc}"])
 
 # ecore_file
-ECORE_CHECK_MODULE([File], [${want_ecore_file}])
+ECORE_CHECK_MODULE([file], [${want_ecore_file}], [File])
 
 have_poll="no"
 have_inotify="no"
@@ -857,12 +1045,12 @@ if test "x${have_eet}" = "xyes" -a "x${have_evas}"  -a "x${have_ecore_ipc}" ; th
    ecore_config_deps="yes"
 fi
 
-ECORE_CHECK_MODULE([Config], [${want_ecore_config}], [${ecore_config_deps}],
+ECORE_CHECK_MODULE([config], [${want_ecore_config}], [Config], [${ecore_config_deps}],
    [requirements_ecore_config="ecore-ipc evas eet ${requirements_ecore_config}"])
 
 # ecore_imf
 
-ECORE_CHECK_MODULE([IMF], [${want_ecore_imf}])
+ECORE_CHECK_MODULE([imf], [${want_ecore_imf}], [Imf])
 
 # ecore_imf_evas
 
@@ -871,12 +1059,13 @@ if test "x${have_ecore_imf}" = "xyes" -a "x${have_evas}" = "xyes" ; then
    ecore_imf_evas_deps="yes"
 fi
 
-ECORE_CHECK_MODULE([IMF_EVAS], [${want_ecore_imf}], [${ecore_imf_evas_deps}],
+ECORE_CHECK_MODULE([imf-evas], [${want_ecore_imf}], [Imf_Evas], [${ecore_imf_evas_deps}],
    [requirements_ecore_imf_evas="ecore-imf evas ${requirements_ecore_imf_evas}"])
 
-# ecore_input
-ECORE_CHECK_MODULE([Input], [${want_ecore_input}], [${have_evas}],
-   [requirements_ecore_input="evas ${requirements_ecore_input}"])
+# ecore_input{_evas}
+ECORE_CHECK_MODULE([input], [${want_ecore_input}], [Input])
+ECORE_CHECK_MODULE([input-evas], [${want_ecore_input}], [Input_Evas], [${have_evas}],
+   [requirements_ecore_input_evas="ecore-input evas ${requirements_ecore_input}"])
 
 ## Graphic systems
 
@@ -884,35 +1073,34 @@ ECORE_CHECK_MODULE([Input], [${want_ecore_input}], [${have_evas}],
 
 ecore_x_deps="no"
 if test "x${have_x}" = "xyes" -a \
-        "x${have_ecore_input}" = "xyes" -a \
-        "x${have_ecore_txt}" = "xyes" ; then
+        "x${have_ecore_input}" = "xyes" ; then
    ecore_x_deps="yes"
 fi
 
-ECORE_CHECK_MODULE([X], [${want_ecore_x}], [${ecore_x_deps}],
+ECORE_CHECK_MODULE([x], [${want_ecore_x}], [X], [${ecore_x_deps}],
   [
    ecore_x_libs="$ecore_x_libs $x_libs"
-   requirements_ecore_x="ecore-input ecore-txt ${requirements_ecore_x}"
+   requirements_ecore_x="ecore-input ${requirements_ecore_x}"
   ])
 
 # ecore_win32
 
-ECORE_CHECK_MODULE([Win32], [${want_ecore_win32}], [${have_ecore_input}],
+ECORE_CHECK_MODULE([win32], [${want_ecore_win32}], [Win32], [${have_ecore_input}],
    [
     ecore_win32_libs="-lole32 -lgdi32"
     requirements_ecore_win32="ecore-input ${requirements_ecore_win32}"
    ])
 AC_SUBST(ecore_win32_libs)
 
-# ecore_quartz
+# ecore_cocoa
 
-ecore_quartz_deps="no"
-if test "x${have_ecore_input}" = "xyes" -a "x${have_quartz}" = "xyes" ; then
-   ecore_quartz_deps="yes"
+ecore_cocoa_deps="no"
+if test "x${have_ecore_input}" = "xyes" -a "x${have_cocoa}" = "xyes" ; then
+   ecore_cocoa_deps="yes"
 fi
 
-ECORE_CHECK_MODULE([QUARTZ], [${want_ecore_quartz}], [${ecore_quartz_deps}],
-   [requirements_ecore_quartz="ecore-input ${requirements_ecore_quartz}"])
+ECORE_CHECK_MODULE([cocoa], [${want_ecore_cocoa}], [Cocoa], [${ecore_cocoa_deps}],
+   [requirements_ecore_cocoa="ecore-input ${requirements_ecore_cocoa}"])
 
 # ecore_sdl
 
@@ -921,11 +1109,11 @@ if test "x${have_sdl}" = "xyes" -a "x${have_ecore_input}" = "xyes" ; then
    ecore_sdl_deps="yes"
 fi
 
-ECORE_CHECK_MODULE([SDL], [${want_ecore_sdl}], [${ecore_sdl_deps}],
+ECORE_CHECK_MODULE([sdl], [${want_ecore_sdl}], [Sdl], [${ecore_sdl_deps}],
    [requirements_ecore_sdl="ecore-input ${requirements_ecore_sdl}"])
 
 # ecore_fb
-ECORE_CHECK_MODULE([FB], [${want_ecore_fb}], [$have_fb])
+ECORE_CHECK_MODULE([fb], [${want_ecore_fb}], [FB], [$have_fb])
 
 if test "x${have_ecore_fb}" = "xyes" ; then
    ECORE_CHECK_TSLIB([${want_tslib}],
@@ -938,12 +1126,12 @@ fi
 
 # ecore_directfb
 
-ECORE_CHECK_MODULE([DirectFB], [${want_ecore_directfb}], [${have_directfb}],
+ECORE_CHECK_MODULE([directfb], [${want_ecore_directfb}], [DirectFB], [${have_directfb}],
    [requirements_ecore_directfb="directfb ${requirements_ecore_directfb}"])
 
 # ecore_wince
 
-ECORE_CHECK_MODULE([WinCE], [${want_ecore_wince}], [${have_ecore_input}],
+ECORE_CHECK_MODULE([wince], [${want_ecore_wince}], [WinCE], [${have_ecore_input}],
    [requirements_ecore_win32="ecore-input ${requirements_ecore_win32}"])
 
 ## Ecore Evas
@@ -951,12 +1139,12 @@ ECORE_CHECK_MODULE([WinCE], [${want_ecore_wince}], [${have_ecore_input}],
 # ecore_evas
 
 ecore_evas_deps="no"
-if test "x${have_evas}" = "xyes" -a "x${have_ecore_input}" = "xyes" ; then
+if test "x${have_evas}" = "xyes" -a "x${have_ecore_input}" = "xyes" -a "x${have_ecore_input_evas}" = "xyes" ; then
    ecore_evas_deps="yes"
 fi
 
-ECORE_CHECK_MODULE([Evas], [${want_ecore_evas}], [${ecore_evas_deps}],
-  [requirements_ecore_evas="ecore-input evas ${requirements_ecore_evas}"])
+ECORE_CHECK_MODULE([evas], [${want_ecore_evas}], [Evas], [${ecore_evas_deps}],
+  [requirements_ecore_evas="ecore-input ecore-input-evas evas ${requirements_ecore_evas}"])
 
 # ecore_evas_buffer
 
@@ -1061,19 +1249,27 @@ if test "x${have_ecore_evas_software_gdi}" = "xyes" -o \
    requirements_ecore_evas="ecore-win32 ${requirements_ecore_evas}"
 fi
 
-# ecore_evas_quartz
+# ecore_evas_cocoa
 
-ECORE_EVAS_CHECK_MODULE([quartz],
-   [${want_ecore_evas_quartz}],
-   [Quartz],
-   [${have_ecore_quartz}],
-   [requirements_ecore_evas="ecore-quartz ${requirements_ecore_evas}"])
+ECORE_EVAS_CHECK_MODULE([cocoa],
+   [${want_ecore_evas_cocoa}],
+   [Cocoa],
+   [${have_ecore_cocoa}],
+   [requirements_ecore_evas="ecore-cocoa ${requirements_ecore_evas}"])
 
 # ecore_evas_software_sdl
 
 ECORE_EVAS_CHECK_MODULE([software-sdl],
    [${want_ecore_evas_software_sdl}],
    [Software SDL],
+   [${have_ecore_sdl}],
+   [requirements_ecore_evas="ecore-sdl ${requirements_ecore_evas}"])
+
+# ecore_evas_gl_sdl
+
+ECORE_EVAS_CHECK_MODULE([opengl-sdl],
+   [${want_ecore_evas_gl_sdl}],
+   [OpenGL SDL],
    [${have_ecore_sdl}],
    [requirements_ecore_evas="ecore-sdl ${requirements_ecore_evas}"])
 
@@ -1115,11 +1311,10 @@ AC_SUBST(requirements_ecore_file)
 AC_SUBST(requirements_ecore_imf)
 AC_SUBST(requirements_ecore_imf_evas)
 AC_SUBST(requirements_ecore_input)
+AC_SUBST(requirements_ecore_input_evas)
 AC_SUBST(requirements_ecore_ipc)
-AC_SUBST(requirements_ecore_job)
-AC_SUBST(requirements_ecore_quartz)
+AC_SUBST(requirements_ecore_cocoa)
 AC_SUBST(requirements_ecore_sdl)
-AC_SUBST(requirements_ecore_txt)
 AC_SUBST(requirements_ecore_x)
 AC_SUBST(requirements_ecore_win32)
 AC_SUBST(requirements_ecore_wince)
@@ -1132,16 +1327,15 @@ ecore-directfb.pc
 ecore-evas.pc
 ecore-fb.pc
 ecore-file.pc
+ecore-cocoa.pc
 ecore-imf.pc
 ecore-imf-evas.pc
 ecore-ipc.pc
-ecore-job.pc
-ecore-txt.pc
 ecore-x.pc
 ecore-input.pc
+ecore-input-evas.pc
 ecore-win32.pc
 ecore-sdl.pc
-ecore-quartz.pc
 ecore-wince.pc
 ecore.pc
 doc/ecore.dox
@@ -1150,28 +1344,28 @@ src/Makefile
 src/bin/Makefile
 src/lib/Makefile
 src/lib/ecore/Makefile
-src/lib/ecore_job/Makefile
-src/lib/ecore_x/Makefile
-src/lib/ecore_x/xlib/Makefile
-src/lib/ecore_x/xcb/Makefile
-src/lib/ecore_fb/Makefile
-src/lib/ecore_sdl/Makefile
-src/lib/ecore_quartz/Makefile
-src/lib/ecore_evas/Makefile
 src/lib/ecore_con/Makefile
+src/lib/ecore_config/Makefile
+src/lib/ecore_directfb/Makefile
+src/lib/ecore_evas/Makefile
+src/lib/ecore_fb/Makefile
+src/lib/ecore_file/Makefile
+src/lib/ecore_cocoa/Makefile
+src/lib/ecore_sdl/Makefile
 src/lib/ecore_imf/Makefile
 src/lib/ecore_imf_evas/Makefile
 src/lib/ecore_input/Makefile
+src/lib/ecore_input_evas/Makefile
 src/lib/ecore_ipc/Makefile
-src/lib/ecore_txt/Makefile
-src/lib/ecore_config/Makefile
-src/lib/ecore_file/Makefile
-src/lib/ecore_directfb/Makefile
 src/lib/ecore_win32/Makefile
 src/lib/ecore_wince/Makefile
+src/lib/ecore_x/Makefile
+src/lib/ecore_x/xlib/Makefile
+src/lib/ecore_x/xcb/Makefile
+src/tests/Makefile
 README
 ecore.spec
-po/Makefile.in
+$po_makefile_in
 ])
 
 echo
@@ -1184,8 +1378,8 @@ echo
 echo "  Ecore........................: always"
 echo "    Thread support.............: $have_pthread"
 echo "    GLib support...............: $have_glib"
-echo "  Ecore_Job....................: $have_ecore_job"
-echo "  Ecore_Txt....................: $have_ecore_txt"
+echo "    Always integrate GLib......: $want_glib_integration_always"
+echo "    Gathering memory statistic.: $have_mallinfo"
 echo "  Ecore_Con....................: $have_ecore_con"
 if test "x$have_ecore_con" = "xyes" ; then
   echo $ECHO_N "    OpenSSL....................: $have_openssl $ECHO_C"
@@ -1197,6 +1391,7 @@ fi
   echo "    GnuTLS.....................: $have_gnutls"
   echo "    CURL.......................: $have_curl"
   echo "    Abstract Sockets...........: $want_abstract_sockets"
+  echo "    c-ares.....................: $have_cares"
 fi
 echo "  Ecore_Ipc....................: $have_ecore_ipc"
 if test "x$have_ecore_ipc" = "xyes" ; then
@@ -1215,10 +1410,11 @@ if test "x$have_ecore_file" = "xyes" ; then
   echo "    Poll.......................: $have_poll"
   echo "    CURL.......................: $have_curl"
 fi
-echo "  Ecore_Config.................: $have_ecore_config"
+echo "  Ecore_Config.................: $have_ecore_config (deprecated)"
 echo "  Ecore_IMF....................: $have_ecore_imf"
 echo "  Ecore_IMF_Evas...............: $have_ecore_imf_evas"
 echo "  Ecore_Input..................: $have_ecore_input"
+echo "  Ecore_Input_Evas.............: $have_ecore_input_evas"
 
 echo
 echo " Graphic systems:"
@@ -1253,12 +1449,14 @@ if test "x$have_ecore_x" = "xyes" ; then
     echo "    Xdamage....................: $use_xdamage"
     echo "    Xdpms......................: $use_xdpms"
     echo "    Xtest......................: $use_xtest"
+    echo "    XIM........................: $want_xim"
+    echo "    Xi2........................: $use_xi2"
   fi
 else
   echo "  Ecore_X......................: $have_ecore_x"
 fi
 echo "  Ecore_Win32..................: $have_ecore_win32"
-echo "  Ecore_Quartz.................: $have_ecore_quartz"
+echo "  Ecore_Cocoa..................: $have_ecore_cocoa"
 echo "  Ecore_SDL....................: $have_ecore_sdl"
 echo "  Ecore_FB.....................: $have_ecore_fb"
 if test "x${have_ecore_fb}" = "xyes" ; then
@@ -1275,12 +1473,7 @@ echo "  Ecore_Evas...................: $have_ecore_evas"
 if test "x${have_ecore_evas}" = "xyes" ; then
   echo "    Software Memory Buffer.....: $have_ecore_evas_software_buffer"
   if test "x${have_ecore_evas_software_x11}" = "xyes" ; then
-    if test "x${have_ecore_evas_software_xlib}" = "xyes" ; then
-      echo "    Software X11...............: $have_ecore_evas_software_x11 (Xlib)"
-    fi
-    if test "x${have_ecore_evas_software_xcb}" = "xyes" ; then
-      echo "    Software X11...............: $have_ecore_evas_software_x11 (XCB)"
-    fi
+    echo "    Software X11...............: $have_ecore_evas_software_x11 (Xlib=${have_ecore_evas_software_xlib}) (XCB=${have_ecore_evas_software_xcb})"
   else
     echo "    Software X11...............: $have_ecore_evas_software_x11"
   fi
@@ -1291,8 +1484,9 @@ if test "x${have_ecore_evas}" = "xyes" ; then
   echo "    Software DirectDraw........: $have_ecore_evas_software_ddraw"
   echo "    Direct3D...................: $have_ecore_evas_direct3d"
   echo "    OpenGL Glew................: $have_ecore_evas_opengl_glew"
-  echo "    Quartz.....................: $have_ecore_evas_quartz"
+  echo "    Cocoa......................: $have_ecore_evas_cocoa"
   echo "    Software SDL...............: $have_ecore_evas_software_sdl"
+  echo "    OpenGL SDL.................: $have_ecore_evas_opengl_sdl"
   echo "    DirectFB...................: $have_ecore_evas_directfb"
   echo "    Software Framebuffer.......: $have_ecore_evas_fb"
   echo "    Software 16bit X11.........: $have_ecore_evas_software_16_x11"
@@ -1300,14 +1494,16 @@ if test "x${have_ecore_evas}" = "xyes" ; then
   echo "    Software 16bit WinCE.......: $have_ecore_evas_software_16_wince"
 fi
 echo
-echo " Documentation.................: ${build_doc}"
+echo "  Tests................: ${enable_tests}"
+echo "  Maximum log level....: ${with_max_log_level}"
+echo "Documentation..........: ${build_doc}"
 echo
-echo " Compilation...................: make (gmake on some systems)"
-if test "x${build_doc}" = "xyes" ; then
-   echo " Build of the documentation....: make doc"
-fi
+echo "Compilation............: make (or gmake)"
+echo "  CPPFLAGS.............: $CPPFLAGS"
+echo "  CFLAGS...............: $CFLAGS"
+echo "  CXXFLAGS.............: $CXXFLAGS"
+echo "  LDFLAGS..............: $LDFLAGS"
 echo
-echo " Installation..................: make install"
-echo
-echo "    prefix.....................: $prefix"
+echo "Installation...........: make install (as root if needed, with 'su' or 'sudo')"
+echo "  prefix...............: $prefix"
 echo

@@ -2,8 +2,13 @@
 
 ACLOCAL_AMFLAGS = -I m4
 
-SUBDIRS = doc src po
+SUBDIRS = doc src
 
+if HAVE_PO
+
+SUBDIRS += po
+
+endif
 
 MAINTAINERCLEANFILES = \
 ABOUT-NLS \
@@ -47,7 +52,11 @@ m4/po.m4 \
 m4/progtest.m4 \
 m4/stdint_h.m4 \
 m4/uintmax_t.m4 \
-m4/ulonglong.m4 \
+m4/ulonglong.m4
+
+if HAVE_PO
+
+MAINTAINERCLEANFILES += \
 po/boldquot.sed \
 po/en@boldquot.header \
 po/en@quot.header \
@@ -57,6 +66,8 @@ po/Makevars.template \
 po/quot.sed \
 po/remove-potcdate.sin \
 po/Rules-quot
+
+endif
 
 bin_SCRIPTS = 
 
@@ -72,12 +83,10 @@ EXTRA_DIST = AUTHORS COPYING COPYING-PLAIN \
 	     ecore-imf.pc.in \
 	     ecore-imf-evas.pc.in \
 	     ecore-ipc.pc.in \
-	     ecore-job.pc.in \
-	     ecore-txt.pc.in \
 	     ecore-x.pc.in \
 	     ecore-win32.pc.in \
 	     ecore-sdl.pc.in \
-	     ecore-quartz.pc.in \
+	     ecore-cocoa.pc.in \
 	     ecore-input.pc.in \
 	     ecore-wince.pc.in \
 	     ecore.spec.in ecore.spec
@@ -121,16 +130,12 @@ if BUILD_ECORE_INPUT
 pkgconfig_DATA += ecore-input.pc
 endif
 
+if BUILD_ECORE_INPUT_EVAS
+pkgconfig_DATA += ecore-input-evas.pc
+endif
+
 if BUILD_ECORE_IPC
 pkgconfig_DATA += ecore-ipc.pc
-endif
-
-if BUILD_ECORE_JOB
-pkgconfig_DATA += ecore-job.pc
-endif
-
-if BUILD_ECORE_TXT
-pkgconfig_DATA += ecore-txt.pc
 endif
 
 if BUILD_ECORE_X
@@ -149,13 +154,28 @@ if BUILD_ECORE_SDL
 pkgconfig_DATA += ecore-sdl.pc
 endif
 
-if BUILD_ECORE_QUARTZ
-pkgconfig_DATA += ecore-quartz.pc
+if BUILD_ECORE_COCOA
+pkgconfig_DATA += ecore-cocoa.pc
 endif
 
 .PHONY: doc
+
+# Documentation
 
 doc:
 	@echo "entering doc/"
 	make -C doc doc
 
+# Unit tests
+
+if EFL_ENABLE_TESTS
+
+check-local:
+	@./src/tests/ecore_suite
+
+else
+
+check-local:
+	@echo "reconfigure with --enable-tests"
+
+endif

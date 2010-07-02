@@ -54,11 +54,41 @@
 # include <xcb/xprint.h>
 #endif /* ECORE_XCB_XPRINT */
 
+#include "Ecore.h"
 #include "ecore_private.h"
 #include "Ecore_X.h"
 
-/* FIXME: this is for simulation only */
-#include "Ecore_Txt.h"
+extern int _ecore_x11xcb_log_dom ;
+
+#ifdef ECORE_XLIB_XCB_DEFAULT_LOG_COLOR
+# undef ECORE_XLIB_XCB_DEFAULT_LOG_COLOR
+#endif
+#define ECORE_XLIB_XCB_DEFAULT_LOG_COLOR EINA_COLOR_BLUE
+
+#ifdef ERR
+# undef ERR
+#endif
+#define ERR(...) EINA_LOG_DOM_ERR(_ecore_x11xcb_log_dom, __VA_ARGS__)
+
+#ifdef DBG
+# undef DBG
+#endif
+#define DBG(...) EINA_LOG_DOM_DBG(_ecore_x11xcb_log_dom, __VA_ARGS__)
+
+#ifdef INF
+# undef INF
+#endif
+#define INF(...) EINA_LOG_DOM_INFO(_ecore_x11xcb_log_dom, __VA_ARGS__)
+
+#ifdef WRN
+# undef WRN
+#endif
+#define WRN(...) EINA_LOG_DOM_WARN(_ecore_x11xcb_log_dom, __VA_ARGS__)
+
+#ifdef CRIT
+# undef CRIT
+#endif
+#define CRIT(...) EINA_LOG_DOM_CRIT(_ecore_x11xcb_log_dom, __VA_ARGS__)
 
 typedef struct _Ecore_X_Selection_Intern Ecore_X_Selection_Intern;
 
@@ -77,7 +107,8 @@ struct _Ecore_X_Selection_Converter
 {
    Ecore_X_Atom target;
    int (*convert)(char *target, void *data, int size,
-                  void **data_ret, int *size_ret);
+                  void **data_ret, int *size_ret,
+		  Ecore_X_Atom *type, int *typeseize);
    Ecore_X_Selection_Converter *next;
 };
 

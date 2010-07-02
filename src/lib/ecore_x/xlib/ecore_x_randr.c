@@ -40,6 +40,7 @@ _ecore_x_randr_init(void)
 EAPI int
 ecore_x_randr_query(void)
 {
+   LOGFN(__FILE__, __LINE__, __FUNCTION__);
    return _randr_available;
 }
 
@@ -49,6 +50,7 @@ ecore_x_randr_events_select(Ecore_X_Window win, int on)
 #ifdef ECORE_XRANDR
    int mask;
 
+   LOGFN(__FILE__, __LINE__, __FUNCTION__);
    if (!on)
      mask = 0;
    else
@@ -74,6 +76,7 @@ ecore_x_randr_screen_rotations_get(Ecore_X_Window root)
 #ifdef ECORE_XRANDR
    Rotation rot, crot;
    
+   LOGFN(__FILE__, __LINE__, __FUNCTION__);
    rot = XRRRotations(_ecore_x_disp, XRRRootToScreen(_ecore_x_disp, root), &crot);
    return rot;
 #else
@@ -85,9 +88,10 @@ EAPI Ecore_X_Randr_Rotation
 ecore_x_randr_screen_rotation_get(Ecore_X_Window root)
 {
 #ifdef ECORE_XRANDR
-   Rotation rot, crot = 0;
+   Rotation crot = 0;
    
-   rot = XRRRotations(_ecore_x_disp, XRRRootToScreen(_ecore_x_disp, root), &crot);
+   LOGFN(__FILE__, __LINE__, __FUNCTION__);
+   XRRRotations(_ecore_x_disp, XRRRootToScreen(_ecore_x_disp, root), &crot);
    return crot;
 #else
    return 0;
@@ -102,6 +106,7 @@ ecore_x_randr_screen_rotation_set(Ecore_X_Window root, Ecore_X_Randr_Rotation ro
    SizeID sizeid;
    Rotation crot;
    
+   LOGFN(__FILE__, __LINE__, __FUNCTION__);
    xrrcfg = XRRGetScreenInfo(_ecore_x_disp, root);
    if (!xrrcfg) return;
    sizeid = XRRConfigCurrentConfiguration(xrrcfg, &crot);
@@ -118,6 +123,7 @@ ecore_x_randr_screen_sizes_get(Ecore_X_Window root, int *num)
    XRRScreenSize *sizes;
    int i, n;
 
+   LOGFN(__FILE__, __LINE__, __FUNCTION__);
    if (num) *num = 0;
 
    /* we don't have to free sizes, no idea why not */
@@ -149,10 +155,11 @@ ecore_x_randr_current_screen_size_get(Ecore_X_Window root)
    Rotation rotation;
    int n;
 
+   LOGFN(__FILE__, __LINE__, __FUNCTION__);
    sc = XRRGetScreenInfo(_ecore_x_disp, root);
    if (!sc)
      {
-	printf("ERROR: Couldn't get screen information for %d\n", root);
+	ERR("Couldn't get screen information for %d", root);
 	return ret;
      }
    size_index = XRRConfigCurrentConfiguration(sc, &rotation);
@@ -176,6 +183,7 @@ ecore_x_randr_screen_size_set(Ecore_X_Window root, Ecore_X_Screen_Size size)
    XRRScreenSize *sizes;
    int i, n, size_index = -1;
 
+   LOGFN(__FILE__, __LINE__, __FUNCTION__);
    sizes = XRRSizes(_ecore_x_disp, XRRRootToScreen(_ecore_x_disp, root), &n);
    for (i = 0; i < n; i++)
      {
@@ -192,7 +200,7 @@ ecore_x_randr_screen_size_set(Ecore_X_Window root, Ecore_X_Screen_Size size)
 			  root, size_index,
 			  RR_Rotate_0, CurrentTime))
      {
-	printf("ERROR: Can't set new screen size!\n");
+	ERR("Can't set new screen size!");
 	XRRFreeScreenConfigInfo(sc);
 	return 0;
      }
@@ -210,10 +218,11 @@ ecore_x_randr_current_screen_refresh_rate_get(Ecore_X_Window root)
 #ifdef ECORE_XRANDR
    XRRScreenConfiguration *sc;
 
+   LOGFN(__FILE__, __LINE__, __FUNCTION__);
    sc = XRRGetScreenInfo(_ecore_x_disp, root);
    if (!sc)
      {
-	printf("ERROR: Couldn't get screen information for %d\n", root);
+	ERR("Couldn't get screen information for %d", root);
 	return ret;
      }
    ret.rate = XRRConfigCurrentRate(sc);
@@ -231,12 +240,13 @@ ecore_x_randr_screen_refresh_rates_get(Ecore_X_Window root, int size_id, int *nu
    short *rates;
    int i, n;
 
+   LOGFN(__FILE__, __LINE__, __FUNCTION__);
    if (num) *num = 0;
 
    sc = XRRGetScreenInfo(_ecore_x_disp, root);
    if (!sc)
      {
-	printf("ERROR: Couldn't get screen information for %d\n", root);
+	ERR("Couldn't get screen information for %d", root);
 	return ret;
      }
    
@@ -269,6 +279,7 @@ ecore_x_randr_screen_refresh_rate_set(Ecore_X_Window root, Ecore_X_Screen_Size s
    XRRScreenSize *sizes;
    int i, n, size_index = -1;
 
+   LOGFN(__FILE__, __LINE__, __FUNCTION__);
    sizes = XRRSizes(_ecore_x_disp, XRRRootToScreen(_ecore_x_disp, root), &n);
    for (i = 0; i < n; i++)
      {
@@ -285,7 +296,7 @@ ecore_x_randr_screen_refresh_rate_set(Ecore_X_Window root, Ecore_X_Screen_Size s
 				 root, size_index,
 				 RR_Rotate_0, rate.rate, CurrentTime))
      {
-	printf("ERROR: Can't set new screen size and refresh rate!\n");
+	ERR("Can't set new screen size and refresh rate!");
 	XRRFreeScreenConfigInfo(sc);
 	return 0;
      }

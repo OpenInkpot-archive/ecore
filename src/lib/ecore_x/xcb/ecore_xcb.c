@@ -12,8 +12,8 @@
 #include "ecore_xcb_private.h"
 #include "Ecore_X_Atoms.h"
 
-static int _ecore_xcb_fd_handler(void *data, Ecore_Fd_Handler *fd_handler);
-static int _ecore_xcb_fd_handler_buf(void *data, Ecore_Fd_Handler *fd_handler);
+static Eina_Bool _ecore_xcb_fd_handler(void *data, Ecore_Fd_Handler *fd_handler);
+static Eina_Bool _ecore_xcb_fd_handler_buf(void *data, Ecore_Fd_Handler *fd_handler);
 static int _ecore_xcb_key_mask_get(xcb_keysym_t sym);
 static int _ecore_xcb_event_modifier(unsigned int state);
 
@@ -54,6 +54,7 @@ static xcb_generic_event_t *_ecore_xcb_event_buffered = NULL;
 
 static int _ecore_xcb_init_count = 0;
 static int _ecore_xcb_grab_count = 0;
+int _ecore_x11xcb_log_dom = -1;
 
 Ecore_X_Connection *_ecore_xcb_conn = NULL;
 Ecore_X_Screen     *_ecore_xcb_screen = NULL;
@@ -198,11 +199,18 @@ ecore_x_init(const char *name)
 
    if (++_ecore_xcb_init_count != 1)
      return _ecore_xcb_init_count;
-
+   _ecore_x11xcb_log_dom = eina_log_domain_register("EcoreXCB", ECORE_XLIB_XCB_DEFAULT_LOG_COLOR);
+   if(_ecore_x11xcb_log_dom < 0)
+     {
+       EINA_LOG_ERR("Impossible to create a log domain the Ecore XCB module.");
+       return --_ecore_xcb_init_count;
+     }
    _ecore_xcb_conn = xcb_connect(name, &screen);
-   if (xcb_connection_has_error(_ecore_xcb_conn))
-       return 0;
-
+   if (xcb_connection_has_error(_ecore_xcb_conn)) {
+     eina_log_domain_unregister(_ecore_x11xcb_log_dom);
+     _ecore_x11xcb_log_dom = -1;
+     return --_ecore_xcb_init_count;
+   }
    /* FIXME: no error code right now */
    /* _ecore_xcb_error_handler_init(); */
 
@@ -855,12 +863,13 @@ ecore_x_killall(Ecore_X_Window root)
         if (reply)
           {
             xcb_window_t *wins = NULL;
-            int i, tree_c_len;
+            int tree_c_len;
+            int i;
 
             wins = xcb_query_tree_children(reply);
             tree_c_len = xcb_query_tree_children_length(reply);
             for (i = 0; i < tree_c_len; i++)
-               xcb_kill_client(_ecore_xcb_conn, wins[i]);
+              xcb_kill_client(_ecore_xcb_conn, wins[i]);
             free(reply);
           }
      }
@@ -906,7 +915,7 @@ handle_event(xcb_generic_event_t *ev)
      }
 }
 
-static int
+static Eina_Bool
 _ecore_xcb_fd_handler(void *data, Ecore_Fd_Handler *fd_handler __UNUSED__)
 {
    xcb_connection_t    *c;
@@ -914,11 +923,14 @@ _ecore_xcb_fd_handler(void *data, Ecore_Fd_Handler *fd_handler __UNUSED__)
 
    c = (xcb_connection_t *)data;
 
-/*    printf ("nbr events: %d\n", _ecore_xcb_event_handlers_num); */
+/*    INF ("nbr events: %d", _ecore_xcb_event_handlers_num); */
 
    /* We check if _ecore_xcb_event_buffered is NULL or not */
    if (_ecore_xcb_event_buffered)
-     handle_event(_ecore_xcb_event_buffered);
+     {
+        handle_event(_ecore_xcb_event_buffered);
+        _ecore_xcb_event_buffered = NULL;
+     }
 
    while ((ev = xcb_poll_for_event(c)))
      handle_event(ev);
@@ -926,10 +938,10 @@ _ecore_xcb_fd_handler(void *data, Ecore_Fd_Handler *fd_handler __UNUSED__)
    if(xcb_connection_has_error(c))
        if(_io_error_func) (*_io_error_func)(_io_error_data);
 
-   return 1;
+   return ECORE_CALLBACK_RENEW;
 }
 
-static int
+static Eina_Bool
 _ecore_xcb_fd_handler_buf(void *data, Ecore_Fd_Handler *fd_handler __UNUSED__)
 {
    xcb_connection_t *c;
@@ -941,9 +953,9 @@ _ecore_xcb_fd_handler_buf(void *data, Ecore_Fd_Handler *fd_handler __UNUSED__)
        if(_io_error_func) (*_io_error_func)(_io_error_data);
 
    if (!_ecore_xcb_event_buffered)
-     return 0;
+     return ECORE_CALLBACK_CANCEL;
 
-   return 1;
+   return ECORE_CALLBACK_RENEW;
 }
 
 /* FIXME: possible roundtrip */
@@ -951,7 +963,6 @@ _ecore_xcb_fd_handler_buf(void *data, Ecore_Fd_Handler *fd_handler __UNUSED__)
 static int
 _ecore_xcb_key_mask_get(xcb_keysym_t sym)
 {
-   xcb_keycode_iterator_t            iter;
    xcb_get_modifier_mapping_cookie_t cookie;
    xcb_get_modifier_mapping_reply_t *reply;
    xcb_key_symbols_t                *symbols;
@@ -1514,13 +1525,13 @@ ecore_x_ungrab(void)
 
 int      _ecore_window_grabs_num = 0;
 Ecore_X_Window  *_ecore_window_grabs = NULL;
-int    (*_ecore_window_grab_replay_func) (void *data, int event_type, void *event);
+Eina_Bool (*_ecore_window_grab_replay_func) (void *data, int event_type, void *event);
 void    *_ecore_window_grab_replay_data;
 
 EAPI void
-ecore_x_passive_grab_replay_func_set(int (*func) (void *data,
-                                                  int   event_type,
-                                                  void *event),
+ecore_x_passive_grab_replay_func_set(Eina_Bool (*func) (void *data,
+							int   event_type,
+							void *event),
                                      void *data)
 {
    _ecore_window_grab_replay_func = func;

@@ -6,6 +6,23 @@
 # include <config.h>
 #endif
 
+#ifdef HAVE_ALLOCA_H
+# include <alloca.h>
+#elif defined __GNUC__
+# define alloca __builtin_alloca
+#elif defined _AIX
+# define alloca __alloca
+#elif defined _MSC_VER
+# include <malloc.h>
+# define alloca _alloca
+#else
+# include <stddef.h>
+# ifdef  __cplusplus
+extern "C"
+# endif
+void *alloca (size_t);
+#endif
+
 #include <stdio.h>
 #include <string.h>
 #include <stdarg.h>
@@ -46,7 +63,8 @@ _ecore_getopt_help_print_replace_program(FILE *fp, const Ecore_Getopt *parser __
 	     break;
 	  }
 
-	fwrite(text, 1, d - text, fp);
+	if (fwrite(text, 1, d - text, fp) != (size_t)(d - text))
+	  return;
 	d++;
 	if (strncmp(d, "prog", sizeof("prog") - 1) == 0)
 	  {
@@ -99,13 +117,13 @@ _ecore_getopt_help_line(FILE *fp, const int base, const int total, int used, con
 	/* process line considering spaces (new line and tabs are spaces!) */
 	while ((used < total) && (len > 0))
 	  {
+	     const char *space = NULL;
 	     int i, todo;
 
 	     todo = total - used;
 	     if (todo > len)
 	       todo = len;
 
-	     const char *space = NULL;
 	     for (i = 0; i < todo; i++)
 	       if (isspace(text[i]))
 		 {
@@ -115,7 +133,7 @@ _ecore_getopt_help_line(FILE *fp, const int base, const int total, int used, con
 
 	     if (space)
 	       {
-		  fwrite(text, 1, i, fp);
+		  i = fwrite(text, 1, i, fp);
 		  i++;
 		  text += i;
 		  len -= i;
@@ -152,7 +170,7 @@ _ecore_getopt_help_line(FILE *fp, const int base, const int total, int used, con
 	       }
 	     else
 	       {
-		  fwrite(text, 1, i, fp);
+		  i = fwrite(text, 1, i, fp);
 		  text += i;
 		  len -= i;
 		  used += i;
@@ -557,10 +575,10 @@ _ecore_getopt_help_desc(FILE *fp, const Ecore_Getopt_Desc *desc)
    switch (desc->action)
      {
       case ECORE_GETOPT_ACTION_STORE:
-	 used = _ecore_getopt_help_desc_store(fp, helpcol, cols, used, desc);
+	 _ecore_getopt_help_desc_store(fp, helpcol, cols, used, desc);
 	 break;
       case ECORE_GETOPT_ACTION_CHOICE:
-	 used = _ecore_getopt_help_desc_choices(fp, helpcol, cols, used, desc);
+	 _ecore_getopt_help_desc_choices(fp, helpcol, cols, used, desc);
 	 break;
       default:
 	 break;
@@ -669,9 +687,10 @@ _ecore_getopt_parse_find_short(const Ecore_Getopt *parser, char name)
 static int
 _ecore_getopt_parse_find_nonargs_base(const Ecore_Getopt *parser, int argc, char **argv)
 {
-   char *nonargs[argc];
+   char **nonargs;
    int src, dst, used, base;
 
+   nonargs = alloca(sizeof(char*) * argc);
    src = 1;
    dst = 1;
    used = 0;
@@ -746,7 +765,6 @@ _ecore_getopt_parse_find_nonargs_base(const Ecore_Getopt *parser, int argc, char
 	base = dst;
 	if (src != dst)
 	  argv[dst] = argv[src];
-	src++;
 	dst++;
      }
 
@@ -1536,7 +1554,7 @@ ecore_getopt_parser_has_duplicates(const Ecore_Getopt *parser)
    return 0;
 }
 
-const Ecore_Getopt_Desc *
+static const Ecore_Getopt_Desc *
 _ecore_getopt_find_help(const Ecore_Getopt *parser)
 {
    const Ecore_Getopt_Desc *desc = parser->descs;

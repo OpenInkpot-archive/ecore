@@ -89,7 +89,7 @@ ecore_win32_init()
      return --_ecore_win32_init_count;
 
    eina_log_print_cb_set(_ecore_win32_error_print_cb, NULL);
-   _ecore_win32_log_dom_global = eina_log_domain_register("ecore_win32", EINA_COLOR_LIGHTBLUE);
+   _ecore_win32_log_dom_global = eina_log_domain_register("ecore_win32", ECORE_WIN32_DEFAULT_LOG_COLOR);
    if (_ecore_win32_log_dom_global < 0)
      {
         EINA_LOG_ERR("Ecore_Win32: Could not register log domain");
@@ -183,6 +183,7 @@ ecore_win32_shutdown()
 
    ecore_event_shutdown();
    eina_log_domain_unregister(_ecore_win32_log_dom_global);
+   _ecore_win32_log_dom_global = -1;
    eina_shutdown();
 
    return _ecore_win32_init_count;

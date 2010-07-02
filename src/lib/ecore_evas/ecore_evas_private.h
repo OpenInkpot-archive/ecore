@@ -18,8 +18,8 @@
 
 #include <Evas.h>
 #include <ecore_private.h>
-#include <Ecore_Data.h>
 #include <Ecore_Input.h>
+#include <Ecore_Input_Evas.h>
 
 #define ECORE_MAGIC_EVAS 0x76543211
 
@@ -104,7 +104,8 @@ extern int _ecore_evas_log_dom;
 #ifdef ECORE_EVAS_DEFAULT_LOG_COLOR
 # undef ECORE_EVAS_DEFAULT_LOG_COLOR
 #endif
-#define ECORE_EVAS_DEFAULT_LOG_COLOR EINA_COLOR_CYAN
+#define ECORE_EVAS_DEFAULT_LOG_COLOR EINA_COLOR_BLUE
+
 #ifdef ERR
 # undef ERR
 #endif
@@ -156,7 +157,7 @@ struct _Ecore_Evas_Engine_Func
    void        (*fn_managed_move) (Ecore_Evas *ee, int x, int y);
    void        (*fn_resize) (Ecore_Evas *ee, int w, int h);
    void        (*fn_move_resize) (Ecore_Evas *ee, int x, int y, int w, int h);
-   void        (*fn_rotation_set) (Ecore_Evas *ee, int rot);
+   void        (*fn_rotation_set) (Ecore_Evas *ee, int rot, int resize);
    void        (*fn_shaped_set) (Ecore_Evas *ee, int shaped);
    void        (*fn_show) (Ecore_Evas *ee);
    void        (*fn_hide) (Ecore_Evas *ee);
@@ -182,13 +183,16 @@ struct _Ecore_Evas_Engine_Func
    void        (*fn_sticky_set) (Ecore_Evas *ee, int sticky);
    void        (*fn_ignore_events_set) (Ecore_Evas *ee, int ignore);
    void        (*fn_alpha_set) (Ecore_Evas *ee, int alpha);
+   void        (*fn_transparent_set) (Ecore_Evas *ee, int transparent);
+
+   int         (*fn_render) (Ecore_Evas *ee);
 };
 
 struct _Ecore_Evas_Engine
 {
    Ecore_Evas_Engine_Func *func;
 
-#ifdef BUILD_ECORE_EVAS_SOFTWARE_X11
+#ifdef BUILD_ECORE_EVAS_X11
    struct {
       Ecore_X_Window win_root;
       Eina_List     *win_extra;
@@ -196,11 +200,15 @@ struct _Ecore_Evas_Engine
       Ecore_X_Pixmap mask;
       Ecore_X_GC     gc;
       Ecore_X_XRegion *damages;
+      Ecore_X_Sync_Counter sync_counter;
+      int            sync_val; // bigger! this will screw up at 2 billion frames (414 days of continual rendering @ 60fps)
       int            screen_num;
       int            px, py, pw, ph;
       unsigned char  direct_resize : 1;
       unsigned char  using_bg_pixmap : 1;
       unsigned char  managed : 1;
+      unsigned char  sync_began : 1;
+      unsigned char  sync_cancel : 1;
       struct {
 	   unsigned char modal : 1;
 	   unsigned char sticky : 1;
@@ -225,6 +233,9 @@ struct _Ecore_Evas_Engine
    struct {
       void *pixels;
       Evas_Object *image;
+      void  (*free_func) (void *data, void *pix);
+      void *(*alloc_func) (void *data, int size);
+      void *data;
    } buffer;
 #endif
 #ifdef BUILD_ECORE_EVAS_DIRECTFB
@@ -266,9 +277,14 @@ struct _Ecore_Evas
    Eina_Bool   draw_ok : 1;
    Eina_Bool   should_be_visible : 1;
    Eina_Bool   alpha  : 1;
+   Eina_Bool   transparent  : 1;
 
    Eina_Hash  *data;
 
+   struct {
+      int      x, y, w, h;
+   } req;
+   
    struct {
       int      x, y;
    } mouse;
@@ -330,6 +346,9 @@ struct _Ecore_Evas
    Eina_List *sub_ecore_evas;
 
    unsigned char ignore_events : 1;
+   unsigned char manual_render : 1;
+   unsigned char registered : 1;
+   unsigned char no_comp_sync  : 1;
 };
 
 #ifdef BUILD_ECORE_EVAS_X11
@@ -340,7 +359,7 @@ int _ecore_evas_fb_shutdown(void);
 #endif
 #ifdef BUILD_ECORE_EVAS_SOFTWARE_BUFFER
 int _ecore_evas_buffer_shutdown(void);
-void _ecore_evas_buffer_render(Ecore_Evas *ee);
+int _ecore_evas_buffer_render(Ecore_Evas *ee);
 #endif
 #ifdef BUILD_ECORE_EVAS_DIRECTFB
 int _ecore_evas_directfb_shutdown(void);
@@ -355,8 +374,11 @@ int _ecore_evas_wince_shutdown(void);
 void _ecore_evas_fps_debug_init(void);
 void _ecore_evas_fps_debug_shutdown(void);
 void _ecore_evas_fps_debug_rendertime_add(double t);
+void _ecore_evas_register(Ecore_Evas *ee);
 void _ecore_evas_free(Ecore_Evas *ee);
 void _ecore_evas_idle_timeout_update(Ecore_Evas *ee);
 void _ecore_evas_mouse_move_process(Ecore_Evas *ee, int x, int y, unsigned int timestamp);
+
+extern int _ecore_evas_app_comp_sync;
 
 #endif

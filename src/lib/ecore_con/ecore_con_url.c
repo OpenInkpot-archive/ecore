@@ -52,6 +52,11 @@
 #include <errno.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <unistd.h>
+
+#ifdef HAVE_WS2TCPIP_H
+# include <ws2tcpip.h>
+#endif
 
 #include "Ecore.h"
 #include "ecore_private.h"
@@ -71,7 +76,7 @@ int ECORE_CON_EVENT_URL_COMPLETE = 0;
 int ECORE_CON_EVENT_URL_PROGRESS = 0;
 
 #ifdef HAVE_CURL
-static int _ecore_con_url_fd_handler(void *data, Ecore_Fd_Handler *fd_handler);
+static Eina_Bool _ecore_con_url_fd_handler(void *data, Ecore_Fd_Handler *fd_handler);
 static int _ecore_con_url_perform(Ecore_Con_Url *url_con);
 static size_t _ecore_con_url_header_cb(void *ptr, size_t size, size_t nitems, void *stream);
 static size_t _ecore_con_url_data_cb(void *buffer, size_t size, size_t nitems, void *userp);
@@ -79,7 +84,7 @@ static int _ecore_con_url_progress_cb(void *clientp, double dltotal, double dlno
 static size_t _ecore_con_url_read_cb(void *ptr, size_t size, size_t nitems, void *stream);
 static void _ecore_con_event_url_free(void *data __UNUSED__, void *ev);
 static int _ecore_con_url_process_completed_jobs(Ecore_Con_Url *url_con_to_match);
-static int _ecore_con_url_idler_handler(void *data __UNUSED__);
+static Eina_Bool _ecore_con_url_idler_handler(void *data __UNUSED__);
 
 static Ecore_Idler *_fd_idler_handler = NULL;
 static Eina_List *_url_con_list = NULL;
@@ -95,7 +100,7 @@ struct _Ecore_Con_Url_Event
    void  *ev;
 };
 
-static int
+static Eina_Bool
 _url_complete_idler_cb(void *data)
 {
    Ecore_Con_Url_Event *lev;
@@ -104,7 +109,7 @@ _url_complete_idler_cb(void *data)
    ecore_event_add(lev->type, lev->ev, _ecore_con_event_url_free, NULL);
    free(lev);
 
-   return 0;
+   return ECORE_CALLBACK_CANCEL;
 }
 
 static void
@@ -258,7 +263,7 @@ ecore_con_url_new(const char *url)
    curl_easy_setopt(url_con->curl_easy, CURLOPT_PROGRESSFUNCTION, 
                     _ecore_con_url_progress_cb);
    curl_easy_setopt(url_con->curl_easy, CURLOPT_PROGRESSDATA, url_con);
-   curl_easy_setopt(url_con->curl_easy, CURLOPT_NOPROGRESS, FALSE);
+   curl_easy_setopt(url_con->curl_easy, CURLOPT_NOPROGRESS, EINA_FALSE);
 
    curl_easy_setopt(url_con->curl_easy, CURLOPT_HEADERFUNCTION, _ecore_con_url_header_cb);
    curl_easy_setopt(url_con->curl_easy, CURLOPT_HEADERDATA, url_con);
@@ -354,6 +359,11 @@ ecore_con_url_destroy(Ecore_Con_Url *url_con)
 	url_con->fd = -1;
 	url_con->fd_handler = NULL;
      }
+
+   if (url_con->post)
+     curl_formfree(url_con->post);
+   url_con->post = NULL;
+   
    if (url_con->curl_easy)
      {
 	// FIXME: For an unknown reason, progress continue to arrive after destruction
@@ -404,11 +414,13 @@ ecore_con_url_url_set(Ecore_Con_Url *url_con, const char *url)
 
    if (url_con->active) return 0;
 
-   free(url_con->url);
+   if (url_con->url) free(url_con->url);
    url_con->url = NULL;
-   if (url)
-     url_con->url = strdup(url);
-   curl_easy_setopt(url_con->curl_easy, CURLOPT_URL, url_con->url);
+   if (url) url_con->url = strdup(url);
+   if (url_con->url)
+     curl_easy_setopt(url_con->curl_easy, CURLOPT_URL, url_con->url);
+   else
+     curl_easy_setopt(url_con->curl_easy, CURLOPT_URL, "");
    return 1;
 #else
    return 0;
@@ -655,6 +667,46 @@ ecore_con_url_response_headers_get(Ecore_Con_Url *url_con)
 }
 
 /**
+ * Sets url_con to use http auth, with given username and password, "safely" or not.
+ *
+ * @param url_con Connection object to perform a request on, previously created
+ *		  with ecore_con_url_new() or ecore_con_url_custom_new().
+ * @param username Username to use in authentication
+ * @param password Password to use in authentication
+ * @param safe Whether to use "safer" methods (eg, NOT http basic auth)
+ *
+ * @return 1 on success, 0 on error.
+ *
+ * @ingroup Ecore_Con_Url_Group
+ */
+EAPI int
+ecore_con_url_httpauth_set(Ecore_Con_Url *url_con, const char *username, const char *password, Eina_Bool safe)
+{
+#ifdef HAVE_CURL
+   if (!ECORE_MAGIC_CHECK(url_con, ECORE_MAGIC_CON_URL))
+     {
+	ECORE_MAGIC_FAIL(url_con, ECORE_MAGIC_CON_URL, "ecore_con_url_httpauth_set");
+	return 0;
+     }
+# ifdef CURLOPT_USERNAME
+#  ifdef CURLOPT_PASSWORD   
+   if ((username != NULL) && (password != NULL))
+     {
+	if (safe)
+          curl_easy_setopt(url_con->curl_easy, CURLOPT_HTTPAUTH, CURLAUTH_ANYSAFE);
+	else
+          curl_easy_setopt(url_con->curl_easy, CURLOPT_HTTPAUTH, CURLAUTH_ANY);
+	curl_easy_setopt(url_con->curl_easy, CURLOPT_USERNAME, username);
+	curl_easy_setopt(url_con->curl_easy, CURLOPT_PASSWORD, password);
+        return 1;
+     }
+#  endif
+# endif
+#endif
+   return 0;
+}
+
+/**
  * Sends a request.
  *
  * @param url_con Connection object to perform a request on, previously created
@@ -816,6 +868,39 @@ ecore_con_url_ftp_upload(Ecore_Con_Url *url_con, const char *filename, const cha
 }
 
 /**
+ * Send a Curl httppost 
+ * @return 1 on success, 0 on error.
+ * @ingroup Ecore_Con_Url_Group
+ */
+EAPI int
+ecore_con_url_http_post_send(Ecore_Con_Url *url_con, void *httppost)
+{
+#ifdef HAVE_CURL
+  if (url_con->post)
+    curl_formfree(url_con->post);
+  url_con->post = NULL;
+
+  if (!ECORE_MAGIC_CHECK(url_con, ECORE_MAGIC_CON_URL))
+    {
+      ECORE_MAGIC_FAIL(url_con, ECORE_MAGIC_CON_URL, "ecore_con_url_http_post_send");
+      return 0;
+    }
+
+  url_con->post = httppost;
+  
+  if (url_con->active) return 0;
+  if (!url_con->url) return 0;  
+  
+  curl_easy_setopt(url_con->curl_easy, CURLOPT_HTTPPOST, httppost);
+  
+  return ecore_con_url_send(url_con, NULL, 0, NULL);
+#else
+  return 0;
+  url_con = NULL;
+#endif
+}
+
+/**
  * Enable or disable libcurl verbose output, useful for debug
  * @return  FIXME: To be more documented.
  * @ingroup Ecore_Con_Url_Group
@@ -832,7 +917,7 @@ ecore_con_url_verbose_set(Ecore_Con_Url *url_con, int verbose)
 
    if (url_con->active) return;
    if (!url_con->url) return;
-   if (verbose == TRUE)
+   if (verbose == EINA_TRUE)
      curl_easy_setopt(url_con->curl_easy, CURLOPT_VERBOSE, 1);
    else
      curl_easy_setopt(url_con->curl_easy, CURLOPT_VERBOSE, 0);
@@ -856,7 +941,7 @@ ecore_con_url_ftp_use_epsv_set(Ecore_Con_Url *url_con, int use_epsv)
 
    if (url_con->active) return;
    if (!url_con->url) return;
-   if (use_epsv == TRUE)
+   if (use_epsv == EINA_TRUE)
      curl_easy_setopt(url_con->curl_easy, CURLOPT_FTP_USE_EPSV, 1);
    else
      curl_easy_setopt(url_con->curl_easy, CURLOPT_FTP_USE_EPSV, 0);
@@ -1035,7 +1120,7 @@ _ecore_con_url_read_cb(void *ptr, size_t size, size_t nitems, void *stream)
         fclose((FILE*)stream);
         return 0;
      }
-   fprintf(stderr, "*** We read %zu bytes from file\n", retcode);
+   INF("*** We read %zu bytes from file", retcode);
    return retcode;
 }
 
@@ -1110,7 +1195,7 @@ _ecore_con_url_perform(Ecore_Con_Url *url_con)
    return 1;
 }
 
-static int
+static Eina_Bool
 _ecore_con_url_idler_handler(void *data)
 {
    double start;
@@ -1134,13 +1219,13 @@ _ecore_con_url_idler_handler(void *data)
 
 	if (!_url_con_list)
 	  ecore_timer_freeze(_curl_timeout);
-	return data == (void*) 0xACE ? 1 : 0;
+	return data == (void*) 0xACE ? ECORE_CALLBACK_RENEW : ECORE_CALLBACK_CANCEL;
      }
 
-   return 1;
+   return ECORE_CALLBACK_RENEW;
 }
 
-static int
+static Eina_Bool
 _ecore_con_url_fd_handler(void *data __UNUSED__, Ecore_Fd_Handler *fd_handler __UNUSED__)
 {
    _ecore_con_url_suspend_fd_handler();
@@ -1148,7 +1233,7 @@ _ecore_con_url_fd_handler(void *data __UNUSED__, Ecore_Fd_Handler *fd_handler __
    if (_fd_idler_handler == NULL)
      _fd_idler_handler = ecore_idler_add(_ecore_con_url_idler_handler, NULL);
 
-   return 1;
+   return ECORE_CALLBACK_RENEW;
 }
 
 static int

@@ -9,7 +9,10 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "Ecore_Con.h"
+#ifdef BUILD_ECORE_CON
+# include "Ecore_Con.h"
+#endif
+
 #include "ecore_file_private.h"
 
 #ifdef BUILD_ECORE_CON
@@ -38,8 +41,8 @@ Ecore_File_Download_Job *_ecore_file_download_curl(const char *url, const char *
 						   int (*progress_cb)(void *data, const char *file, long int dltotal, long int dlnow, long int ultotal, long int ulnow),
 						   void *data);
 
-static int _ecore_file_download_url_complete_cb(void *data, int type, void *event);
-static int _ecore_file_download_url_progress_cb(void *data, int type, void *event);
+static Eina_Bool _ecore_file_download_url_complete_cb(void *data, int type, void *event);
+static Eina_Bool _ecore_file_download_url_progress_cb(void *data, int type, void *event);
 #endif
 
 static Ecore_Event_Handler	*_url_complete_handler = NULL;
@@ -96,15 +99,19 @@ ecore_file_download_abort_all(void)
  * Download @p url to the given @p dst
  * @param  url The complete url to download
  * @param  dst The local file to save the downloaded to
- * @param  job_ret If the protocol use is http or ftp, this parameter will be fill
- *	with the job. Then you can use ecore_file_download_abort() to cancel it.
  * @param  completion_cb A callback called on download complete
  * @param  progress_cb A callback called during the download operation
+ * @param  data User data passed to both callbacks
+ * @param  job_ret If the protocol in use is http or ftp, this parameter will be
+ * filled with the job. Then you can use ecore_file_download_abort() to cancel it.
+ * 
  * @return 1 if the download start or 0 on failure
  *
  * You must provide the full url, including 'http://', 'ftp://' or 'file://'.\n
  * If @p dst already exist it will not be overwritten and the function will fail.\n
- * Ecore must be compiled with CURL to download using http and ftp protocols.
+ * Ecore must be compiled with CURL to download using http and ftp protocols.\n
+ * The @p status param in the @p completion_cb() will be 0 if the download goes well or
+ * 1 in case of failure.
  */
 EAPI int
 ecore_file_download(const char *url, const char *dst,
@@ -194,15 +201,14 @@ _ecore_file_download_url_compare_job(const void *data1, const void *data2)
    return -1;
 }
 
-static int
-_ecore_file_download_url_complete_cb(void *data, int type, void *event)
+static Eina_Bool
+_ecore_file_download_url_complete_cb(void *data __UNUSED__, int type __UNUSED__, void *event)
 {
    Ecore_Con_Event_Url_Complete	*ev = event;
    Ecore_File_Download_Job	*job;
 
    job = eina_list_search_unsorted(_job_list, _ecore_file_download_url_compare_job, ev->url_con);
-   if (!ECORE_MAGIC_CHECK(job, ECORE_MAGIC_FILE_DOWNLOAD_JOB)) return 1;
-
+   if (!ECORE_MAGIC_CHECK(job, ECORE_MAGIC_FILE_DOWNLOAD_JOB)) return ECORE_CALLBACK_PASS_ON;
 
    if (job->completion_cb)
      job->completion_cb(ecore_con_url_data_get(job->url_con), job->dst, !ev->status);
@@ -212,11 +218,11 @@ _ecore_file_download_url_complete_cb(void *data, int type, void *event)
    free(job->dst);
    free(job);
 
-   return 0;
+   return ECORE_CALLBACK_DONE;
 }
 
-static int
-_ecore_file_download_url_progress_cb(void *data, int type, void *event)
+static Eina_Bool
+_ecore_file_download_url_progress_cb(void *data __UNUSED__, int type __UNUSED__, void *event)
 {
 /* this reports the downloads progress. if we return 0, then download
  * continues, if we return anything else, then the download stops */
@@ -224,7 +230,7 @@ _ecore_file_download_url_progress_cb(void *data, int type, void *event)
    Ecore_File_Download_Job	*job;
 
    job = eina_list_search_unsorted(_job_list, _ecore_file_download_url_compare_job, ev->url_con);
-   if (!ECORE_MAGIC_CHECK(job, ECORE_MAGIC_FILE_DOWNLOAD_JOB)) return 1;
+   if (!ECORE_MAGIC_CHECK(job, ECORE_MAGIC_FILE_DOWNLOAD_JOB)) return ECORE_CALLBACK_PASS_ON;
 
    if (job->progress_cb)
      if (job->progress_cb(ecore_con_url_data_get(job->url_con), job->dst,
@@ -236,10 +242,10 @@ _ecore_file_download_url_progress_cb(void *data, int type, void *event)
 	  free(job->dst);
 	  free(job);
 
-	  return 1;
+	  return ECORE_CALLBACK_PASS_ON;
        }
 
-   return 0;
+   return ECORE_CALLBACK_DONE;
 }
 
 Ecore_File_Download_Job *
@@ -288,10 +294,18 @@ _ecore_file_download_curl(const char *url, const char *dst,
 # endif
 #endif
 
+/**
+ * Abort the given download job and call the @p completion_cb function with a
+ * @status of 1 (error)
+ * @param  job The download job to abort
+ */
+
 EAPI void
 ecore_file_download_abort(Ecore_File_Download_Job *job)
 {
 #ifdef BUILD_ECORE_CON
+   if (job->completion_cb)
+     job->completion_cb(ecore_con_url_data_get(job->url_con), job->dst, 1);
 # ifdef HAVE_CURL
    ecore_con_url_destroy(job->url_con);
 # endif

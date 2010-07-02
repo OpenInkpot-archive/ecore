@@ -3,6 +3,37 @@
 
 #define ECORE_MAGIC_CONTEXT 0x56c1b39a
 
+#ifdef ECORE_IMF_DEFAULT_LOG_COLOR
+#undef ECORE_IMF_DEFAULT_LOG_COLOR
+#endif
+#define ECORE_IMF_DEFAULT_LOG_COLOR EINA_COLOR_BLUE
+
+extern int _ecore_imf_log_dom;
+#ifdef ERR
+# undef ERR
+#endif
+#define ERR(...) EINA_LOG_DOM_ERR(_ecore_imf_log_dom, __VA_ARGS__)
+
+#ifdef DBG
+# undef DBG
+#endif
+#define DBG(...) EINA_LOG_DOM_DBG(_ecore_imf_log_dom, __VA_ARGS__)
+
+#ifdef INF
+# undef INF
+#endif
+#define INF(...) EINA_LOG_DOM_INFO(_ecore_imf_log_dom, __VA_ARGS__)
+
+#ifdef WRN
+# undef WRN
+#endif
+#define WRN(...) EINA_LOG_DOM_WARN(_ecore_imf_log_dom, __VA_ARGS__)
+
+#ifdef CRIT
+# undef CRIT
+#endif
+#define CRIT(...) EINA_LOG_DOM_CRIT(_ecore_imf_log_dom, __VA_ARGS__)
+
 typedef struct _Ecore_IMF_Module Ecore_IMF_Module;
 
 struct _Ecore_IMF_Context
@@ -18,9 +49,9 @@ struct _Ecore_IMF_Context
 
 struct _Ecore_IMF_Module
 {
-   Ecore_Plugin                 *plugin;
    const Ecore_IMF_Context_Info *info;
    Ecore_IMF_Context            *(*create)(void);
+   Ecore_IMF_Context            *(*exit)(void);
 };
 
 void               ecore_imf_module_init(void);

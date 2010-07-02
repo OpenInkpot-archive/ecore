@@ -6,10 +6,12 @@
 
 #include <time.h>
 #include <libgen.h>
-#ifdef HAVE_NETDB_H
+#ifdef _WIN32
+# include <ws2tcpip.h>
+#else
 # include <netdb.h>
 #endif
-#include <Ecore_Data.h>
+#include <Eina.h>
 
 #ifdef EAPI
 # undef EAPI
@@ -79,14 +81,15 @@ extern "C" {
 
    typedef enum _Ecore_Con_Type
      {
-	ECORE_CON_LOCAL_USER,
-	ECORE_CON_LOCAL_SYSTEM,
-	ECORE_CON_LOCAL_ABSTRACT,
-	ECORE_CON_REMOTE_TCP,
-	ECORE_CON_REMOTE_MCAST,
-	ECORE_CON_REMOTE_UDP,
-	ECORE_CON_REMOTE_BROADCAST,
-	ECORE_CON_REMOTE_NODELAY,
+	ECORE_CON_LOCAL_USER       = 0,
+	ECORE_CON_LOCAL_SYSTEM     = 1,
+	ECORE_CON_LOCAL_ABSTRACT   = 2,
+	ECORE_CON_REMOTE_TCP       = 3,
+	ECORE_CON_REMOTE_MCAST     = 4,
+	ECORE_CON_REMOTE_UDP       = 5,
+	ECORE_CON_REMOTE_BROADCAST = 6,
+	ECORE_CON_REMOTE_NODELAY   = 7,
+          
 	ECORE_CON_USE_SSL2 = (1 << 4),
 	ECORE_CON_USE_SSL3 = (1 << 5),
 	ECORE_CON_USE_TLS  = (1 << 6)
@@ -220,19 +223,16 @@ extern "C" {
    EAPI int               ecore_con_url_url_set(Ecore_Con_Url *url_con, const char *url);
    EAPI void		  ecore_con_url_fd_set(Ecore_Con_Url *url_con, int fd);
    EAPI int		  ecore_con_url_received_bytes_get(Ecore_Con_Url *url_con);
+   EAPI int		  ecore_con_url_httpauth_set(Ecore_Con_Url *url_con, const char *username, const char *password, Eina_Bool safe);
    EAPI int               ecore_con_url_send(Ecore_Con_Url *url_con, const void *data, size_t length, const char *content_type);
    EAPI void              ecore_con_url_time(Ecore_Con_Url *url_con, Ecore_Con_Url_Time condition, time_t tm);
 
-#ifdef HAVE_NETDB_H
-   EINA_DEPRECATED EAPI int ecore_con_dns_lookup(const char *name,
-						 void (*done_cb)(void *data, struct hostent *hostent),
-						 void *data);
    EAPI int		  ecore_con_info_get(Ecore_Con_Server *svr, Ecore_Con_Info_Cb done_cb, void *data, struct addrinfo *hints);
-#endif
 
    EAPI int		  ecore_con_url_ftp_upload(Ecore_Con_Url *url_con, const char *filename, const char *user, const char *pass, const char *upload_dir);
    EAPI void		  ecore_con_url_verbose_set(Ecore_Con_Url *url_con, int verbose);
    EAPI void		  ecore_con_url_ftp_use_epsv_set(Ecore_Con_Url *url_con, int use_epsv);
+   EAPI int               ecore_con_url_http_post_send(Ecore_Con_Url *url_con, void *curl_httppost);
 
 #ifdef __cplusplus
 }

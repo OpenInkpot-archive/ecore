@@ -8,6 +8,8 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <sys/types.h>
+#include <unistd.h>
 
 #include "ecore_file_private.h"
 
@@ -49,7 +51,7 @@ struct _Ecore_File_Monitor_Inotify
 static Ecore_Fd_Handler *_fdh = NULL;
 static Ecore_File_Monitor    *_monitors = NULL;
 
-static int                 _ecore_file_monitor_inotify_handler(void *data, Ecore_Fd_Handler *fdh);
+static Eina_Bool           _ecore_file_monitor_inotify_handler(void *data, Ecore_Fd_Handler *fdh);
 static Ecore_File_Monitor *_ecore_file_monitor_inotify_monitor_find(int wd);
 static void                _ecore_file_monitor_inotify_events(Ecore_File_Monitor *em, char *file, int mask);
 static int                 _ecore_file_monitor_inotify_monitor(Ecore_File_Monitor *em, const char *path);
@@ -145,7 +147,7 @@ ecore_file_monitor_inotify_del(Ecore_File_Monitor *em)
    free(em);
 }
 
-static int
+static Eina_Bool
 _ecore_file_monitor_inotify_handler(void *data __UNUSED__, Ecore_Fd_Handler *fdh)
 {
    Ecore_File_Monitor *em;
@@ -168,7 +170,7 @@ _ecore_file_monitor_inotify_handler(void *data __UNUSED__, Ecore_Fd_Handler *fdh
 	_ecore_file_monitor_inotify_events(em, (event->len ? event->name : NULL), event->mask);
      }
 
-   return 1;
+   return ECORE_CALLBACK_RENEW;
 }
 
 static Ecore_File_Monitor *
@@ -274,7 +276,7 @@ _ecore_file_monitor_inotify_monitor(Ecore_File_Monitor *em, const char *path)
 							  path, mask);
    if (ECORE_FILE_MONITOR_INOTIFY(em)->wd < 0)
      {
-	printf("inotify_add_watch error\n");
+	ERR("inotify_add_watch error");
 	ecore_file_monitor_inotify_del(em);
 	return 0;
      }
@@ -314,35 +316,35 @@ _ecore_file_monitor_inotify_print(char *file, int mask)
 
    if (mask & IN_MODIFY)
      {
-	printf("Inotify modified %s: %s\n", type, file);
+	WRN("Inotify modified %s: %s", type, file);
      }
    if (mask & IN_MOVED_FROM)
      {
-	printf("Inotify moved from %s: %s\n", type, file);
+	WRN("Inotify moved from %s: %s", type, file);
      }
    if (mask & IN_MOVED_TO)
      {
-	printf("Inotify moved to %s: %s\n", type, file);
+	WRN("Inotify moved to %s: %s", type, file);
      }
    if (mask & IN_DELETE)
      {
-	printf("Inotify delete %s: %s\n", type, file);
+	WRN("Inotify delete %s: %s", type, file);
      }
    if (mask & IN_CREATE)
      {
-	printf("Inotify create %s: %s\n", type, file);
+	WRN("Inotify create %s: %s", type, file);
      }
    if (mask & IN_DELETE_SELF)
      {
-	printf("Inotify delete self %s: %s\n", type, file);
+	WRN("Inotify delete self %s: %s", type, file);
      }
    if (mask & IN_MOVE_SELF)
      {
-	printf("Inotify move self %s: %s\n", type, file);
+	WRN("Inotify move self %s: %s", type, file);
      }
    if (mask & IN_UNMOUNT)
      {
-	printf("Inotify unmount %s: %s\n", type, file);
+	WRN("Inotify unmount %s: %s", type, file);
      }
 }
 #endif

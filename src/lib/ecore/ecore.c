@@ -9,8 +9,12 @@
 #include <stdio.h>
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <unistd.h>
 #include <fcntl.h>
+#include <errno.h>
+
+#ifndef _MSC_VER
+# include <unistd.h>
+#endif
 
 #ifdef HAVE_LOCALE_H
 # include <locale.h>
@@ -32,9 +36,25 @@
 #include "Ecore.h"
 #include "ecore_private.h"
 
+#if HAVE_MALLINFO
+#include <malloc.h>
+
+static Ecore_Version _version = { VERS_MAJ, VERS_MIN, VERS_MIC, VERS_REV };
+EAPI Ecore_Version *ecore_version = &_version;
+
+#define KEEP_MAX(Global, Local)			\
+   if (Global < (Local))			\
+     Global = Local;
+
+static Eina_Bool _ecore_memory_statistic(void *data);
+static int _ecore_memory_max_total = 0;
+static int _ecore_memory_max_free = 0;
+static pid_t _ecore_memory_pid = 0;
+#endif
+
 static const char *_ecore_magic_string_get(Ecore_Magic m);
 static int _ecore_init_count = 0;
-
+int _ecore_log_dom = -1;
 int _ecore_fps_debug = 0;
 
 /** OpenBSD does not define CODESET
@@ -79,7 +99,7 @@ ecore_init(void)
    /*
      if (strcmp(nl_langinfo(CODESET), "UTF-8"))
      {
-	printf("WARNING: not a utf8 locale!\n");
+	WRN("Not a utf8 locale!");
      }
    */
 #ifdef HAVE_EVIL
@@ -88,16 +108,36 @@ ecore_init(void)
 #endif
    if (!eina_init())
      goto shutdown_evil;
+   _ecore_log_dom = eina_log_domain_register("Ecore",ECORE_DEFAULT_LOG_COLOR);
+   if (_ecore_log_dom < 0) {
+     EINA_LOG_ERR("Ecore was unable to create a log domain.");
+     goto shutdown_log_dom;
+   }
    if (getenv("ECORE_FPS_DEBUG")) _ecore_fps_debug = 1;
    if (_ecore_fps_debug) _ecore_fps_debug_init();
    _ecore_signal_init();
    _ecore_exe_init();
    _ecore_thread_init();
    _ecore_glib_init();
+   _ecore_job_init();
    _ecore_loop_time = ecore_time_get();
 
+#if HAVE_MALLINFO
+   if (getenv("ECORE_MEM_STAT"))
+     {
+	_ecore_memory_pid = getpid();
+	ecore_animator_add(_ecore_memory_statistic, NULL);
+     }
+#endif
+
+#ifdef GLIB_INTEGRATION_ALWAYS   
+   if (_ecore_glib_always_integrate) ecore_main_loop_glib_integrate();
+#endif
+   
    return _ecore_init_count;
 
+ shutdown_log_dom:
+   eina_shutdown();
  shutdown_evil:
 #ifdef HAVE_EVIL
    evil_shutdown();
@@ -125,6 +165,7 @@ ecore_shutdown(void)
    _ecore_poller_shutdown();
    _ecore_animator_shutdown();
    _ecore_glib_shutdown();
+   _ecore_job_shutdown();
    _ecore_thread_shutdown();
    _ecore_exe_shutdown();
    _ecore_idle_enterer_shutdown();
@@ -134,6 +175,21 @@ ecore_shutdown(void)
    _ecore_event_shutdown();
    _ecore_main_shutdown();
    _ecore_signal_shutdown();
+
+#if HAVE_MALLINFO
+   if (getenv("ECORE_MEM_STAT"))
+     {
+	_ecore_memory_statistic(NULL);
+
+	ERR("[%i] Memory MAX total: %i, free: %i",
+	    _ecore_memory_pid,
+	    _ecore_memory_max_total,
+	    _ecore_memory_max_free);
+     }
+#endif
+
+   eina_log_domain_unregister(_ecore_log_dom);
+   _ecore_log_dom = -1;
    eina_shutdown();
 #ifdef HAVE_EVIL
    evil_shutdown();
@@ -143,27 +199,36 @@ ecore_shutdown(void)
 }
 
 EAPI void
+ecore_print_warning(const char *function, const char *sparam)
+{
+   WRN("***** Developer Warning ***** :\n"
+       "\tThis program is calling:\n\n"
+       "\t%s();\n\n"
+       "\tWith the parameter:\n\n"
+       "\t%s\n\n"
+       "\tbeing NULL. Please fix your program.", function, sparam);
+   if (getenv("ECORE_ERROR_ABORT")) abort();
+}
+
+EAPI void
 _ecore_magic_fail(const void *d, Ecore_Magic m, Ecore_Magic req_m, const char *fname)
 {
-   fprintf(stderr,
-	   "\n"
-	   "*** ECORE ERROR: Ecore Magic Check Failed!!!\n"
-	   "*** IN FUNCTION: %s()\n", fname);
+   ERR("\n"
+       "*** ECORE ERROR: Ecore Magic Check Failed!!!\n"
+       "*** IN FUNCTION: %s()", fname);
    if (!d)
-     fprintf(stderr, "  Input handle pointer is NULL!\n");
+     ERR("  Input handle pointer is NULL!");
    else if (m == ECORE_MAGIC_NONE)
-     fprintf(stderr, "  Input handle has already been freed!\n");
+     ERR("  Input handle has already been freed!");
    else if (m != req_m)
-     fprintf(stderr, "  Input handle is wrong type\n"
-	             "    Expected: %08x - %s\n"
-	             "    Supplied: %08x - %s\n",
-	     (unsigned int)req_m, _ecore_magic_string_get(req_m),
-	     (unsigned int)m, _ecore_magic_string_get(m));
-   fprintf(stderr,
-	   "*** NAUGHTY PROGRAMMER!!!\n"
-	   "*** SPANK SPANK SPANK!!!\n"
-	   "*** Now go fix your code. Tut tut tut!\n"
-	   "\n");
+     ERR("  Input handle is wrong type\n"
+	 "    Expected: %08x - %s\n"
+	 "    Supplied: %08x - %s",
+	 (unsigned int)req_m, _ecore_magic_string_get(req_m),
+	 (unsigned int)m, _ecore_magic_string_get(m));
+     ERR("*** NAUGHTY PROGRAMMER!!!\n"
+	 "*** SPANK SPANK SPANK!!!\n"
+	 "*** Now go fix your code. Tut tut tut!");
    if (getenv("ECORE_ERROR_ABORT")) abort();
 }
 
@@ -219,7 +284,7 @@ void
 _ecore_fps_debug_init(void)
 {
    char  buf[4096];
-   char *tmp;
+   const char *tmp;
    int   pid;
 
    _ecore_fps_debug_init_count++;
@@ -241,8 +306,28 @@ _ecore_fps_debug_init(void)
    if (_ecore_fps_debug_fd >= 0)
      {
 	unsigned int zero = 0;
+	char *buf = (char *)&zero;
+	ssize_t todo = sizeof(unsigned int);
 
-	write(_ecore_fps_debug_fd, &zero, sizeof(unsigned int));
+	while (todo > 0)
+	  {
+	     ssize_t r = write(_ecore_fps_debug_fd, buf, todo);
+	     if (r > 0)
+	       {
+		  todo -= r;
+		  buf += r;
+	       }
+	     else if ((r < 0) && (errno == EINTR))
+	       continue;
+	     else
+	       {
+		  ERR("could not write to file '%s' fd %d: %s",
+		      tmp, _ecore_fps_debug_fd, strerror(errno));
+		  close(_ecore_fps_debug_fd);
+		  _ecore_fps_debug_fd = -1;
+		  return;
+	       }
+	  }
 	_ecore_fps_runtime_mmap = mmap(NULL, sizeof(unsigned int),
 				       PROT_READ | PROT_WRITE,
 				       MAP_SHARED,
@@ -259,8 +344,8 @@ _ecore_fps_debug_shutdown(void)
    if (_ecore_fps_debug_init_count > 0) return;
    if (_ecore_fps_debug_fd >= 0)
      {
-	char buf[4096];
-        char *tmp;
+        char buf[4096];
+        const char *tmp;
         int   pid;
 
 #ifndef HAVE_EVIL
@@ -299,3 +384,37 @@ _ecore_fps_debug_runtime_add(double t)
 	*(_ecore_fps_runtime_mmap) += tm;
      }
 }
+
+#if HAVE_MALLINFO
+static Eina_Bool
+_ecore_memory_statistic(__UNUSED__ void *data)
+{
+   struct mallinfo mi;
+   static int uordblks = 0;
+   static int fordblks = 0;
+   Eina_Bool changed = EINA_FALSE;
+
+   mi = mallinfo();
+
+#define HAS_CHANGED(Global, Local)		\
+   if (Global != Local)				\
+     {						\
+	Global = Local;				\
+	changed = EINA_TRUE;			\
+     }
+
+   HAS_CHANGED(uordblks, mi.uordblks);
+   HAS_CHANGED(fordblks, mi.fordblks);
+
+   if (changed)
+     ERR("[%i] Memory total: %i, free: %i",
+	 _ecore_memory_pid,
+	 mi.uordblks,
+	 mi.fordblks);
+
+   KEEP_MAX(_ecore_memory_max_total, mi.uordblks);
+   KEEP_MAX(_ecore_memory_max_free, mi.fordblks);
+
+   return ECORE_CALLBACK_RENEW;
+}
+#endif

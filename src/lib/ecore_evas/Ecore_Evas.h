@@ -64,7 +64,7 @@ extern "C" {
 #define HAVE_ECORE_EVAS_X11_16 1
 #define HAVE_ECORE_EVAS_DIRECTFB 1
 #define HAVE_ECORE_EVAS_WIN32 1
-#define HAVE_ECORE_EVAS_QUARTZ 1
+#define HAVE_ECORE_EVAS_COCOA 1
 #define HAVE_ECORE_EVAS_SDL 1
 #define HAVE_ECORE_EVAS_WINCE 1
 
@@ -80,13 +80,14 @@ typedef enum _Ecore_Evas_Engine_Type
    ECORE_EVAS_ENGINE_SOFTWARE_DDRAW,
    ECORE_EVAS_ENGINE_DIRECT3D,
    ECORE_EVAS_ENGINE_OPENGL_GLEW,
-   ECORE_EVAS_ENGINE_QUARTZ,
+   ECORE_EVAS_ENGINE_COCOA,
    ECORE_EVAS_ENGINE_SOFTWARE_SDL,
    ECORE_EVAS_ENGINE_DIRECTFB,
    ECORE_EVAS_ENGINE_SOFTWARE_FB,
    ECORE_EVAS_ENGINE_SOFTWARE_16_X11,
    ECORE_EVAS_ENGINE_SOFTWARE_16_DDRAW,
-   ECORE_EVAS_ENGINE_SOFTWARE_16_WINCE
+   ECORE_EVAS_ENGINE_SOFTWARE_16_WINCE,
+   ECORE_EVAS_ENGINE_OPENGL_SDL
 } Ecore_Evas_Engine_Type;
 
 typedef enum _Ecore_Evas_Avoid_Damage_Type
@@ -136,6 +137,9 @@ EAPI int         ecore_evas_engine_type_supported_get(Ecore_Evas_Engine_Type eng
 EAPI int         ecore_evas_init(void);
 EAPI int         ecore_evas_shutdown(void);
 
+EAPI void        ecore_evas_app_comp_sync_set(int do_sync);
+EAPI int         ecore_evas_app_comp_sync_get(void);
+   
 EAPI Eina_List  *ecore_evas_engines_get(void);
 EAPI void        ecore_evas_engines_free(Eina_List *engines);
 EAPI Ecore_Evas *ecore_evas_new(const char *engine_name, int x, int y, int w, int h, const char *extra_options);
@@ -148,12 +152,18 @@ EAPI void            ecore_evas_software_x11_direct_resize_set(Ecore_Evas *ee, i
 EAPI int             ecore_evas_software_x11_direct_resize_get(const Ecore_Evas *ee);
 EAPI void            ecore_evas_software_x11_extra_event_window_add(Ecore_Evas *ee, Ecore_X_Window win);
 
+#define ECORE_EVAS_GL_X11_OPT_NONE     0
+#define ECORE_EVAS_GL_X11_OPT_INDIRECT 1
+#define ECORE_EVAS_GL_X11_OPT_LAST     2
+
 EAPI Ecore_Evas     *ecore_evas_gl_x11_new(const char *disp_name, Ecore_X_Window parent, int x, int y, int w, int h);
+EAPI Ecore_Evas     *ecore_evas_gl_x11_options_new(const char *disp_name, Ecore_X_Window parent, int x, int y, int w, int h, const int *opt);
 EAPI Ecore_X_Window  ecore_evas_gl_x11_window_get(const Ecore_Evas *ee);
 EAPI void            ecore_evas_gl_x11_direct_resize_set(Ecore_Evas *ee, int on);
 EAPI int             ecore_evas_gl_x11_direct_resize_get(const Ecore_Evas *ee);
 EAPI void            ecore_evas_gl_x11_extra_event_window_add(Ecore_Evas *ee, Ecore_X_Window win);
-
+EAPI void            ecore_evas_gl_x11_pre_post_swap_callback_set(const Ecore_Evas *ee, void *data, void (*pre_cb) (void *data, Evas *e), void (*post_cb) (void *data, Evas *e));
+       
 EAPI Ecore_Evas     *ecore_evas_xrender_x11_new(const char *disp_name, Ecore_X_Window parent, int x, int y, int w, int h);
 EAPI Ecore_X_Window  ecore_evas_xrender_x11_window_get(const Ecore_Evas *ee);
 EAPI void            ecore_evas_xrender_x11_direct_resize_set(Ecore_Evas *ee, int on);
@@ -172,6 +182,7 @@ EAPI Ecore_Evas     *ecore_evas_directfb_new(const char *disp_name, int windowed
 EAPI Ecore_DirectFB_Window *ecore_evas_directfb_window_get(const Ecore_Evas *ee);
 
 EAPI Ecore_Evas     *ecore_evas_buffer_new(int w, int h);
+EAPI Ecore_Evas     *ecore_evas_buffer_allocfunc_new(int w, int h, void *(*alloc_func) (void *data, int size), void (*free_func) (void *data, void *pix), const void *data);
 EAPI const void     *ecore_evas_buffer_pixels_get(Ecore_Evas *ee);
 
 EAPI Evas_Object    *ecore_evas_object_image_new(Ecore_Evas *ee_target);
@@ -210,6 +221,7 @@ EAPI Ecore_Win32_Window *ecore_evas_win32_window_get(const Ecore_Evas *ee);
 
 EAPI Ecore_Evas     *ecore_evas_sdl_new(const char* name, int w, int h, int fullscreen, int hwsurface, int noframe, int alpha);
 EAPI Ecore_Evas     *ecore_evas_sdl16_new(const char* name, int w, int h, int fullscreen, int hwsurface, int noframe, int alpha);
+EAPI Ecore_Evas     *ecore_evas_gl_sdl_new(const char* name, int w, int h, int fullscreen, int noframe);
 
 EAPI Ecore_Evas     *ecore_evas_software_wince_new(Ecore_WinCE_Window *parent,
                                                    int                 x,
@@ -243,7 +255,7 @@ EAPI Ecore_Evas     *ecore_evas_software_wince_gdi_new(Ecore_WinCE_Window *paren
 
 EAPI Ecore_WinCE_Window *ecore_evas_software_wince_window_get(const Ecore_Evas *ee);
 
-EAPI Ecore_Evas *ecore_evas_quartz_new(const char* name, int w, int h);
+EAPI Ecore_Evas *ecore_evas_cocoa_new(const char* name, int w, int h);
 
 /* generic manipulation calls */
 EAPI const char *ecore_evas_engine_name_get(const Ecore_Evas *ee);
@@ -273,11 +285,14 @@ EAPI void        ecore_evas_resize(Ecore_Evas *ee, int w, int h);
 EAPI void        ecore_evas_move_resize(Ecore_Evas *ee, int x, int y, int w, int h);
 EAPI void        ecore_evas_geometry_get(const Ecore_Evas *ee, int *x, int *y, int *w, int *h);
 EAPI void        ecore_evas_rotation_set(Ecore_Evas *ee, int rot);
+EAPI void        ecore_evas_rotation_with_resize_set(Ecore_Evas *ee, int rot);
 EAPI int         ecore_evas_rotation_get(const Ecore_Evas *ee);
 EAPI void        ecore_evas_shaped_set(Ecore_Evas *ee, int shaped);
 EAPI int         ecore_evas_shaped_get(const Ecore_Evas *ee);
 EAPI void        ecore_evas_alpha_set(Ecore_Evas *ee, int alpha);
 EAPI int         ecore_evas_alpha_get(const Ecore_Evas *ee);
+EAPI void        ecore_evas_transparent_set(Ecore_Evas *ee, int transparent);
+EAPI int         ecore_evas_transparent_get(const Ecore_Evas *ee);
 EAPI void        ecore_evas_show(Ecore_Evas *ee);
 EAPI void        ecore_evas_hide(Ecore_Evas *ee);
 EAPI int         ecore_evas_visibility_get(const Ecore_Evas *ee);
@@ -321,6 +336,12 @@ EAPI void        ecore_evas_sticky_set(Ecore_Evas *ee, int sticky);
 EAPI int         ecore_evas_sticky_get(const Ecore_Evas *ee);
 EAPI void        ecore_evas_ignore_events_set(Ecore_Evas *ee, int ignore);
 EAPI int         ecore_evas_ignore_events_get(const Ecore_Evas *ee);
+EAPI void        ecore_evas_manual_render_set(Ecore_Evas *ee, int manual_render);
+EAPI int         ecore_evas_manual_render_get(const Ecore_Evas *ee);
+EAPI void        ecore_evas_manual_render(Ecore_Evas *ee);
+EAPI void        ecore_evas_comp_sync_set(Ecore_Evas *ee, int do_sync);
+EAPI int         ecore_evas_comp_sync_get(const Ecore_Evas *ee);
+       
 EAPI Ecore_Window ecore_evas_window_get(const Ecore_Evas *ee);
 
 

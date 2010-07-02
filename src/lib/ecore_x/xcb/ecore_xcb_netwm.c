@@ -9,8 +9,6 @@
 #include <stdio.h>
 #include <string.h>
 
-#include <Ecore_Data.h>
-
 #include "ecore_xcb_private.h"
 #include "Ecore_X_Atoms.h"
 
@@ -2781,7 +2779,7 @@ _ecore_x_netwm_startup_info_begin(Ecore_X_Window window,
    if (info)
      {
         exists = 1;
-	printf("Already got info for win: 0x%x\n", window);
+	INF("Already got info for win: 0x%x", window);
 	_ecore_x_netwm_startup_info_free(info);
      }
    info = calloc(1, sizeof(Ecore_X_Startup_Info));
@@ -2879,6 +2877,17 @@ _ecore_x_window_prop_string_utf8_get_prefetch(Ecore_X_Window window,
    _ecore_xcb_cookie_cache(cookie.sequence);
 }
 
+static void
+_ecore_x_window_prop_string_utf8_get_fetch(void)
+{
+   xcb_get_property_cookie_t cookie;
+   xcb_get_property_reply_t *reply;
+
+   cookie.sequence = _ecore_xcb_cookie_get();
+   reply = xcb_get_property_reply(_ecore_xcb_conn, cookie, NULL);
+   _ecore_xcb_reply_cache(reply);
+}
+
 /*
  * Get UTF-8 string property
  * call _ecore_x_window_prop_string_utf8_get_prefetch() before.
@@ -2896,22 +2905,17 @@ _ecore_x_window_prop_string_utf8_get(Ecore_X_Window window __UNUSED__,
 
    if ((reply->format != 8) ||
        (reply->value_len <= 0))
-     {
-       free(reply);
-       return NULL;
-     }
+     return NULL;
 
    length = reply->value_len;
    str = (char *)malloc (sizeof (char) * (length + 1));
    if (!str)
      {
-        free(reply);
         return NULL;
      }
    memcpy(str, xcb_get_property_value(reply), length);
    str[length] = '\0';
 
-   free(reply);
    return str;
 }
 
@@ -3133,7 +3137,7 @@ _ecore_x_netwm_startup_info_parse(Ecore_X_Startup_Info *info,
 	  }
 	else
 	  {
-	     printf("Ecore X Sequence, Unknown: %s=%s\n", key, value);
+	     WRN("Ecore X Sequence, Unknown: %s=%s", key, value);
 	  }
      }
    if (!info->id) return 0;

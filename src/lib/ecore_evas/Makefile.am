@@ -42,12 +42,12 @@ ECORE_SDL_LIB =
 ECORE_SDL_LIBADD =
 endif
 
-if BUILD_ECORE_QUARTZ
-ECORE_QUARTZ_INC = -I$(top_srcdir)/src/lib/ecore_quartz -xobjective-c
-ECORE_QUARTZ_LIB = $(top_builddir)/src/lib/ecore_quartz/libecore_quartz.la
+if BUILD_ECORE_COCOA
+ECORE_COCOA_INC = -I$(top_srcdir)/src/lib/ecore_cocoa -xobjective-c
+ECORE_COCOA_LIB = $(top_builddir)/src/lib/ecore_cocoa/libecore_cocoa.la
 else
-ECORE_QUARTZ_INC =
-ECORE_QUARTZ_LIB =
+ECORE_COCOA_INC =
+ECORE_COCOA_LIB =
 endif
 
 if BUILD_ECORE_WINCE
@@ -62,16 +62,18 @@ AM_CPPFLAGS = \
 -I$(top_srcdir)/src/lib/ecore \
 -I$(top_srcdir)/src/lib/ecore_evas \
 -I$(top_srcdir)/src/lib/ecore_input \
+-I$(top_srcdir)/src/lib/ecore_input_evas \
 -I$(top_builddir)/src/lib/ecore \
 -I$(top_builddir)/src/lib/ecore_evas \
 -I$(top_builddir)/src/lib/ecore_input \
+-I$(top_builddir)/src/lib/ecore_input_evas \
 @EFL_ECORE_EVAS_BUILD@ \
 $(ECORE_X_INC) \
 $(ECORE_FB_INC) \
 $(ECORE_DIRECTFB_INC) \
 $(ECORE_WIN32_INC) \
 $(ECORE_SDL_INC) \
-$(ECORE_QUARTZ_INC) \
+$(ECORE_COCOA_INC) \
 $(ECORE_WINCE_INC) \
 @EVAS_CFLAGS@ \
 @XCB_CFLAGS@ \
@@ -95,7 +97,7 @@ ecore_evas_buffer.c \
 ecore_evas_directfb.c \
 ecore_evas_win32.c \
 ecore_evas_sdl.c \
-ecore_evas_quartz.c \
+ecore_evas_cocoa.c \
 ecore_evas_wince.c
 
 libecore_evas_la_LIBADD = \
@@ -105,15 +107,16 @@ $(ECORE_DIRECTFB_LIB) \
 $(ECORE_WIN32_LIB) \
 $(ECORE_SDL_LIB) \
 $(ECORE_SDL_LIBADD) \
-$(ECORE_QUARTZ_LIB) \
+$(ECORE_COCOA_LIB) \
 $(ECORE_WINCE_LIB) \
 $(top_builddir)/src/lib/ecore_input/libecore_input.la \
+$(top_builddir)/src/lib/ecore_input_evas/libecore_input_evas.la \
 $(top_builddir)/src/lib/ecore/libecore.la \
 @EVAS_LIBS@ \
 @EINA_LIBS@ \
 @EVIL_LIBS@
 
-libecore_evas_la_LDFLAGS = @quartz_ldflags@ -no-undefined @lt_enable_auto_import@ -version-info @version_info@ @ecore_evas_release_info@
+libecore_evas_la_LDFLAGS = @cocoa_ldflags@ -no-undefined @lt_enable_auto_import@ -version-info @version_info@ @release_info@
 
 endif
 

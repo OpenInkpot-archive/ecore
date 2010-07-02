@@ -3,26 +3,20 @@
 #endif
 
 #include <Ecore.h>
+#include "ecore_private.h"
 #include <Ecore_Input.h>
 
-#include "ecore_private.h"
 #include "ecore_evas_private.h"
 #include "Ecore_Evas.h"
 
 #ifdef BUILD_ECORE_EVAS_SOFTWARE_BUFFER
 static int _ecore_evas_init_count = 0;
 
-static int _ecore_evas_fps_debug = 0;
-
-static Ecore_Evas *ecore_evases = NULL;
-
 static int
 _ecore_evas_buffer_init(void)
 {
    _ecore_evas_init_count++;
    if (_ecore_evas_init_count > 1) return _ecore_evas_init_count;
-   if (getenv("ECORE_EVAS_FPS_DEBUG")) _ecore_evas_fps_debug = 1;
-   if (_ecore_evas_fps_debug) _ecore_evas_fps_debug_init();
    return _ecore_evas_init_count;
 }
 
@@ -39,9 +33,8 @@ _ecore_evas_buffer_free(Ecore_Evas *ee)
      }
    else
      {
-	ecore_evases = (Ecore_Evas *) eina_inlist_remove(EINA_INLIST_GET(ecore_evases), EINA_INLIST_GET(ee));
-
-	free(ee->engine.buffer.pixels);
+	ee->engine.buffer.free_func(ee->engine.buffer.data, 
+                                    ee->engine.buffer.pixels);
      }
    _ecore_evas_buffer_shutdown();
 }
@@ -66,8 +59,12 @@ _ecore_evas_resize(Ecore_Evas *ee, int w, int h)
      }
    else
      {
-	if (ee->engine.buffer.pixels) free(ee->engine.buffer.pixels);
-	ee->engine.buffer.pixels = malloc(ee->w * ee->h * sizeof(int));
+	if (ee->engine.buffer.pixels)
+          ee->engine.buffer.free_func(ee->engine.buffer.data,
+                                      ee->engine.buffer.pixels);
+	ee->engine.buffer.pixels = 
+          ee->engine.buffer.alloc_func(ee->engine.buffer.data,
+                                       ee->w * ee->h * sizeof(int));
      }
 
    einfo = (Evas_Engine_Info_Buffer *)evas_engine_info_get(ee->evas);
@@ -91,26 +88,22 @@ _ecore_evas_buffer_shutdown(void)
    _ecore_evas_init_count--;
    if (_ecore_evas_init_count == 0)
      {
-	while (ecore_evases)
-	  {
-	     _ecore_evas_free(ecore_evases);
-	  }
-	if (_ecore_evas_fps_debug) _ecore_evas_fps_debug_shutdown();
      }
    if (_ecore_evas_init_count < 0) _ecore_evas_init_count = 0;
    return _ecore_evas_init_count;
 }
 
-void
+int
 _ecore_evas_buffer_render(Ecore_Evas *ee)
 {
    Eina_List *updates, *l, *ll;
    Ecore_Evas *ee2;
+   int rend = 0;
 
    EINA_LIST_FOREACH(ee->sub_ecore_evas, ll, ee2)
      {
 	if (ee2->func.fn_pre_render) ee2->func.fn_pre_render(ee2);
-	_ecore_evas_buffer_render(ee2);
+	rend |= _ecore_evas_buffer_render(ee2);
 	if (ee2->func.fn_post_render) ee2->func.fn_post_render(ee2);
      }
    if (ee->engine.buffer.image)
@@ -136,6 +129,8 @@ _ecore_evas_buffer_render(Ecore_Evas *ee)
 	evas_render_updates_free(updates);
 	_ecore_evas_idle_timeout_update(ee);
      }
+
+   return updates ? 1 : rend;
 }
 
 static void
@@ -227,6 +222,66 @@ _ecore_evas_buffer_cb_mouse_wheel(void *data, Evas *e __UNUSED__, Evas_Object *o
    ee = data;
    ev = event_info;
    evas_event_feed_mouse_wheel(ee->evas, ev->direction, ev->z, ev->timestamp, NULL);
+}
+
+static void
+_ecore_evas_buffer_cb_multi_down(void *data, Evas *e __UNUSED__, Evas_Object *obj __UNUSED__, void *event_info)
+{
+   Ecore_Evas *ee;
+   Evas_Event_Multi_Down *ev;
+   Evas_Coord x, y, xx, yy;
+   double xf, yf;
+
+   ee = data;
+   ev = event_info;
+   x = ev->canvas.x;
+   y = ev->canvas.y;
+   xx = x;
+   yy = y;
+   _ecore_evas_buffer_coord_translate(ee, &x, &y);
+   xf = (ev->canvas.xsub - (double)xx) + (double)x;
+   yf = (ev->canvas.ysub - (double)yy) + (double)y;
+   evas_event_feed_multi_down(ee->evas, ev->device, x, y, ev->radius, ev->radius_x, ev->radius_y, ev->pressure, ev->angle, xf, yf, ev->flags, ev->timestamp, NULL);
+}
+
+static void
+_ecore_evas_buffer_cb_multi_up(void *data, Evas *e __UNUSED__, Evas_Object *obj __UNUSED__, void *event_info)
+{
+   Ecore_Evas *ee;
+   Evas_Event_Multi_Up *ev;
+   Evas_Coord x, y, xx, yy;
+   double xf, yf;
+
+   ee = data;
+   ev = event_info;
+   x = ev->canvas.x;
+   y = ev->canvas.y;
+   xx = x;
+   yy = y;
+   _ecore_evas_buffer_coord_translate(ee, &x, &y);
+   xf = (ev->canvas.xsub - (double)xx) + (double)x;
+   yf = (ev->canvas.ysub - (double)yy) + (double)y;
+   evas_event_feed_multi_up(ee->evas, ev->device, x, y, ev->radius, ev->radius_x, ev->radius_y, ev->pressure, ev->angle, xf, yf, ev->flags, ev->timestamp, NULL);
+}
+
+static void
+_ecore_evas_buffer_cb_multi_move(void *data, Evas *e __UNUSED__, Evas_Object *obj __UNUSED__, void *event_info)
+{
+   Ecore_Evas *ee;
+   Evas_Event_Multi_Move *ev;
+   Evas_Coord x, y, xx, yy;
+   double xf, yf;
+
+   ee = data;
+   ev = event_info;
+   x = ev->cur.canvas.x;
+   y = ev->cur.canvas.y;
+   xx = x;
+   yy = y;
+   _ecore_evas_buffer_coord_translate(ee, &x, &y);
+   xf = (ev->cur.canvas.xsub - (double)xx) + (double)x;
+   yf = (ev->cur.canvas.ysub - (double)yy) + (double)y;
+   evas_event_feed_multi_move(ee->evas, ev->device, x, y, ev->radius, ev->radius_x, ev->radius_y, ev->pressure, ev->angle, xf, yf, ev->timestamp, NULL);
 }
 
 static void
@@ -339,6 +394,7 @@ _ecore_evas_buffer_cb_focus_in(void *data, Evas *e __UNUSED__, Evas_Object *obj 
 
    ee = data;
    ee->prop.focused = 1;
+   evas_focus_in(ee->evas);
    if (ee->func.fn_focus_in) ee->func.fn_focus_in(ee);
 }
 
@@ -349,6 +405,7 @@ _ecore_evas_buffer_cb_focus_out(void *data, Evas *e __UNUSED__, Evas_Object *obj
 
    ee = data;
    ee->prop.focused = 0;
+   evas_focus_out(ee->evas);
    if (ee->func.fn_focus_out) ee->func.fn_focus_out(ee);
 }
 
@@ -372,7 +429,7 @@ _ecore_evas_buffer_cb_hide(void *data, Evas *e __UNUSED__, Evas_Object *obj __UN
    if (ee->func.fn_hide) ee->func.fn_hide(ee);
 }
 
-static const Ecore_Evas_Engine_Func _ecore_buffer_engine_func =
+static Ecore_Evas_Engine_Func _ecore_buffer_engine_func =
 {
    _ecore_evas_buffer_free,
      NULL,
@@ -418,9 +475,24 @@ static const Ecore_Evas_Engine_Func _ecore_buffer_engine_func =
      NULL,
      NULL,
      NULL,
-     NULL
+     NULL,
+     NULL, //transparent
+     
+     NULL // render
 };
 #endif
+
+static void *
+_ecore_evas_buffer_pix_alloc(void *data, int size)
+{
+   return malloc(size);
+}
+
+static void
+_ecore_evas_buffer_pix_free(void *data, void *pix)
+{
+   free(pix);
+}
 
 /**
  * To be documented.
@@ -430,11 +502,19 @@ static const Ecore_Evas_Engine_Func _ecore_buffer_engine_func =
 EAPI Ecore_Evas *
 ecore_evas_buffer_new(int w, int h)
 {
+    return ecore_evas_buffer_allocfunc_new
+     (w, h, _ecore_evas_buffer_pix_alloc, _ecore_evas_buffer_pix_free, NULL);
+}
+
+EAPI Ecore_Evas *
+ecore_evas_buffer_allocfunc_new(int w, int h, void *(*alloc_func) (void *data, int size), void (*free_func) (void *data, void *pix), const void *data)
+{
 #ifdef BUILD_ECORE_EVAS_SOFTWARE_BUFFER
    Evas_Engine_Info_Buffer *einfo;
    Ecore_Evas *ee;
    int rmethod;
 
+   if ((!alloc_func) || (!free_func)) return NULL;
    rmethod = evas_render_method_lookup("buffer");
    if (!rmethod) return NULL;
    ee = calloc(1, sizeof(Ecore_Evas));
@@ -445,6 +525,9 @@ ecore_evas_buffer_new(int w, int h)
    _ecore_evas_buffer_init();
 
    ee->engine.func = (Ecore_Evas_Engine_Func *)&_ecore_buffer_engine_func;
+   ee->engine.buffer.alloc_func = alloc_func;
+   ee->engine.buffer.free_func = free_func;
+   ee->engine.buffer.data = (void *)data;
 
    ee->driver = "buffer";
 
@@ -473,7 +556,9 @@ ecore_evas_buffer_new(int w, int h)
    evas_output_size_set(ee->evas, w, h);
    evas_output_viewport_set(ee->evas, 0, 0, w, h);
 
-   ee->engine.buffer.pixels = malloc(w * h * sizeof(int));
+   ee->engine.buffer.pixels = 
+     ee->engine.buffer.alloc_func
+     (ee->engine.buffer.data, w * h * sizeof(int));
 
    einfo = (Evas_Engine_Info_Buffer *)evas_engine_info_get(ee->evas);
    if (einfo)
@@ -499,7 +584,9 @@ ecore_evas_buffer_new(int w, int h)
 
    evas_event_feed_mouse_in(ee->evas, 0, NULL);
 
-   ecore_evases = (Ecore_Evas *) eina_inlist_prepend(EINA_INLIST_GET(ecore_evases), EINA_INLIST_GET(ee));
+   ee->engine.func->fn_render = _ecore_evas_buffer_render;
+   _ecore_evas_register(ee);
+   
    return ee;
 #else
    return NULL;
@@ -593,6 +680,15 @@ ecore_evas_object_image_new(Ecore_Evas *ee_target)
 				  EVAS_CALLBACK_MOUSE_WHEEL,
 				  _ecore_evas_buffer_cb_mouse_wheel, ee);
    evas_object_event_callback_add(ee->engine.buffer.image,
+				  EVAS_CALLBACK_MULTI_DOWN,
+				  _ecore_evas_buffer_cb_multi_down, ee);
+   evas_object_event_callback_add(ee->engine.buffer.image,
+				  EVAS_CALLBACK_MULTI_UP,
+				  _ecore_evas_buffer_cb_multi_up, ee);
+   evas_object_event_callback_add(ee->engine.buffer.image,
+				  EVAS_CALLBACK_MULTI_MOVE,
+				  _ecore_evas_buffer_cb_multi_move, ee);
+   evas_object_event_callback_add(ee->engine.buffer.image,
 				  EVAS_CALLBACK_FREE,
 				  _ecore_evas_buffer_cb_free, ee);
    evas_object_event_callback_add(ee->engine.buffer.image,
@@ -636,6 +732,9 @@ ecore_evas_object_image_new(Ecore_Evas *ee_target)
    evas_key_lock_add(ee->evas, "Scroll_Lock");
 
    ee_target->sub_ecore_evas = eina_list_append(ee_target->sub_ecore_evas, ee);
+   
+   ee->engine.func->fn_render = _ecore_evas_buffer_render;
+   
    return o;
 #else
    return NULL;

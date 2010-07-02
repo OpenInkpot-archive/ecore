@@ -2,8 +2,6 @@
  * vim:ts=8:sw=3:sts=8:noexpandtab:cino=>5n-3f0^-2{2
  */
 
-#ifndef _WIN32
-
 #ifdef HAVE_CONFIG_H
 # include <config.h>
 #endif
@@ -15,8 +13,8 @@
 #include <unistd.h>
 #include <assert.h>
 
-#include "ecore_private.h"
 #include "Ecore.h"
+#include "ecore_private.h"
 
 /* make mono happy - this is evil though... */
 #undef SIGPWR
@@ -42,7 +40,7 @@ static void _ecore_signal_callback_sigpwr(int sig, siginfo_t *si, void *foo);
 static void _ecore_signal_callback_sigrt(int sig, siginfo_t *si, void *foo);
 #endif
 
-static int _ecore_signal_exe_exit_delay(void *data);
+static Eina_Bool _ecore_signal_exe_exit_delay(void *data);
 
 //#define MAXSIGQ 256 // 32k
 #define MAXSIGQ 64 // 8k
@@ -199,8 +197,8 @@ _ecore_signal_call(void)
 #endif
    sigprocmask(SIG_BLOCK, &newset, &oldset);
    if (sigchld_count > MAXSIGQ)
-     printf("ECORE WARNING. %i SIGCHLD in queue. max queue size %i. losing "
-	    "siginfo for extra signals.\n", sigchld_count, MAXSIGQ);
+     WRN("%i SIGCHLD in queue. max queue size %i. losing "
+	  "siginfo for extra signals.", sigchld_count, MAXSIGQ);
    for (n = 0; n < sigchld_count; n++)
      {
 	pid_t pid;
@@ -232,7 +230,7 @@ _ecore_signal_call(void)
 		  if ((n < MAXSIGQ) && (sigchld_info[n].si_signo))
 		    e->data = sigchld_info[n]; /* No need to clone this. */
 
-                  if ((e->exe) && (e->exe->flags & (ECORE_EXE_PIPE_READ | ECORE_EXE_PIPE_ERROR)))
+                  if ((e->exe) && (ecore_exe_flags_get(e->exe) & (ECORE_EXE_PIPE_READ | ECORE_EXE_PIPE_ERROR)))
                      {
 		        /* We want to report the Last Words of the exe, so delay this event.
 			 * This is twice as relevant for stderr.
@@ -256,8 +254,11 @@ _ecore_signal_call(void)
 			 * check to see for Last Words, and only delay if there are any.
 			 * This has it's own set of problems.
 			 */
-                        IF_FN_DEL(ecore_timer_del, e->exe->doomsday_clock);
-                        e->exe->doomsday_clock = ecore_timer_add(0.1, _ecore_signal_exe_exit_delay, e);
+                        Ecore_Timer *doomsday_clock;
+
+                        doomsday_clock = _ecore_exe_doomsday_clock_get(e->exe);
+                        IF_FN_DEL(ecore_timer_del, doomsday_clock);
+                        _ecore_exe_doomsday_clock_set(e->exe, ecore_timer_add(0.1, _ecore_signal_exe_exit_delay, e));
                      }
 		  else
 		    {
@@ -271,8 +272,8 @@ _ecore_signal_call(void)
    sigchld_count = 0;
 
    if (sigusr1_count > MAXSIGQ)
-     printf("ECORE WARNING. %i SIGUSR1 in queue. max queue size %i. losing "
-	    "siginfo for extra signals.\n", sigusr1_count, MAXSIGQ);
+     WRN("%i SIGUSR1 in queue. max queue size %i. losing "
+	 "siginfo for extra signals.", sigusr1_count, MAXSIGQ);
    for (n = 0; n < sigusr1_count; n++)
      {
 	Ecore_Event_Signal_User *e;
@@ -292,8 +293,8 @@ _ecore_signal_call(void)
    sigusr1_count = 0;
 
    if (sigusr2_count > MAXSIGQ)
-     printf("ECORE WARNING. %i SIGUSR2 in queue. max queue size %i. losing "
-	    "siginfo for extra signals.\n", sigusr2_count, MAXSIGQ);
+     WRN("%i SIGUSR2 in queue. max queue size %i. losing "
+	 "siginfo for extra signals.", sigusr2_count, MAXSIGQ);
    for (n = 0; n < sigusr2_count; n++)
      {
 	Ecore_Event_Signal_User *e;
@@ -313,8 +314,8 @@ _ecore_signal_call(void)
    sigusr2_count = 0;
 
    if (sighup_count > MAXSIGQ)
-     printf("ECORE WARNING. %i SIGHUP in queue. max queue size %i. losing "
-	    "siginfo for extra signals.\n", sighup_count, MAXSIGQ);
+     WRN("%i SIGHUP in queue. max queue size %i. losing "
+	 "siginfo for extra signals.", sighup_count, MAXSIGQ);
    for (n = 0; n < sighup_count; n++)
      {
 	Ecore_Event_Signal_Hup *e;
@@ -332,8 +333,8 @@ _ecore_signal_call(void)
    sighup_count = 0;
 
    if (sigquit_count > MAXSIGQ)
-     printf("ECORE WARNING. %i SIGQUIT in queue. max queue size %i. losing "
-	    "siginfo for extra signals.\n", sigquit_count, MAXSIGQ);
+     WRN("%i SIGQUIT in queue. max queue size %i. losing "
+	 "siginfo for extra signals.", sigquit_count, MAXSIGQ);
    for (n = 0; n < sigquit_count; n++)
      {
 	Ecore_Event_Signal_Exit *e;
@@ -353,8 +354,8 @@ _ecore_signal_call(void)
    sigquit_count = 0;
 
    if (sigint_count > MAXSIGQ)
-     printf("ECORE WARNING. %i SIGINT in queue. max queue size %i. losing "
-	    "siginfo for extra signals.\n", sigint_count, MAXSIGQ);
+     WRN("%i SIGINT in queue. max queue size %i. losing "
+	 "siginfo for extra signals.", sigint_count, MAXSIGQ);
    for (n = 0; n < sigint_count; n++)
      {
 	Ecore_Event_Signal_Exit *e;
@@ -374,8 +375,8 @@ _ecore_signal_call(void)
    sigint_count = 0;
 
    if (sigterm_count > MAXSIGQ)
-     printf("ECORE WARNING. %i SIGTERM in queue. max queue size %i. losing "
-	    "siginfo for extra signals.\n", sigterm_count, MAXSIGQ);
+     WRN("%i SIGTERM in queue. max queue size %i. losing "
+	 "siginfo for extra signals.", sigterm_count, MAXSIGQ);
    for (n = 0; n < sigterm_count; n++)
      {
 	Ecore_Event_Signal_Exit *e;
@@ -396,8 +397,8 @@ _ecore_signal_call(void)
 
 #ifdef SIGPWR
    if (sigpwr_count > MAXSIGQ)
-     printf("ECORE WARNING. %i SIGPWR in queue. max queue size %i. losing "
-	    "siginfo for extra signals.\n", sigpwr_count, MAXSIGQ);
+     WRN("%i SIGPWR in queue. max queue size %i. losing "
+	 "siginfo for extra signals.", sigpwr_count, MAXSIGQ);
    for (n = 0; n < sigpwr_count; n++)
      {
 	Ecore_Event_Signal_Power *e;
@@ -419,8 +420,8 @@ _ecore_signal_call(void)
    for (i = 0; i < num; i++)
      {
 	if (sigrt_count[i] > MAXSIGQ)
-	  printf("ECORE WARNING. %i SIGRT%i in queue. max queue size %i. losing "
-		 "siginfo for extra signals.\n", i + 1, sigrt_count[i], MAXSIGQ);
+	  WRN("%i SIGRT%i in queue. max queue size %i. losing "
+	      "siginfo for extra signals.", i + 1, sigrt_count[i], MAXSIGQ);
 	for (n = 0; n < sigrt_count[i]; n++)
 	  {
 	     Ecore_Event_Signal_Realtime *e;
@@ -607,7 +608,7 @@ _ecore_signal_callback_sigrt(int sig, siginfo_t *si, void *foo __UNUSED__)
 }
 #endif
 
-static int
+static Eina_Bool
 _ecore_signal_exe_exit_delay(void *data)
 {
    Ecore_Exe_Event_Del *e;
@@ -615,10 +616,9 @@ _ecore_signal_exe_exit_delay(void *data)
    e = data;
    if (e)
      {
-	e->exe->doomsday_clock = NULL;
+	_ecore_exe_doomsday_clock_set(e->exe, NULL);
 	_ecore_event_add(ECORE_EXE_EVENT_DEL, e,
 			 _ecore_exe_event_del_free, NULL);
      }
-   return 0;
+   return ECORE_CALLBACK_CANCEL;
 }
-#endif

@@ -28,6 +28,7 @@ _ecore_x_composite_init(void)
 EAPI int
 ecore_x_composite_query(void)
 {
+   LOGFN(__FILE__, __LINE__, __FUNCTION__);
    return _composite_available;
 }
 
@@ -35,8 +36,9 @@ EAPI void
 ecore_x_composite_redirect_window(Ecore_X_Window win, Ecore_X_Composite_Update_Type type)
 {
 #ifdef ECORE_XCOMPOSITE
-   int update;
+   int update = CompositeRedirectAutomatic;
 
+   LOGFN(__FILE__, __LINE__, __FUNCTION__);
    switch(type)
      {
       case ECORE_X_COMPOSITE_UPDATE_AUTOMATIC:
@@ -54,8 +56,9 @@ EAPI void
 ecore_x_composite_redirect_subwindows(Ecore_X_Window win, Ecore_X_Composite_Update_Type type)
 {
 #ifdef ECORE_XCOMPOSITE
-   int update;
+   int update = CompositeRedirectAutomatic;
 
+   LOGFN(__FILE__, __LINE__, __FUNCTION__);
    switch(type)
      {
       case ECORE_X_COMPOSITE_UPDATE_AUTOMATIC:
@@ -73,8 +76,9 @@ EAPI void
 ecore_x_composite_unredirect_window(Ecore_X_Window win, Ecore_X_Composite_Update_Type type)
 {
 #ifdef ECORE_XCOMPOSITE
-   int update;
+   int update = CompositeRedirectAutomatic;
 
+   LOGFN(__FILE__, __LINE__, __FUNCTION__);
    switch(type)
      {
       case ECORE_X_COMPOSITE_UPDATE_AUTOMATIC:
@@ -92,8 +96,9 @@ EAPI void
 ecore_x_composite_unredirect_subwindows(Ecore_X_Window win, Ecore_X_Composite_Update_Type type)
 {
 #ifdef ECORE_XCOMPOSITE
-   int update;
+   int update = CompositeRedirectAutomatic;
 
+   LOGFN(__FILE__, __LINE__, __FUNCTION__);
    switch(type)
      {
       case ECORE_X_COMPOSITE_UPDATE_AUTOMATIC:
@@ -113,8 +118,37 @@ ecore_x_composite_name_window_pixmap_get(Ecore_X_Window win)
    Ecore_X_Pixmap pixmap = None;
   
 #ifdef ECORE_XCOMPOSITE
+   LOGFN(__FILE__, __LINE__, __FUNCTION__);
    pixmap = XCompositeNameWindowPixmap(_ecore_x_disp, win);
 #endif
 
    return pixmap;
+}
+
+EAPI Ecore_X_Window
+ecore_x_composite_render_window_enable(Ecore_X_Window root)
+{
+   Ecore_X_Window win = 0;
+#ifdef ECORE_XCOMPOSITE
+   XRectangle rect;
+   
+   LOGFN(__FILE__, __LINE__, __FUNCTION__);
+   win = XCompositeGetOverlayWindow(_ecore_x_disp, root);
+   rect.x = -1;
+   rect.y = -1;
+   rect.width = 1;
+   rect.height = 1;
+   XShapeCombineRectangles(_ecore_x_disp, win, ShapeInput, 0, 0, &rect, 1, 
+                           ShapeSet, Unsorted);
+#endif
+   return win;
+}
+
+EAPI void
+ecore_x_composite_render_window_disable(Ecore_X_Window root)
+{
+#ifdef ECORE_XCOMPOSITE
+   LOGFN(__FILE__, __LINE__, __FUNCTION__);
+   XCompositeReleaseOverlayWindow(_ecore_x_disp, root);
+#endif   
 }

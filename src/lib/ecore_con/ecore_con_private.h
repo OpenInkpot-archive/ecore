@@ -3,7 +3,6 @@
 
 #include "ecore_private.h"
 #include "Ecore_Con.h"
-#include "Ecore_Data.h"
 
 #define ECORE_MAGIC_CON_SERVER             0x77665544
 #define ECORE_MAGIC_CON_CLIENT             0x77556677
@@ -22,6 +21,38 @@
 #endif
 
 #define READBUFSIZ 65536
+
+extern int  _ecore_con_log_dom ;
+
+#ifdef ECORE_CON_DEFAULT_LOG_COLOR
+#undef ECORE_LOG_DEFAULT_LOG_COLOR
+#endif
+#define ECORE_CON_DEFAULT_LOG_COLOR EINA_COLOR_BLUE
+
+#ifdef ERR
+# undef ERR
+#endif
+#define ERR(...) EINA_LOG_DOM_ERR(_ecore_con_log_dom, __VA_ARGS__)
+
+#ifdef DBG
+# undef DBG
+#endif
+#define DBG(...) EINA_LOG_DOM_DBG(_ecore_con_log_dom, __VA_ARGS__)
+
+#ifdef INF
+# undef INF
+#endif
+#define INF(...) EINA_LOG_DOM_INFO(_ecore_con_log_dom, __VA_ARGS__)
+
+#ifdef WRN
+# undef WRN
+#endif
+#define WRN(...) EINA_LOG_DOM_WARN(_ecore_con_log_dom, __VA_ARGS__)
+
+#ifdef CRIT
+# undef CRIT
+#endif
+#define CRIT(...) EINA_LOG_DOM_CRIT(_ecore_con_log_dom, __VA_ARGS__)
 
 typedef enum _Ecore_Con_State
   {
@@ -51,7 +82,8 @@ struct _Ecore_Con_Client
    unsigned char    *buf;
    char             *ip;
    int               event_count;
-   struct sockaddr_in *client_addr;
+   struct sockaddr  *client_addr;
+   int               client_addr_len;
 #if USE_GNUTLS
    gnutls_session    session;
 #elif USE_OPENSSL
@@ -103,6 +135,7 @@ struct _Ecore_Con_Url
    ECORE_MAGIC;
    CURL              *curl_easy;
    struct curl_slist *headers;
+   struct curl_httppost* post;
    Eina_List         *additional_headers;
    Eina_List         *response_headers;
    char              *url;
@@ -130,9 +163,11 @@ struct _Ecore_Con_Info
    char		   service[NI_MAXSERV];
 };
 
-/* from ecore_con_dns.c */
-int ecore_con_dns_init(void);
-int ecore_con_dns_shutdown(void);
+/* from ecore_local.c */
+int ecore_con_local_init(void);
+int ecore_con_local_shutdown(void);
+int ecore_con_local_connect(Ecore_Con_Server *svr, Eina_Bool (*cb_done)(void *data, Ecore_Fd_Handler *fd_handler), void *data, void (*cb_free)(void *data, void *ev));
+int ecore_con_local_listen(Ecore_Con_Server *svr, Eina_Bool (*cb_listen)(void *data, Ecore_Fd_Handler *fd_handler), void *data);
 /* from ecore_con_info.c */
 int ecore_con_info_init(void);
 int ecore_con_info_shutdown(void);

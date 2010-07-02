@@ -1,9 +1,8 @@
 #ifndef _ECORE_FB_PRIVATE_H
 #define _ECORE_FB_PRIVATE_H
 
-#include "ecore_private.h"
 #include "Ecore.h"
-#include "Ecore_Data.h"
+#include "ecore_private.h"
 
 #include <stdio.h>
 #include <string.h>

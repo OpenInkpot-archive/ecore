@@ -226,6 +226,18 @@ _ecore_have_tslib="no"
 TSLIB_LIBS=""
 TSLIB_CFLAGS=""
 
+AC_ARG_ENABLE([tslib],
+   [AC_HELP_STRING([--disable-tslib],
+       [disable the tslib support in ecore (currently ecore-fb).
+        @<:@default=detect@:>@])],
+   [
+    if test "x${enableval}" = "xyes" ; then
+       _ecore_want_tslib="yes"
+    else
+       _ecore_want_tslib="no"
+    fi
+   ])
+
 if test "x${_ecore_want_tslib}" = "xyes" -o "x${_ecore_want_tslib}" = "xauto" ; then
    PKG_CHECK_MODULES([TSLIB], [tslib-1.0],
      [
@@ -267,6 +279,39 @@ AC_SUBST(TSLIB_LIBS)
 AC_SUBST(TSLIB_CFLAGS)
 
 if test "x$_ecore_have_tslib" = "xyes" ; then
+   m4_default([$2], [:])
+else
+   m4_default([$3], [:])
+fi
+])
+
+dnl use: ECORE_CHECK_CARES(default-enabled[, ACTION-IF-FOUND[, ACTION-IF-NOT-FOUND]])
+AC_DEFUN([ECORE_CHECK_CARES],
+[
+_ecore_want_cares=$1
+_ecore_have_cares="no"
+
+AC_ARG_ENABLE(cares,
+  [AC_HELP_STRING([--disable-cares], [disable cares support])],
+  [
+    if test "x${enableval}" = "xyes" ; then
+       _ecore_want_cares="yes"
+    else
+       _ecore_want_cares="no"
+    fi
+  ])
+
+if test "x${_ecore_want_cares}" = "xyes" -o "x${_ecore_want_cares}" = "xauto" ; then
+   PKG_CHECK_MODULES([CARES], [libcares >= 1.6.1],
+     [_ecore_have_cares="yes"],
+     [_ecore_have_cares="no"])
+fi
+
+if test "x${_ecore_have_cares}" = "xyes" ; then
+   AC_DEFINE([HAVE_CARES], [1], [Build Ecore_Con_Info with c-ares support])
+fi
+
+if test "x$_ecore_have_cares" = "xyes" ; then
    m4_default([$2], [:])
 else
    m4_default([$3], [:])

@@ -6,6 +6,7 @@
 # include <config.h>
 #endif
 
+#include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -527,7 +528,7 @@ _ecore_x_event_handle_button_press(xcb_generic_event_t *event)
 	     if ((_ecore_window_grabs[i] == ev->event) ||
 		 (_ecore_window_grabs[i] == ev->child))
 	       {
-		  int replay = 0;
+		  Eina_Bool replay = EINA_FALSE;
 
 		  if (_ecore_window_grab_replay_func)
 		    replay = _ecore_window_grab_replay_func(_ecore_window_grab_replay_data,
@@ -589,7 +590,7 @@ _ecore_x_event_handle_button_press(xcb_generic_event_t *event)
                 if ((_ecore_window_grabs[i] == ev->event) ||
                     (_ecore_window_grabs[i] == ev->child))
                   {
-                     int replay = 0;
+                     Eina_Bool replay = EINA_FALSE;
 
                      if (_ecore_window_grab_replay_func)
                        replay = _ecore_window_grab_replay_func(_ecore_window_grab_replay_data,
@@ -1414,53 +1415,68 @@ _ecore_x_event_handle_selection_clear(xcb_generic_event_t *event)
 void
 _ecore_x_event_handle_selection_request(xcb_generic_event_t *event)
 {
-   xcb_selection_request_event_t *ev;
-   Ecore_X_Selection_Intern    *sd;
-   xcb_selection_notify_event_t   sn_event;
-   void                          *data;
+   xcb_selection_request_event_t   *ev;
+   Ecore_X_Event_Selection_Request *e;
+   Ecore_X_Selection_Intern        *sd;
+   void                            *data;
+   int                              len;
+   int                              typesize;
 
    ev = (xcb_selection_request_event_t *)event;
-   /* FIXME: is it the correct value ? */
-   sn_event.response_type = XCB_SELECTION_NOTIFY;
-   sn_event.pad0 = 0;
-   /* FIXME: is it the correct value ? */
-   sn_event.sequence = 0;
-   sn_event.time = XCB_CURRENT_TIME;
-   sn_event.requestor = ev->requestor;
-   sn_event.selection = ev->selection;
-   sn_event.target = ev->target;
+   _ecore_xcb_last_event_mouse_move = 0;
+
+   /*
+    * Generate a selection request event.
+    */
+   e = malloc(sizeof(Ecore_X_Event_Selection_Request));
+   e->owner = ev->owner;
+   e->requestor = ev->requestor;
+   e->time = ev->time;
+   e->selection = ev->selection;
+   e->target = ev->target;
+   e->property = ev->property;
+   ecore_event_add(ECORE_X_EVENT_SELECTION_REQUEST, e, NULL, NULL);
 
    if ((sd = _ecore_x_selection_get(ev->selection)) &&
        (sd->win == ev->owner))
      {
-	if (!ecore_x_selection_convert(ev->selection, ev->target,
-                                       &data))
-	  {
-	     /* Refuse selection, conversion to requested target failed */
-	     sn_event.property = XCB_NONE;
-	  }
-	else
-	  {
-	     /* FIXME: This does not properly handle large data transfers */
-	     ecore_x_window_prop_property_set(ev->requestor,
-                                              ev->property,
-                                              ev->target,
-                                              8, data, sd->length);
-	     sn_event.property = ev->property;
-	     free(data);
-	  }
-     }
-   else
-     {
-	sn_event.property = XCB_NONE;
-	return;
-     }
+	Ecore_X_Selection_Intern *si;
 
-   /* FIXME: I use _ecore_xcb_conn, as ev has no information on the connection */
-   xcb_send_event(_ecore_xcb_conn, 0,
-                  ev->requestor, 0, (const char *)&sn_event);
+	si = _ecore_x_selection_get(ev->selection);
+	if (si->data)
+	  {
+	     Ecore_X_Atom property;
+	     Ecore_X_Atom type;
 
-   free(event);
+	     /* Set up defaults for strings first */
+	     type = ev->target;
+	     typesize = 8;
+	     len = sd->length;
+
+             if (!ecore_x_selection_convert(ev->selection, ev->target,
+                                            &data, &len, &type, &typesize))
+               {
+                  /* Refuse selection, conversion to requested target failed */
+                 property = XCB_NONE;
+               }
+             else
+               {
+                  /* FIXME: This does not properly handle large data transfers */
+                 ecore_x_window_prop_property_set(ev->requestor,
+                                                  ev->property,
+                                                  ev->target,
+                                                  8, data, sd->length);
+                 property = ev->property;
+                 free(data);
+               }
+
+	     ecore_x_selection_notify_send(ev->requestor,
+					   ev->selection,
+					   ev->target,
+					   property,
+					   ev->time);
+          }
+     }
 }
 
 /* FIXME: round trip */
@@ -1614,7 +1630,7 @@ _ecore_x_event_handle_client_message(xcb_generic_event_t *event)
 	target->version = ev->data.data32[1] >> 24;
 	if (target->version > ECORE_X_DND_VERSION)
 	  {
-             printf("DND: Requested version %d, we only support up to %d\n", target->version,
+             WRN("DND: Requested version %d, we only support up to %d", target->version,
                     ECORE_X_DND_VERSION);
 	     return;
 	  }
@@ -1641,7 +1657,7 @@ _ecore_x_event_handle_client_message(xcb_generic_event_t *event)
                                                        &num_ret);
              if (!format)
 	       {
-		  printf("DND: Could not fetch data type list from source window, aborting.\n");
+		  ERR("DND: Could not fetch data type list from source window, aborting.");
 		  return;
 	       }
 	     types = (Ecore_X_Atom *)data;
@@ -1904,7 +1920,7 @@ _ecore_x_event_handle_client_message(xcb_generic_event_t *event)
                         xcb_get_atom_name_name(reply),
                         reply->name_len);
                  name[reply->name_len] = '\0';
-                 printf("Unknown state: %s\n", name);
+                 ERR("Unknown state: %s", name);
                  free(name);
                  free(reply);
                }
@@ -1925,7 +1941,7 @@ _ecore_x_event_handle_client_message(xcb_generic_event_t *event)
                         xcb_get_atom_name_name(reply),
                         reply->name_len);
                  name[reply->name_len] = '\0';
-                 printf("Unknown state: %s\n", name);
+                 WRN("Unknown state: %s", name);
                  free(name);
                }
 	  }
@@ -1935,7 +1951,7 @@ _ecore_x_event_handle_client_message(xcb_generic_event_t *event)
      }
    else if ((ev->type == ECORE_X_ATOM_WM_CHANGE_STATE)
 	    && (ev->format == 32)
-	    && (ev->data.data32[0] == XCB_WM_STATE_ICONIC))
+	    && (ev->data.data32[0] == XCB_WM_HINT_STATE))
      {
 	Ecore_X_Event_Window_State_Request *e;
 
@@ -2134,7 +2150,7 @@ _ecore_x_event_handle_randr_change(xcb_generic_event_t *event)
 
      if ((!rep) ||
          (((ev->response_type & ~0x80) - rep->first_event) != XCB_RANDR_SCREEN_CHANGE_NOTIFY))
-       printf("ERROR: Can't update RandR config!\n");
+       WRN("ERROR: Can't update RandR config!");
      if (rep)
        free(rep);
      }

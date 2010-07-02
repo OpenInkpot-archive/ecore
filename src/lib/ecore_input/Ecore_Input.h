@@ -6,8 +6,6 @@
 #define _ECORE_INPUT_H
 
 
-#include <Evas.h>
-
 #ifdef EAPI
 # undef EAPI
 #endif
@@ -98,6 +96,19 @@ struct _Ecore_Event_Mouse_Button
       int	 x;
       int	 y;
    } root;
+   
+   struct
+     {
+        int        device; /* 0 if normal mouse, 1+ for other mouse-devices (eg multi-touch - other fingers) */
+        double     radius, radius_x, radius_y; /* radius of press point - radius_x and y if its an ellipse (radius is the average of the 2) */
+        double     pressure; /* pressure - 1.0 == normal, > 1.0 == more, 0.0 == none */
+        double     angle; /* angle relative to perpendicular (0.0 == perpendicular), in degrees */
+        double     x, y; /* same as x, y root.x, root.y, but with sub-pixel precision, if available */
+        struct
+          {
+             double  x, y;
+          } root;
+     } multi;
 };
 
 typedef struct _Ecore_Event_Mouse_Wheel Ecore_Event_Mouse_Wheel;
@@ -142,6 +153,19 @@ struct _Ecore_Event_Mouse_Move
       int	 x;
       int	 y;
    } root;
+
+   struct
+     {
+        int        device; /* 0 if normal mouse, 1+ for other mouse-devices (eg multi-touch - other fingers) */
+        double     radius, radius_x, radius_y; /* radius of press point - radius_x and y if its an ellipse (radius is the average of the 2) */
+        double     pressure; /* pressure - 1.0 == normal, > 1.0 == more, 0.0 == none */
+        double     angle; /* angle relative to perpendicular (0.0 == perpendicular), in degrees */
+        double     x, y; /* same as x, y root.x, root.y, but with sub-pixel precision, if available */
+        struct
+          {
+             double  x, y;
+          } root;
+     } multi;
 };
 
 typedef struct _Ecore_Event_Mouse_IO Ecore_Event_Mouse_IO;
@@ -192,32 +216,11 @@ struct _Ecore_Event_Modifiers
    unsigned int array[ECORE_LAST];
 };
 
-typedef void (*Ecore_Event_Mouse_Move_Cb)(void *window, int x, int y, unsigned int timestamp);
-
 EAPI int	 ecore_event_init(void);
 EAPI int	 ecore_event_shutdown(void);
 
-EAPI Ecore_Event_Modifier ecore_event_update_modifier(const char *key, Ecore_Event_Modifiers *modifiers, int inc);
 EAPI unsigned int ecore_event_modifier_mask(Ecore_Event_Modifier modifier);
-
-EAPI int	 ecore_event_evas_init(void);
-EAPI int	 ecore_event_evas_shutdown(void);
-
-EAPI int	 ecore_event_evas_key_down(void *data, int type, void *event);
-EAPI int	 ecore_event_evas_key_up(void *data, int type, void *event);
-EAPI int	 ecore_event_evas_mouse_button_up(void *data, int type, void *event);
-EAPI int	 ecore_event_evas_mouse_button_down(void *data, int type, void *event);
-EAPI int	 ecore_event_evas_mouse_wheel(void *data, int type, void *event);
-EAPI int	 ecore_event_evas_mouse_move(void *data, int type, void *event);
-EAPI int	 ecore_event_evas_mouse_in(void *data, int type, void *event);
-EAPI int	 ecore_event_evas_mouse_out(void *data, int type, void *event);
-
-EAPI void        ecore_event_window_register(Ecore_Window id, void *window, Evas *evas, Ecore_Event_Mouse_Move_Cb move_mouse);
-EAPI void        ecore_event_window_unregister(Ecore_Window id);
-EAPI void*       ecore_event_window_match(Ecore_Window id);
-EAPI void        ecore_event_window_ignore_events(Ecore_Window id, int ignore_event);
-
-EAPI void	 ecore_event_evas_modifier_lock_update(Evas *e, unsigned int modifiers);
+EAPI Ecore_Event_Modifier ecore_event_update_modifier(const char *key, Ecore_Event_Modifiers *modifiers, int inc);
 
 #ifdef __cplusplus
 }

@@ -7,11 +7,26 @@
 #endif
 
 #include <stdlib.h>
+#include <math.h>
 
-#include "ecore_private.h"
 #include "Ecore.h"
+#include "ecore_private.h"
 
-static int _ecore_animator(void *data);
+
+struct _Ecore_Animator
+{
+   EINA_INLIST;
+   ECORE_MAGIC;
+
+   Eina_Bool    (*func) (void *data);
+   void          *data;
+
+   Eina_Bool     delete_me : 1;
+   Eina_Bool	 suspended : 1;
+};
+
+
+static Eina_Bool _ecore_animator(void *data);
 
 static Ecore_Timer    *timer = NULL;
 static int             animators_delete_me = 0;
@@ -36,7 +51,7 @@ static double          animators_frametime = 1.0 / 30.0;
  * automatically making any references/handles for it invalid.
  */
 EAPI Ecore_Animator *
-ecore_animator_add(int (*func) (void *data), const void *data)
+ecore_animator_add(Eina_Bool (*func) (void *data), const void *data)
 {
    Ecore_Animator *animator;
 
@@ -46,9 +61,16 @@ ecore_animator_add(int (*func) (void *data), const void *data)
    ECORE_MAGIC_SET(animator, ECORE_MAGIC_ANIMATOR);
    animator->func = func;
    animator->data = (void *)data;
-   animators = (Ecore_Animator *) eina_inlist_append(EINA_INLIST_GET(animators), EINA_INLIST_GET(animator));
+   animators = (Ecore_Animator *)eina_inlist_append(EINA_INLIST_GET(animators), EINA_INLIST_GET(animator));
    if (!timer)
-     timer = ecore_timer_add(animators_frametime, _ecore_animator, NULL);
+     {
+        double t_loop = ecore_loop_time_get();
+        double sync_0 = 0.0;
+        double d = -fmod(t_loop - sync_0, animators_frametime);
+
+        timer = ecore_timer_loop_add(animators_frametime, _ecore_animator, NULL);
+        ecore_timer_delay(timer, d);
+     }
    return animator;
 }
 
@@ -74,7 +96,7 @@ ecore_animator_del(Ecore_Animator *animator)
 	return NULL;
      }
    if (animator->delete_me) return animator->data;
-   animator->delete_me = 1;
+   animator->delete_me = EINA_TRUE;
    animators_delete_me++;
    return animator->data;
 }
@@ -112,6 +134,48 @@ ecore_animator_frametime_get(void)
    return animators_frametime;
 }
 
+/**
+ * Suspend the specified animator.
+ * @param animator The animator to delete
+ * @ingroup Ecore_Animator_Group
+ *
+ * The specified @p animator will be temporarly removed from the set of animators
+ * that are executed during main loop execution.
+ */
+EAPI void
+ecore_animator_freeze(Ecore_Animator *animator)
+{
+   if (!ECORE_MAGIC_CHECK(animator, ECORE_MAGIC_ANIMATOR))
+     {
+	ECORE_MAGIC_FAIL(animator, ECORE_MAGIC_ANIMATOR,
+			 "ecore_animator_del");
+	return;
+     }
+   if (animator->delete_me) return;
+   animator->suspended = EINA_TRUE;
+}
+
+/**
+ * Restore execution of the specified animator.
+ * @param animator The animator to delete
+ * @ingroup Ecore_Animator_Group
+ *
+ * The specified @p animator will be put back in the set of animators
+ * that are executed during main loop execution.
+ */
+EAPI void
+ecore_animator_thaw(Ecore_Animator *animator)
+{
+   if (!ECORE_MAGIC_CHECK(animator, ECORE_MAGIC_ANIMATOR))
+     {
+	ECORE_MAGIC_FAIL(animator, ECORE_MAGIC_ANIMATOR,
+			 "ecore_animator_del");
+	return;
+     }
+   if (animator->delete_me) return;
+   animator->suspended = EINA_FALSE;
+}
+
 void
 _ecore_animator_shutdown(void)
 {
@@ -131,18 +195,18 @@ _ecore_animator_shutdown(void)
      }
 }
 
-static int
+static Eina_Bool
 _ecore_animator(void *data __UNUSED__)
 {
    Ecore_Animator *animator;
 
    EINA_INLIST_FOREACH(animators, animator)
      {
-	if (!animator->delete_me)
+	if (!animator->delete_me && !animator->suspended)
 	  {
 	     if (!animator->func(animator->data))
 	       {
-		  animator->delete_me = 1;
+		  animator->delete_me = EINA_TRUE;
 		  animators_delete_me++;
 	       }
 	  }
@@ -167,7 +231,7 @@ _ecore_animator(void *data __UNUSED__)
    if (!animators)
      {
 	timer = NULL;
-	return 0;
+	return ECORE_CALLBACK_CANCEL;
      }
-   return 1;
+   return ECORE_CALLBACK_RENEW;
 }

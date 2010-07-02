@@ -13,19 +13,53 @@
 # include <config.h>
 #endif
 
+#ifdef HAVE_ALLOCA_H
+# include <alloca.h>
+#elif defined __GNUC__
+# define alloca __builtin_alloca
+#elif defined _AIX
+# define alloca __alloca
+#elif defined _MSC_VER
+# include <malloc.h>
+# define alloca _alloca
+#else
+# include <stddef.h>
+# ifdef  __cplusplus
+extern "C"
+# endif
+void *alloca (size_t);
+#endif
+
 #include <string.h>
+#include <sys/types.h>
+#include <unistd.h>
 #include <ctype.h>
 #ifdef __OpenBSD__
 # include <sys/types.h>
 #endif
-#include <netinet/in.h>
-#include <sys/socket.h>
-#include <arpa/inet.h>
-#include <arpa/nameser.h>
-#include <netdb.h>
 
-#include "ecore_private.h"
+#ifdef HAVE_ARPA_INET_H
+# include <arpa/inet.h>
+#endif
+
+#ifdef HAVE_ARPA_NAMESER_H
+# include <arpa/nameser.h>
+#endif
+
+#ifdef HAVE_NETINET_IN_H
+# include <netinet/in.h>
+#endif
+
+#ifdef HAVE_SYS_SOCKET_H
+# include <sys/socket.h>
+#endif
+
+#ifdef HAVE_NETDB_H
+# include <netdb.h>
+#endif
+
 #include "Ecore.h"
+#include "ecore_private.h"
 #include "ecore_con_private.h"
 
 typedef struct _CB_Data CB_Data;
@@ -44,20 +78,20 @@ struct _CB_Data
 
 static void _ecore_con_info_readdata(CB_Data *cbdata);
 static void _ecore_con_info_slave_free(CB_Data *cbdata);
-static int _ecore_con_info_data_handler(void *data, Ecore_Fd_Handler *fd_handler);
-static int _ecore_con_info_exit_handler(void *data, int type __UNUSED__, void *event);
+static Eina_Bool _ecore_con_info_data_handler(void *data, Ecore_Fd_Handler *fd_handler);
+static Eina_Bool _ecore_con_info_exit_handler(void *data, int type __UNUSED__, void *event);
 
 static int info_init = 0;
 static CB_Data *info_slaves = NULL;
 
-EAPI int
+int
 ecore_con_info_init(void)
 {
    info_init++;
    return info_init;
 }
 
-EAPI int
+int
 ecore_con_info_shutdown(void)
 {
    info_init--;
@@ -222,8 +256,8 @@ ecore_con_info_get(Ecore_Con_Server *svr,
 	    container->size = tosend_len;
 
 	    memcpy(&container->info, result, sizeof(struct addrinfo));
-	    memcpy(tosend + sizeof(Ecore_Con_Info), result->ai_addr, result->ai_addrlen);
-	    memcpy(tosend + sizeof(Ecore_Con_Info) + result->ai_addrlen, result->ai_canonname, canonname_len);
+	    memcpy((char *)tosend + sizeof(Ecore_Con_Info), result->ai_addr, result->ai_addrlen);
+	    memcpy((char *)tosend + sizeof(Ecore_Con_Info) + result->ai_addrlen, result->ai_canonname, canonname_len);
 
 	    if (!getnameinfo(result->ai_addr, result->ai_addrlen,
 			     hbuf, sizeof(hbuf), sbuf, sizeof(sbuf),
@@ -279,15 +313,15 @@ _ecore_con_info_readdata(CB_Data *cbdata)
 
 	memcpy(torecv, &container, sizeof(Ecore_Con_Info));
 
-	size = read(ecore_main_fd_handler_fd_get(cbdata->fdh), torecv + sizeof(Ecore_Con_Info),
+	size = read(ecore_main_fd_handler_fd_get(cbdata->fdh), (char *)torecv + sizeof(Ecore_Con_Info),
 		    torecv_len - sizeof(Ecore_Con_Info));
-	if (size == torecv_len - sizeof(Ecore_Con_Info))
+	if ((size > 0) && ((size_t)size == torecv_len - sizeof(Ecore_Con_Info)))
 	  {
 	    recv = (Ecore_Con_Info *)torecv;
 
-	    recv->info.ai_addr = torecv + sizeof(Ecore_Con_Info);
-	    if (torecv_len != (sizeof(Ecore_Con_Info) + recv->info.ai_addrlen))
-	      recv->info.ai_canonname = torecv + sizeof(Ecore_Con_Info) + recv->info.ai_addrlen;
+	    recv->info.ai_addr = (struct sockaddr *)((char *)torecv + sizeof(Ecore_Con_Info));
+	    if ((size_t)torecv_len != (sizeof(Ecore_Con_Info) + recv->info.ai_addrlen))
+	      recv->info.ai_canonname = (char *)torecv + sizeof(Ecore_Con_Info) + recv->info.ai_addrlen;
 	    else
 	      recv->info.ai_canonname = NULL;
 	    recv->info.ai_next = NULL;
@@ -314,7 +348,7 @@ _ecore_con_info_slave_free(CB_Data *cbdata)
    free(cbdata);
 }
 
-static int
+static Eina_Bool
 _ecore_con_info_data_handler(void *data, Ecore_Fd_Handler *fd_handler)
 {
    CB_Data *cbdata;
@@ -331,10 +365,10 @@ _ecore_con_info_data_handler(void *data, Ecore_Fd_Handler *fd_handler)
 	  }
      }
    _ecore_con_info_slave_free(cbdata);
-   return 0;
+   return ECORE_CALLBACK_CANCEL;
 }
 
-static int
+static Eina_Bool
 _ecore_con_info_exit_handler(void *data, int type __UNUSED__, void *event)
 {
    CB_Data *cbdata;
@@ -342,8 +376,8 @@ _ecore_con_info_exit_handler(void *data, int type __UNUSED__, void *event)
 
    ev = event;
    cbdata = data;
-   if (cbdata->pid != ev->pid) return 1;
-   return 0;
+   if (cbdata->pid != ev->pid) return ECORE_CALLBACK_RENEW;
+   return ECORE_CALLBACK_CANCEL; /* FIXME: Woot ??? */
    _ecore_con_info_slave_free(cbdata);
-   return 0;
+   return ECORE_CALLBACK_CANCEL;
 }

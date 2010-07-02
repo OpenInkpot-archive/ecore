@@ -6,8 +6,6 @@ AM_CFLAGS = @WIN32_CFLAGS@ @EFL_PTHREAD_CFLAGS@
 lib_LTLIBRARIES = libecore.la
 include_HEADERS = \
 Ecore.h \
-Ecore_Data.h \
-Ecore_Str.h \
 Ecore_Getopt.h
 
 libecore_la_SOURCES = \
@@ -15,31 +13,38 @@ ecore.c \
 ecore_anim.c \
 ecore_app.c \
 ecore_events.c \
-ecore_exe.c \
-ecore_exe_win32.c \
 ecore_getopt.c \
-ecore_hash.c \
 ecore_idle_enterer.c \
 ecore_idle_exiter.c \
 ecore_idler.c \
-ecore_list.c \
+ecore_job.c \
 ecore_main.c \
-ecore_path.c \
 ecore_pipe.c \
-ecore_plugin.c \
 ecore_poll.c \
-ecore_sheap.c \
-ecore_signal.c \
-ecore_str.c \
-ecore_strbuf.c \
 ecore_time.c \
 ecore_timer.c \
-ecore_tree.c \
-ecore_value.c \
 ecore_thread.c \
 ecore_glib.c
 
+if ECORE_HAVE_WIN32
+
+libecore_la_SOURCES += ecore_exe_win32.c
+
+else
+
+if ECORE_HAVE_WINCE
+
+libecore_la_SOURCES += ecore_exe_wince.c
+
+else
+
+libecore_la_SOURCES += ecore_signal.c ecore_exe.c
+
+endif
+
+endif
+
 libecore_la_LIBADD = @dlopen_libs@ @EINA_LIBS@ @EVIL_LIBS@ @GLIB_LIBS@ @WIN32_LIBS@ @LTLIBINTL@ @EFL_PTHREAD_LIBS@ -lm
-libecore_la_LDFLAGS = -no-undefined @lt_enable_auto_import@ -version-info @version_info@ @ecore_release_info@
+libecore_la_LDFLAGS = -no-undefined @lt_enable_auto_import@ -version-info @version_info@ @release_info@
 
 EXTRA_DIST = ecore_private.h

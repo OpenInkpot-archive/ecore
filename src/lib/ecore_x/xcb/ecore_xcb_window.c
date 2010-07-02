@@ -1440,7 +1440,6 @@ _ecore_x_window_at_xy_get(Ecore_X_Window  base,
                           Ecore_X_Window *skip,
                           int             skip_num)
 {
-   xcb_window_iterator_t              iter_children;
    xcb_get_window_attributes_cookie_t cookie_get_window_attributes;
    xcb_get_geometry_cookie_t          cookie_get_geometry;
    xcb_query_tree_cookie_t            cookie_query_tree;
@@ -1454,7 +1453,8 @@ _ecore_x_window_at_xy_get(Ecore_X_Window  base,
    uint16_t                           win_width;
    uint16_t                           win_height;
    xcb_window_t                      *wins = NULL;
-   int                                i, tree_c_len;
+   int                                tree_c_len;
+   int                                i;
 
    cookie_get_window_attributes = xcb_get_window_attributes_unchecked(_ecore_xcb_conn, base);
    cookie_get_geometry = xcb_get_geometry_unchecked(_ecore_xcb_conn, base);

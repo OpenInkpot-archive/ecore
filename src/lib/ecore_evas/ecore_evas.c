@@ -7,18 +7,58 @@
 #endif
 
 #include <string.h>
+#include <sys/types.h>
+#include <errno.h>
+
+#ifndef _MSC_VER
+# include <unistd.h>
+#endif
 
 #include "Ecore.h"
+#include "ecore_private.h"
 #include "Ecore_Input.h"
 
-#include "ecore_private.h"
 #include "ecore_evas_private.h"
 #include "Ecore_Evas.h"
 
 int _ecore_evas_log_dom = -1;
 static int _ecore_evas_init_count = 0;
 static Ecore_Fd_Handler *_ecore_evas_async_events_fd = NULL;
-static int _ecore_evas_async_events_fd_handler(void *data, Ecore_Fd_Handler *fd_handler);
+static Eina_Bool _ecore_evas_async_events_fd_handler(void *data, Ecore_Fd_Handler *fd_handler);
+
+static Ecore_Idle_Enterer *ecore_evas_idle_enterer = NULL;
+static Ecore_Evas *ecore_evases = NULL;
+static int _ecore_evas_fps_debug = 0;
+
+static Eina_Bool
+_ecore_evas_idle_enter(void *data __UNUSED__)
+{
+   Ecore_Evas *ee;
+   double t1 = 0.0;
+   double t2 = 0.0;
+   int rend = 0;
+   
+   if (!ecore_evases) return ECORE_CALLBACK_RENEW;
+   if (_ecore_evas_fps_debug)
+     {
+        t1 = ecore_time_get();
+     }
+   EINA_INLIST_FOREACH(ecore_evases, ee)
+     {
+        if (!ee->manual_render)
+          {
+             if (ee->engine.func->fn_render)
+               rend |= ee->engine.func->fn_render(ee);
+          }
+     }
+   if (_ecore_evas_fps_debug)
+     {
+        t2 = ecore_time_get();
+        if (rend)
+          _ecore_evas_fps_debug_rendertime_add(t2 - t1);
+     }
+   return ECORE_CALLBACK_RENEW;
+}
 
 /**
  * Query if a particular renginering engine target has support
@@ -99,6 +139,12 @@ ecore_evas_engine_type_supported_get(Ecore_Evas_Engine_Type engine)
 #else
         return 0;
 #endif
+     case ECORE_EVAS_ENGINE_OPENGL_SDL:
+#ifdef BUILD_ECORE_EVAS_OPENGL_SDL
+        return 1;
+#else
+        return 0;
+#endif
       case ECORE_EVAS_ENGINE_DIRECTFB:
 #ifdef BUILD_ECORE_EVAS_DIRECTFB
 	return 1;
@@ -130,8 +176,8 @@ ecore_evas_engine_type_supported_get(Ecore_Evas_Engine_Type engine)
 #else
 	return 0;
 #endif
-      case ECORE_EVAS_ENGINE_QUARTZ:
-#ifdef BUILD_ECORE_EVAS_QUARTZ
+      case ECORE_EVAS_ENGINE_COCOA:
+#ifdef BUILD_ECORE_EVAS_COCOA
 	 return 1;
 #else
 	 return 0;
@@ -140,7 +186,6 @@ ecore_evas_engine_type_supported_get(Ecore_Evas_Engine_Type engine)
 	return 0;
 	break;
      };
-   return 0;
 }
 
 /**
@@ -166,7 +211,7 @@ ecore_evas_init(void)
    _ecore_evas_log_dom = eina_log_domain_register("Ecore_Evas", ECORE_EVAS_DEFAULT_LOG_COLOR);
    if(_ecore_evas_log_dom < 0) 
      {
-	EINA_LOG_ERR("Impossible to create a log domain for Ecore_Evas.\n");
+	EINA_LOG_ERR("Impossible to create a log domain for Ecore_Evas.");
 	goto shutdown_ecore;
      }
 
@@ -176,6 +221,12 @@ ecore_evas_init(void)
 							     ECORE_FD_READ,
 							     _ecore_evas_async_events_fd_handler, NULL,
 							     NULL, NULL);
+   
+   ecore_evas_idle_enterer = 
+     ecore_idle_enterer_add(_ecore_evas_idle_enter, NULL);
+   if (getenv("ECORE_EVAS_FPS_DEBUG")) _ecore_evas_fps_debug = 1;
+   if (_ecore_evas_fps_debug) _ecore_evas_fps_debug_init();
+   
    return _ecore_evas_init_count;
 
  shutdown_ecore:
@@ -197,6 +248,12 @@ ecore_evas_shutdown(void)
 {
    if (--_ecore_evas_init_count != 0)
      return _ecore_evas_init_count;
+
+   while (ecore_evases) _ecore_evas_free(ecore_evases);
+
+   if (_ecore_evas_fps_debug) _ecore_evas_fps_debug_shutdown();
+   ecore_idle_enterer_del(ecore_evas_idle_enterer);
+   ecore_evas_idle_enterer = NULL;
 
 #ifdef BUILD_ECORE_EVAS_X11
    while (_ecore_evas_x_shutdown());
@@ -220,10 +277,25 @@ ecore_evas_shutdown(void)
      ecore_main_fd_handler_del(_ecore_evas_async_events_fd);
 
    eina_log_domain_unregister(_ecore_evas_log_dom);
+   _ecore_evas_log_dom = -1;
    ecore_shutdown();
    evas_shutdown();
 
    return _ecore_evas_init_count;
+}
+
+int _ecore_evas_app_comp_sync = 1;
+
+EAPI void
+ecore_evas_app_comp_sync_set(int do_sync)
+{
+   _ecore_evas_app_comp_sync = do_sync;
+}
+
+EAPI int
+ecore_evas_app_comp_sync_get(void)
+{
+   return _ecore_evas_app_comp_sync;
 }
 
 struct ecore_evas_engine {
@@ -323,15 +395,15 @@ _ecore_evas_constructor_software_x11(int x, int y, int w, int h, const char *ext
 }
 #endif
 
-#ifdef BUILD_ECORE_EVAS_QUARTZ
+#ifdef BUILD_ECORE_EVAS_COCOA
 static Ecore_Evas *
-_ecore_evas_constructor_quartz(int x, int y, int w, int h, const char *extra_options)
+_ecore_evas_constructor_cocoa(int x, int y, int w, int h, const char *extra_options)
 {
    char *name = NULL;
    Ecore_Evas *ee;
 
    _ecore_evas_parse_extra_options_str(extra_options, "name=", &name);
-   ee = ecore_evas_quartz_new(name, w, h);
+   ee = ecore_evas_cocoa_new(name, w, h);
    free(name);
 
    if (ee) ecore_evas_move(ee, x, y);
@@ -419,6 +491,25 @@ _ecore_evas_constructor_sdl16(int x __UNUSED__, int y __UNUSED__, int w, int h, 
    _ecore_evas_parse_extra_options_uint(extra_options, "alpha=", &alpha);
 
    ee = ecore_evas_sdl16_new(name, w, h, fullscreen, hwsurface, noframe, alpha);
+   free(name);
+
+   return ee;
+}
+#endif
+
+#ifdef BUILD_ECORE_EVAS_OPENGL_SDL
+static Ecore_Evas *
+_ecore_evas_constructor_opengl_sdl(int x __UNUSED__, int y __UNUSED__, int w, int h, const char *extra_options)
+{
+   Ecore_Evas *ee;
+   unsigned int fullscreen = 0, noframe = 0;
+   char *name = NULL;
+
+   _ecore_evas_parse_extra_options_str(extra_options, "name=", &name);
+   _ecore_evas_parse_extra_options_uint(extra_options, "fullscreen=", &fullscreen);
+   _ecore_evas_parse_extra_options_uint(extra_options, "noframe=", &noframe);
+
+   ee = ecore_evas_gl_sdl_new(name, w, h, fullscreen, noframe);
    free(name);
 
    return ee;
@@ -584,14 +675,18 @@ static const struct ecore_evas_engine _engines[] = {
 #endif
 
   /* Apple */
-#ifdef BUILD_ECORE_EVAS_QUARTZ
-  {"quartz", _ecore_evas_constructor_quartz},
+#ifdef BUILD_ECORE_EVAS_COCOA
+  {"cocoa", _ecore_evas_constructor_cocoa},
 #endif
 
   /* Last chance to have a window */
 #ifdef BUILD_ECORE_EVAS_SOFTWARE_SDL
   {"sdl", _ecore_evas_constructor_sdl},
   {"software_16_sdl", _ecore_evas_constructor_sdl16},
+#endif
+
+#ifdef BUILD_ECORE_EVAS_OPENGL_SDL
+  {"opengl_sdl", _ecore_evas_constructor_opengl_sdl},
 #endif
 
   /* independent */
@@ -634,15 +729,19 @@ _ecore_evas_new_auto_discover(int x, int y, int w, int h, const char *extra_opti
 {
    const struct ecore_evas_engine *itr;
 
+   DBG("auto discover engine");
+
    for (itr = _engines; itr->constructor != NULL; itr++)
      {
-	Ecore_Evas *ee;
-
-	ee = itr->constructor(x, y, w, h, extra_options);
+	Ecore_Evas *ee = itr->constructor(x, y, w, h, extra_options);
 	if (ee)
-	  return ee;
+	  {
+	     INF("auto discovered '%s'", itr->name);
+	     return ee;
+	  }
      }
 
+   WRN("could not auto discover.");
    return NULL;
 }
 
@@ -671,14 +770,24 @@ ecore_evas_new(const char *engine_name, int x, int y, int w, int h, const char *
    const struct ecore_evas_engine *itr;
 
    if (!engine_name)
-     engine_name = getenv("ECORE_EVAS_ENGINE");
+     {
+	engine_name = getenv("ECORE_EVAS_ENGINE");
+	if (engine_name)
+	  DBG("no engine_name provided, using ECORE_EVAS_ENGINE='%s'",
+	      engine_name);
+     }
    if (!engine_name)
      return _ecore_evas_new_auto_discover(x, y, w, h, extra_options);
 
    for (itr = _engines; itr->name != NULL; itr++)
      if (strcmp(itr->name, engine_name) == 0)
-       return itr->constructor(x, y, w, h, extra_options);
+       {
+	  INF("using engine '%s', extra_options=%s",
+	      engine_name, extra_options ? extra_options : "(null)");
+	  return itr->constructor(x, y, w, h, extra_options);
+       }
 
+   WRN("unknown engine '%s'", engine_name);
    return NULL;
 }
 
@@ -1317,7 +1426,35 @@ ecore_evas_rotation_set(Ecore_Evas *ee, int rot)
    rot = rot % 360;
    while (rot < 0) rot += 360;
    while (rot >= 360) rot -= 360;
-   IFC(ee, fn_rotation_set) (ee, rot);
+   IFC(ee, fn_rotation_set) (ee, rot, 0);
+   /* make sure everything gets redrawn */
+   evas_damage_rectangle_add(ee->evas, 0, 0, ee->w, ee->h);
+   evas_damage_rectangle_add(ee->evas, 0, 0, ee->h, ee->w);
+   IFE;
+}
+
+/**
+ * Set the rotation of an Ecore_Evas' window
+ *
+ * @param ee The Ecore_Evas
+ * @param rot the angle (in degrees) of rotation.
+ *
+ * The allowed values of @p rot depend on the engine being used. Most only
+ * allow multiples of 90.
+ */
+EAPI void
+ecore_evas_rotation_with_resize_set(Ecore_Evas *ee, int rot)
+{
+   if (!ECORE_MAGIC_CHECK(ee, ECORE_MAGIC_EVAS))
+     {
+	ECORE_MAGIC_FAIL(ee, ECORE_MAGIC_EVAS,
+			 "ecore_evas_rotation_set");
+	return;
+     }
+   rot = rot % 360;
+   while (rot < 0) rot += 360;
+   while (rot >= 360) rot -= 360;
+   IFC(ee, fn_rotation_set) (ee, rot, 1);
    /* make sure everything gets redrawn */
    evas_damage_rectangle_add(ee->evas, 0, 0, ee->w, ee->h);
    evas_damage_rectangle_add(ee->evas, 0, 0, ee->h, ee->w);
@@ -1430,6 +1567,51 @@ ecore_evas_alpha_get(const Ecore_Evas *ee)
 	return 0;
      }
    return ee->alpha ? 1:0;
+}
+
+/**
+ * Set whether an Ecore_Evas has an transparent window or not.
+ * @param ee The Ecore_Evas to shape
+ * @param transparent 1 to enable the transparent window, 0 to disable it
+ *
+ * This function allows you to make an Ecore_Evas translucent using an
+ * alpha channel. See ecore_evas_shaped_set() for details. The difference
+ * between a shaped window and a window with an alpha channel is that an
+ * alpha channel supports multiple levels of transpararency, as opposed to
+ * the 1 bit transparency of a shaped window (a pixel is either opaque, or
+ * it's transparent).
+ */
+EAPI void
+ecore_evas_transparent_set(Ecore_Evas *ee, int transparent)
+{
+   if (!ECORE_MAGIC_CHECK(ee, ECORE_MAGIC_EVAS))
+     {
+	ECORE_MAGIC_FAIL(ee, ECORE_MAGIC_EVAS,
+			 "ecore_evas_transparent_set");
+	return;
+     }
+   IFC(ee, fn_transparent_set) (ee, transparent);
+   IFE;
+}
+
+/**
+ * Query whether an Ecore_Evas has an alpha channel.
+ * @param ee The Ecore_Evas to query.
+ * @return 1 if ee has an alpha channel, 0 if it does not.
+ *
+ * This function returns 1 if @p ee has an alpha channel, and 0 if
+ * it does not.
+ */
+EAPI int
+ecore_evas_transparent_get(const Ecore_Evas *ee)
+{
+   if (!ECORE_MAGIC_CHECK(ee, ECORE_MAGIC_EVAS))
+     {
+	ECORE_MAGIC_FAIL(ee, ECORE_MAGIC_EVAS,
+			 "ecore_evas_transparent_get");
+	return 0;
+     }
+   return ee->transparent ? 1:0;
 }
 
 /**
@@ -2281,12 +2463,12 @@ EAPI void
 ecore_evas_withdrawn_set(Ecore_Evas *ee, int withdrawn)
 {
    if (!ECORE_MAGIC_CHECK(ee, ECORE_MAGIC_EVAS))
-   {
-      ECORE_MAGIC_FAIL(ee, ECORE_MAGIC_EVAS,
-         "ecore_evas_withdrawn_set");
-      return;
-   }
-
+     {
+        ECORE_MAGIC_FAIL(ee, ECORE_MAGIC_EVAS,
+                         "ecore_evas_withdrawn_set");
+        return;
+     }
+   
    IFC(ee, fn_withdrawn_set) (ee, withdrawn);
    IFE;
 }
@@ -2301,12 +2483,12 @@ EAPI int
 ecore_evas_withdrawn_get(const Ecore_Evas *ee)
 {
    if (!ECORE_MAGIC_CHECK(ee, ECORE_MAGIC_EVAS))
-   {
-      ECORE_MAGIC_FAIL(ee, ECORE_MAGIC_EVAS,
-         "ecore_evas_withdrawn_get");
-      return 0;
-   } else
-      return ee->prop.withdrawn ? 1:0;
+     {
+        ECORE_MAGIC_FAIL(ee, ECORE_MAGIC_EVAS,
+                         "ecore_evas_withdrawn_get");
+        return 0;
+     } else
+     return ee->prop.withdrawn ? 1:0;
 }
 
 /**
@@ -2320,12 +2502,12 @@ EAPI void
 ecore_evas_sticky_set(Ecore_Evas *ee, int sticky)
 {
    if (!ECORE_MAGIC_CHECK(ee, ECORE_MAGIC_EVAS))
-   {
-      ECORE_MAGIC_FAIL(ee, ECORE_MAGIC_EVAS,
-         "ecore_evas_sticky_set");
-      return;
-   }
-
+     {
+        ECORE_MAGIC_FAIL(ee, ECORE_MAGIC_EVAS,
+                         "ecore_evas_sticky_set");
+        return;
+     }
+   
    IFC(ee, fn_sticky_set) (ee, sticky);
    IFE;
 }
@@ -2341,12 +2523,12 @@ EAPI int
 ecore_evas_sticky_get(const Ecore_Evas *ee)
 {
    if (!ECORE_MAGIC_CHECK(ee, ECORE_MAGIC_EVAS))
-   {
-      ECORE_MAGIC_FAIL(ee, ECORE_MAGIC_EVAS,
-         "ecore_evas_sticky_get");
-      return 0;
-   } else
-      return ee->prop.sticky ? 1:0;
+     {
+        ECORE_MAGIC_FAIL(ee, ECORE_MAGIC_EVAS,
+                         "ecore_evas_sticky_get");
+        return 0;
+     } else
+     return ee->prop.sticky ? 1:0;
 }
 
 /**
@@ -2360,12 +2542,12 @@ EAPI void
 ecore_evas_ignore_events_set(Ecore_Evas *ee, int ignore)
 {
    if (!ECORE_MAGIC_CHECK(ee, ECORE_MAGIC_EVAS))
-   {
-      ECORE_MAGIC_FAIL(ee, ECORE_MAGIC_EVAS,
-         "ecore_evas_ignore_events_set");
-      return;
-   }
-
+     {
+        ECORE_MAGIC_FAIL(ee, ECORE_MAGIC_EVAS,
+                         "ecore_evas_ignore_events_set");
+        return;
+     }
+   
    IFC(ee, fn_ignore_events_set) (ee, ignore);
    IFE;
 }
@@ -2381,12 +2563,73 @@ EAPI int
 ecore_evas_ignore_events_get(const Ecore_Evas *ee)
 {
    if (!ECORE_MAGIC_CHECK(ee, ECORE_MAGIC_EVAS))
-   {
-      ECORE_MAGIC_FAIL(ee, ECORE_MAGIC_EVAS,
-         "ecore_evas_ignore_events_get");
-      return 0;
-   } else
-      return ee->ignore_events ? 1 : 0;
+     {
+        ECORE_MAGIC_FAIL(ee, ECORE_MAGIC_EVAS,
+                         "ecore_evas_ignore_events_get");
+        return 0;
+     }
+   return ee->ignore_events ? 1 : 0;
+}
+
+EAPI void
+ecore_evas_manual_render_set(Ecore_Evas *ee, int manual_render)
+{
+   if (!ECORE_MAGIC_CHECK(ee, ECORE_MAGIC_EVAS))
+     {
+        ECORE_MAGIC_FAIL(ee, ECORE_MAGIC_EVAS,
+                         "ecore_evas_manual_render_set");
+        return;
+     }
+   ee->manual_render = manual_render;
+}
+
+EAPI int
+ecore_evas_manual_render_get(const Ecore_Evas *ee)
+{
+   if (!ECORE_MAGIC_CHECK(ee, ECORE_MAGIC_EVAS))
+     {
+        ECORE_MAGIC_FAIL(ee, ECORE_MAGIC_EVAS,
+                         "ecore_evas_manual_render_get");
+        return 0;
+     }
+   return ee->manual_render ? 1 : 0;
+}
+
+EAPI void
+ecore_evas_manual_render(Ecore_Evas *ee)
+{
+   if (!ECORE_MAGIC_CHECK(ee, ECORE_MAGIC_EVAS))
+     {
+        ECORE_MAGIC_FAIL(ee, ECORE_MAGIC_EVAS,
+                         "ecore_evas_manual_render");
+        return;
+     }
+   if (ee->engine.func->fn_render)
+     ee->engine.func->fn_render(ee);
+}
+
+EAPI void
+ecore_evas_comp_sync_set(Ecore_Evas *ee, int do_sync)
+{
+   if (!ECORE_MAGIC_CHECK(ee, ECORE_MAGIC_EVAS))
+     {
+        ECORE_MAGIC_FAIL(ee, ECORE_MAGIC_EVAS,
+                         "ecore_evas_comp_sync_set");
+        return;
+     }
+   ee->no_comp_sync = !do_sync;
+}
+
+EAPI int
+ecore_evas_comp_sync_get(const Ecore_Evas *ee)
+{
+   if (!ECORE_MAGIC_CHECK(ee, ECORE_MAGIC_EVAS))
+     {
+        ECORE_MAGIC_FAIL(ee, ECORE_MAGIC_EVAS,
+                         "ecore_evas_comp_sync_get");
+        return 0;
+     }
+   return !ee->no_comp_sync;
 }
 
 EAPI Ecore_Window
@@ -2426,8 +2669,28 @@ _ecore_evas_fps_debug_init(void)
    if (_ecore_evas_fps_debug_fd >= 0)
      {
 	unsigned int zero = 0;
+	char *buf = (char *)&zero;
+	ssize_t todo = sizeof(unsigned int);
 
-	write(_ecore_evas_fps_debug_fd, &zero, sizeof(unsigned int));
+	while (todo > 0)
+	  {
+	     ssize_t r = write(_ecore_evas_fps_debug_fd, buf, todo);
+	     if (r > 0)
+	       {
+		  todo -= r;
+		  buf += r;
+	       }
+	     else if ((r < 0) && (errno == EINTR))
+	       continue;
+	     else
+	       {
+		  ERR("could not write to file '%s' fd %d: %s",
+		      buf, _ecore_evas_fps_debug_fd, strerror(errno));
+		  close(_ecore_evas_fps_debug_fd);
+		  _ecore_evas_fps_debug_fd = -1;
+		  return;
+	       }
+	  }
 	_ecore_evas_fps_rendertime_mmap = mmap(NULL, sizeof(unsigned int),
 					       PROT_READ | PROT_WRITE,
 					       MAP_SHARED,
@@ -2489,36 +2752,49 @@ _ecore_evas_fps_debug_rendertime_add(double t)
 }
 
 void
+_ecore_evas_register(Ecore_Evas *ee)
+{
+   ee->registered = 1;
+   ecore_evases = (Ecore_Evas *)eina_inlist_prepend
+     (EINA_INLIST_GET(ecore_evases), EINA_INLIST_GET(ee));
+}
+
+void
 _ecore_evas_free(Ecore_Evas *ee)
 {
    if (ee->func.fn_pre_free) ee->func.fn_pre_free(ee);
-   ECORE_MAGIC_SET(ee, ECORE_MAGIC_NONE);
    while (ee->sub_ecore_evas)
      {
 	_ecore_evas_free(ee->sub_ecore_evas->data);
      }
    if (ee->data) eina_hash_free(ee->data);
-   if (ee->name) free(ee->name);
-   if (ee->prop.title) free(ee->prop.title);
-   if (ee->prop.name) free(ee->prop.name);
-   if (ee->prop.clas) free(ee->prop.clas);
-   if (ee->prop.cursor.object) evas_object_del(ee->prop.cursor.object);
-   if (ee->evas) evas_free(ee->evas);
    ee->data = NULL;
-   ee->driver = NULL;
+   if (ee->name) free(ee->name);
    ee->name = NULL;
+   if (ee->prop.title) free(ee->prop.title);
    ee->prop.title = NULL;
+   if (ee->prop.name) free(ee->prop.name);
    ee->prop.name = NULL;
+   if (ee->prop.clas) free(ee->prop.clas);
    ee->prop.clas = NULL;
+   if (ee->prop.cursor.object) evas_object_del(ee->prop.cursor.object);
    ee->prop.cursor.object = NULL;
+   if (ee->evas) evas_free(ee->evas);
    ee->evas = NULL;
+   ECORE_MAGIC_SET(ee, ECORE_MAGIC_NONE);
+   ee->driver = NULL;
    if (ee->engine.idle_flush_timer)
      ecore_timer_del(ee->engine.idle_flush_timer);
    if (ee->engine.func->fn_free) ee->engine.func->fn_free(ee);
+   if (ee->registered)
+     {
+        ecore_evases = (Ecore_Evas *)eina_inlist_remove
+          (EINA_INLIST_GET(ecore_evases), EINA_INLIST_GET(ee));
+     }
    free(ee);
 }
 
-static int
+static Eina_Bool
 _ecore_evas_cb_idle_flush(void *data)
 {
    Ecore_Evas *ee;
@@ -2526,15 +2802,15 @@ _ecore_evas_cb_idle_flush(void *data)
    ee = (Ecore_Evas *)data;
    evas_render_idle_flush(ee->evas);
    ee->engine.idle_flush_timer = NULL;
-   return 0;
+   return ECORE_CALLBACK_CANCEL;
 }
 
-static int
+static Eina_Bool
 _ecore_evas_async_events_fd_handler(void *data __UNUSED__, Ecore_Fd_Handler *fd_handler __UNUSED__)
 {
    evas_async_events_process();
 
-   return 1;
+   return ECORE_CALLBACK_RENEW;
 }
 
 void

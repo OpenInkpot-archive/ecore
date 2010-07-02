@@ -12,8 +12,12 @@
 # include <openssl/ssl.h>
 #endif
 
-#include "ecore_con_private.h"
+#ifdef HAVE_WS2TCPIP_H
+# include <ws2tcpip.h>
+#endif
+
 #include "Ecore.h"
+#include "ecore_con_private.h"
 
 static int _init_con_ssl_init_count = 0;
 

@@ -8,8 +8,20 @@
 
 #include <stdlib.h>
 
-#include "ecore_private.h"
 #include "Ecore.h"
+#include "ecore_private.h"
+
+
+struct _Ecore_Poller
+{
+   EINA_INLIST;
+   ECORE_MAGIC;
+   int           ibit;
+   unsigned char delete_me : 1;
+   Eina_Bool    (*func) (void *data);
+   void          *data;
+};
+
 
 static Ecore_Timer    *timer = NULL;
 static int             min_interval = -1;
@@ -33,7 +45,7 @@ static unsigned short  poller_counters[16] =
 };
 
 static void _ecore_poller_next_tick_eval(void);
-static int _ecore_poller_cb_timer(void *data);
+static Eina_Bool _ecore_poller_cb_timer(void *data);
 
 static void
 _ecore_poller_next_tick_eval(void)
@@ -94,7 +106,7 @@ _ecore_poller_next_tick_eval(void)
    poll_cur_interval = interval;
 }
 
-static int
+static Eina_Bool
 _ecore_poller_cb_timer(void *data __UNUSED__)
 {
    int i;
@@ -175,11 +187,11 @@ _ecore_poller_cb_timer(void *data __UNUSED__)
    /* if the timer was deleted then there is no point returning 1 - ambiguous
     * if we do as it im plies "keep running me" but we have been deleted
     * anyway */
-   if (!timer) return 0;
+   if (!timer) return ECORE_CALLBACK_CANCEL;
 
    /* adjust interval */
    ecore_timer_interval_set(timer, poll_cur_interval);
-   return 1;
+   return ECORE_CALLBACK_RENEW;
 }
 
 /**
@@ -270,7 +282,7 @@ ecore_poller_poll_interval_get(Ecore_Poller_Type type __UNUSED__)
  * invalid.
  */
 EAPI Ecore_Poller *
-ecore_poller_add(Ecore_Poller_Type type __UNUSED__, int interval, int (*func) (void *data), const void *data)
+ecore_poller_add(Ecore_Poller_Type type __UNUSED__, int interval, Eina_Bool (*func) (void *data), const void *data)
 {
    Ecore_Poller *poller;
    int ibit;
@@ -304,6 +316,82 @@ ecore_poller_add(Ecore_Poller_Type type __UNUSED__, int interval, int (*func) (v
 }
 
 /**
+ * Changes the polling interval rate of @p poller.
+ *
+ * @param poller The Ecore_Poller to change the interval of
+ * @param interval The tick interval to set; must be a power of 2 but <= 32768
+ * @return Returns true on success, false on failure
+ *
+ * This allows the changing of a poller's polling interval.  It is useful when you want to alter
+ * a poll rate without deleting and re-creating a poller.
+ * @ingroup Ecore_Poller_Group
+ */
+EAPI Eina_Bool
+ecore_poller_poller_interval_set(Ecore_Poller *poller, int interval)
+{
+   int ibit;
+
+   if (!ECORE_MAGIC_CHECK(poller, ECORE_MAGIC_POLLER))
+     {
+        ECORE_MAGIC_FAIL(poller, ECORE_MAGIC_POLLER,
+           "ecore_poller_poller_interval_set");
+        return EINA_FALSE;
+     }
+
+   /* interval MUST be a power of 2, so enforce it */
+   if (interval < 1) interval = 1;
+   ibit = -1;
+   while (interval != 0)
+     {
+       ibit++;
+       interval >>= 1;
+     }
+   /* only allow up to 32768 - i.e. ibit == 15, so limit it */
+   if (ibit > 15) ibit = 15;
+   /* if interval specified is the same as interval set, return true without wasting time */
+   if (poller->ibit == ibit)
+     return EINA_TRUE;
+   pollers[poller->ibit] = (Ecore_Poller *) eina_inlist_remove(EINA_INLIST_GET(pollers[poller->ibit]), EINA_INLIST_GET(poller));
+   poller->ibit = ibit;
+   pollers[poller->ibit] = (Ecore_Poller *) eina_inlist_prepend(EINA_INLIST_GET(pollers[poller->ibit]), EINA_INLIST_GET(poller));
+   if (poller_walking)
+     just_added_poller++;
+   else
+     _ecore_poller_next_tick_eval();
+   return EINA_TRUE;
+}
+
+/**
+ * Gets the polling interval rate of @p poller.
+ *
+ * @param poller The Ecore_Poller to change the interval of
+ * @return Returns the interval, in ticks, that @p poller polls at
+ *
+ * This returns a poller's polling interval, or 0 on error.
+ * @ingroup Ecore_Poller_Group
+ */
+EAPI int
+ecore_poller_poller_interval_get(Ecore_Poller *poller)
+{
+   int ibit, interval = 1;
+
+   if (!ECORE_MAGIC_CHECK(poller, ECORE_MAGIC_POLLER))
+     {
+        ECORE_MAGIC_FAIL(poller, ECORE_MAGIC_POLLER,
+           "ecore_poller_poller_interval_get");
+        return 0;
+     }
+
+   ibit = poller->ibit;
+   while (ibit != 0)
+     {
+       ibit--;
+       interval <<= 1;
+     }
+   return interval;
+}
+
+/**
  * Delete the specified poller from the timer list.
  * @param   poller The poller to delete.
  * @return  The data pointer set for the timer when @ref ecore_poller_add was
@@ -320,18 +408,18 @@ ecore_poller_del(Ecore_Poller *poller)
 
    if (!ECORE_MAGIC_CHECK(poller, ECORE_MAGIC_POLLER))
      {
-	ECORE_MAGIC_FAIL(poller, ECORE_MAGIC_POLLER,
-			 "ecore_poller_del");
-	return NULL;
+        ECORE_MAGIC_FAIL(poller, ECORE_MAGIC_POLLER,
+           "ecore_poller_del");
+        return NULL;
      }
    /* we are walking the poller list - a bad idea to remove from it while
     * walking it, so just flag it as delete_me and come back to it after
     * the loop has finished */
    if (poller_walking > 0)
      {
-	poller_delete_count++;
-	poller->delete_me = 1;
-	return poller->data;
+        poller_delete_count++;
+        poller->delete_me = 1;
+        return poller->data;
      }
    /* not in loop so safe - delete immediately */
    data = poller->data;

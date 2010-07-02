@@ -14,8 +14,8 @@
 # include <Evil.h>
 #endif
 
-#include "ecore_private.h"
 #include "Ecore.h"
+#include "ecore_private.h"
 
 /* How of then we should retry to write to the pipe */
 #define ECORE_PIPE_WRITE_RETRY 6
@@ -66,7 +66,7 @@ struct _Ecore_Pipe
 };
 
 
-static int _ecore_pipe_read(void *data, Ecore_Fd_Handler *fd_handler);
+static Eina_Bool _ecore_pipe_read(void *data, Ecore_Fd_Handler *fd_handler);
 
 /**
  * @defgroup Ecore_Pipe_Group Pipe wrapper
@@ -238,8 +238,8 @@ static int _ecore_pipe_read(void *data, Ecore_Fd_Handler *fd_handler);
  *     printf ("no sink");
  *     goto failure;
  *   }
- *   g_object_set (G_OBJECT (sink), "sync", TRUE, NULL);
- *   g_object_set (G_OBJECT (sink), "signal-handoffs", TRUE, NULL);
+ *   g_object_set (G_OBJECT (sink), "sync", EINA_TRUE, NULL);
+ *   g_object_set (G_OBJECT (sink), "signal-handoffs", EINA_TRUE, NULL);
  *   g_signal_connect (sink, "handoff",
  *                     G_CALLBACK (handoff), pipe);
  *
@@ -305,9 +305,7 @@ ecore_pipe_add(void (*handler) (void *data, void *buffer, unsigned int nbyte),
    p->handler = handler;
    p->data = data;
 
-#ifndef _WIN32
    fcntl(p->fd_read, F_SETFL, O_NONBLOCK);
-#endif /* _WIN32 */
    p->fd_handler = ecore_main_fd_handler_add(p->fd_read,
                                           ECORE_FD_READ,
                                           _ecore_pipe_read,
@@ -385,10 +383,10 @@ ecore_pipe_write_close(Ecore_Pipe *p)
  * @param p      The Ecore_Pipe object.
  * @param buffer The data to write into the pipe.
  * @param nbytes The size of the @p buffer in bytes
- * @return       Returns TRUE on a successful write, FALSE on an error
+ * @return       Returns EINA_TRUE on a successful write, EINA_FALSE on an error
  * @ingroup Ecore_Pipe_Group
  */
-EAPI int
+EAPI Eina_Bool
 ecore_pipe_write(Ecore_Pipe *p, const void *buffer, unsigned int nbytes)
 {
    ssize_t ret;
@@ -398,10 +396,10 @@ ecore_pipe_write(Ecore_Pipe *p, const void *buffer, unsigned int nbytes)
    if (!ECORE_MAGIC_CHECK(p, ECORE_MAGIC_PIPE))
      {
 	ECORE_MAGIC_FAIL(p, ECORE_MAGIC_PIPE, "ecore_pipe_write");
-	return FALSE;
+	return EINA_FALSE;
      }
 
-   if (p->fd_write == PIPE_FD_INVALID) return FALSE;
+   if (p->fd_write == PIPE_FD_INVALID) return EINA_FALSE;
 
    /* First write the len into the pipe */
    do
@@ -415,29 +413,29 @@ ecore_pipe_write(Ecore_Pipe *p, const void *buffer, unsigned int nbytes)
 	else if (ret > 0)
 	  {
 	     /* XXX What should we do here? */
-	     fprintf(stderr, "The length of the data was not written complete"
-                     " to the pipe\n");
-	     return FALSE;
+	     ERR("The length of the data was not written complete"
+		 " to the pipe");
+	     return EINA_FALSE;
 	  }
 	else if (ret == PIPE_FD_ERROR && errno == EPIPE)
 	  {
 	     pipe_close(p->fd_write);
 	     p->fd_write = PIPE_FD_INVALID;
-	     return FALSE;
+	     return EINA_FALSE;
 	  }
 	else if (ret == PIPE_FD_ERROR && errno == EINTR)
 	  /* try it again */
 	  ;
 	else
 	  {
-	     fprintf(stderr, "An unhandled error (ret: %d errno: %d)"
-                     "occured while writing to the pipe the length\n",
-                     ret, errno);
+	     ERR("An unhandled error (ret: %zd errno: %d)"
+		 "occured while writing to the pipe the length",
+		 ret, errno);
 	  }
      }
    while (retry--);
 
-   if (retry != ECORE_PIPE_WRITE_RETRY) return FALSE;
+   if (retry != ECORE_PIPE_WRITE_RETRY) return EINA_FALSE;
 
    /* and now pass the data to the pipe */
    do
@@ -447,7 +445,7 @@ ecore_pipe_write(Ecore_Pipe *p, const void *buffer, unsigned int nbytes)
                          nbytes - already_written);
         
 	if (ret == (ssize_t)(nbytes - already_written))
-	  return TRUE;
+	  return EINA_TRUE;
 	else if (ret >= 0)
 	  {
 	     already_written -= ret;
@@ -457,26 +455,26 @@ ecore_pipe_write(Ecore_Pipe *p, const void *buffer, unsigned int nbytes)
 	  {
 	     pipe_close(p->fd_write);
 	     p->fd_write = PIPE_FD_INVALID;
-	     return FALSE;
+	     return EINA_FALSE;
 	  }
 	else if (ret == PIPE_FD_ERROR && errno == EINTR)
 	  /* try it again */
 	  ;
 	else
 	  {
-	     fprintf(stderr, "An unhandled error (ret: %d errno: %d)"
-                     "occured while writing to the pipe the length\n",
-                     ret, errno);
+	     ERR("An unhandled error (ret: %zd errno: %d)"
+		 "occured while writing to the pipe the length",
+		 ret, errno);
 	  }
      }
    while (retry--);
 
-   return FALSE;
+   return EINA_FALSE;
 }
 
 /* Private function */
 
-static int
+static Eina_Bool
 _ecore_pipe_read(void *data, Ecore_Fd_Handler *fd_handler __UNUSED__)
 {
    Ecore_Pipe  *p;
@@ -503,8 +501,8 @@ _ecore_pipe_read(void *data, Ecore_Fd_Handler *fd_handler __UNUSED__)
 	     else if (ret > 0)
 	       {
 		  /* XXX What should we do here? */
-		  fprintf(stderr, "Only read %d bytes from the pipe, although"
-                          " we need to read %d bytes.\n", ret, sizeof(p->len));
+		  ERR("Only read %zd bytes from the pipe, although"
+		      " we need to read %zd bytes.", ret, sizeof(p->len));
 	       }
 	     else if (ret == 0)
 	       {
@@ -519,9 +517,9 @@ _ecore_pipe_read(void *data, Ecore_Fd_Handler *fd_handler __UNUSED__)
 	       return ECORE_CALLBACK_RENEW;
 	     else
 	       {
-		  fprintf(stderr, "An unhandled error (ret: %d errno: %d)"
-                          "occured while reading from the pipe the length\n",
-                          ret, errno);
+		  ERR("An unhandled error (ret: %zd errno: %d)"
+		      "occured while reading from the pipe the length",
+		      ret, errno);
                   return ECORE_CALLBACK_RENEW;
 	       }
 #else
@@ -535,13 +533,10 @@ _ecore_pipe_read(void *data, Ecore_Fd_Handler *fd_handler __UNUSED__)
                        p->fd_handler = NULL;
                        return ECORE_CALLBACK_CANCEL;
                     }
-                  else
-                    goto _win32_done;
 	       }
 #endif
 	  }
 
-     _win32_done:
 	if (!p->passed_data)
 	  p->passed_data = malloc(p->len);
 
@@ -578,9 +573,9 @@ _ecore_pipe_read(void *data, Ecore_Fd_Handler *fd_handler __UNUSED__)
 	  return ECORE_CALLBACK_RENEW;
 	else
 	  {
-	     fprintf(stderr, "An unhandled error (ret: %d errno: %d)"
-                     "occured while reading from the pipe the data\n",
-                     ret, errno);
+	     ERR("An unhandled error (ret: %zd errno: %d)"
+		 "occured while reading from the pipe the data",
+		 ret, errno);
 	     return ECORE_CALLBACK_RENEW;
 	  }
 #else

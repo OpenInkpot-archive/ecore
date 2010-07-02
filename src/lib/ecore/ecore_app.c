@@ -7,14 +7,19 @@
 #endif
 
 #include <stdlib.h>
-#include <unistd.h>
+
+#ifndef _MSC_VER
+# include <unistd.h>
+#else
+# include <process.h>
+#endif
 
 #ifdef HAVE_EVIL
 # include <Evil.h>
 #endif
 
-#include "ecore_private.h"
 #include "Ecore.h"
+#include "ecore_private.h"
 
 static int app_argc = 0;
 static char **app_argv = NULL;

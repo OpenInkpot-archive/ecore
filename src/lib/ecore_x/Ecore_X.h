@@ -5,9 +5,12 @@
 #ifndef _ECORE_X_H
 #define _ECORE_X_H
 
+#include <Eina.h>
+
 #ifdef EAPI
 # undef EAPI
 #endif
+
 #ifdef _MSC_VER
 # ifdef BUILDING_DLL
 #  define EAPI __declspec(dllexport)
@@ -42,9 +45,9 @@
 
 
 typedef unsigned int Ecore_X_ID;
-#  ifndef _ECORE_X_WINDOW_PREDEF
+#ifndef _ECORE_X_WINDOW_PREDEF
 typedef Ecore_X_ID   Ecore_X_Window;
-#  endif
+#endif
 #ifdef HAVE_ECORE_X_XCB
 typedef Ecore_X_ID   Ecore_X_Visual;
 #else
@@ -72,6 +75,8 @@ typedef Ecore_X_ID     Ecore_X_Randr_Output;
 typedef Ecore_X_ID     Ecore_X_Randr_Crtc;
 typedef Ecore_X_ID     Ecore_X_Randr_Mode;
 typedef unsigned short Ecore_X_Randr_Size_ID;
+
+typedef Ecore_X_ID   Ecore_X_Device;
 
 #ifdef __cplusplus
 extern "C" {
@@ -119,6 +124,8 @@ typedef enum _Ecore_X_Composite_Update_Type {
 } Ecore_X_Composite_Update_Type;
 
 typedef enum _Ecore_X_Window_State {
+    /* Unknown state */
+    ECORE_X_WINDOW_STATE_UNKNOWN = 0,
     /** The window is iconified. */
     ECORE_X_WINDOW_STATE_ICONIFIED,
     /** The window is a modal dialog box. */
@@ -146,9 +153,7 @@ typedef enum _Ecore_X_Window_State {
     ECORE_X_WINDOW_STATE_ABOVE,
     ECORE_X_WINDOW_STATE_BELOW,
     /* FIXME: Documentation */
-    ECORE_X_WINDOW_STATE_DEMANDS_ATTENTION,
-    /* Unknown state */
-    ECORE_X_WINDOW_STATE_UNKNOWN
+    ECORE_X_WINDOW_STATE_DEMANDS_ATTENTION
 } Ecore_X_Window_State;
 
 typedef enum _Ecore_X_Window_State_Action {
@@ -257,19 +262,20 @@ typedef enum _Ecore_X_Event_Mask
    ECORE_X_EVENT_MASK_WINDOW_FOCUS_OUT       = (1L << 31)
 } Ecore_X_Event_Mask;
 
-typedef enum _Ecore_X_Gravity {
-     ECORE_X_GRAVITY_FORGET = 0,
-     ECORE_X_GRAVITY_UNMAP = 0,
-     ECORE_X_GRAVITY_NW = 1,
-     ECORE_X_GRAVITY_N = 2,
-     ECORE_X_GRAVITY_NE = 3,
-     ECORE_X_GRAVITY_W = 4,
-     ECORE_X_GRAVITY_CENTER = 5,
-     ECORE_X_GRAVITY_E = 6,
-     ECORE_X_GRAVITY_SW = 7,
-     ECORE_X_GRAVITY_S = 8,
-     ECORE_X_GRAVITY_SE = 9,
-     ECORE_X_GRAVITY_STATIC = 10
+typedef enum _Ecore_X_Gravity
+{
+   ECORE_X_GRAVITY_FORGET = 0,
+   ECORE_X_GRAVITY_UNMAP = 0,
+   ECORE_X_GRAVITY_NW = 1,
+   ECORE_X_GRAVITY_N = 2,
+   ECORE_X_GRAVITY_NE = 3,
+   ECORE_X_GRAVITY_W = 4,
+   ECORE_X_GRAVITY_CENTER = 5,
+   ECORE_X_GRAVITY_E = 6,
+   ECORE_X_GRAVITY_SW = 7,
+   ECORE_X_GRAVITY_S = 8,
+   ECORE_X_GRAVITY_SE = 9,
+   ECORE_X_GRAVITY_STATIC = 10
 } Ecore_X_Gravity;
 
 /* Needed for ecore_x_region_window_shape_set */
@@ -320,8 +326,8 @@ typedef struct _Ecore_X_Event_Screensaver_Notify       Ecore_X_Event_Screensaver
 typedef struct _Ecore_X_Event_Sync_Counter             Ecore_X_Event_Sync_Counter;
 typedef struct _Ecore_X_Event_Sync_Alarm               Ecore_X_Event_Sync_Alarm;
 typedef struct _Ecore_X_Event_Screen_Change            Ecore_X_Event_Screen_Change;
-typedef struct _Ecore_X_Event_Randr_Crtc_Change        Ecore_X_Event_Randr_Crtc_Change;
-typedef struct _Ecore_X_Event_Randr_Output_Change       Ecore_X_Event_Randr_Output_Change;
+typedef struct _Ecore_X_Event_Randr_Crtc_Change            Ecore_X_Event_Randr_Crtc_Change;
+typedef struct _Ecore_X_Event_Randr_Output_Change          Ecore_X_Event_Randr_Output_Change;
 typedef struct _Ecore_X_Event_Randr_Output_Property_Notify Ecore_X_Event_Randr_Output_Property_Notify;
 
 typedef struct _Ecore_X_Event_Window_Delete_Request                Ecore_X_Event_Window_Delete_Request;
@@ -341,6 +347,8 @@ typedef struct _Ecore_X_Event_Ping                       Ecore_X_Event_Ping;
 typedef struct _Ecore_X_Event_Desktop_Change             Ecore_X_Event_Desktop_Change;
 
 typedef struct _Ecore_X_Event_Startup_Sequence           Ecore_X_Event_Startup_Sequence;
+
+typedef struct _Ecore_X_Event_Generic                    Ecore_X_Event_Generic;
 
 struct _Ecore_X_Event_Mouse_In
 {
@@ -413,7 +421,10 @@ struct _Ecore_X_Event_Window_Visibility_Change
 struct _Ecore_X_Event_Window_Create
 {
    Ecore_X_Window  win;
+   Ecore_X_Window  parent;
    int             override;
+   int             x, y, w, h;
+   int             border;
    Ecore_X_Time    time;
 };
 
@@ -820,10 +831,17 @@ struct _Ecore_X_Event_Desktop_Change
    int                         source;
 };
 
+struct _Ecore_X_Event_Generic
+{
+   int            extension;
+   int            evtype;
+   unsigned int   cookie;
+   void           *data;
+};
+
 EAPI extern int ECORE_X_EVENT_ANY; /**< low level event dependent on
 				        backend in use, if Xlib will be XEvent,
 					if XCB will be xcb_generic_event_t.
-
 					@warning avoid using it.
 				   */
 EAPI extern int ECORE_X_EVENT_MOUSE_IN;
@@ -884,6 +902,8 @@ EAPI extern int ECORE_X_EVENT_STARTUP_SEQUENCE_NEW;
 EAPI extern int ECORE_X_EVENT_STARTUP_SEQUENCE_CHANGE;
 EAPI extern int ECORE_X_EVENT_STARTUP_SEQUENCE_REMOVE;
 
+EAPI extern int ECORE_X_EVENT_GENERIC;
+
 EAPI extern int ECORE_X_EVENT_XDND_ENTER;
 EAPI extern int ECORE_X_EVENT_XDND_POSITION;
 EAPI extern int ECORE_X_EVENT_XDND_STATUS;
@@ -895,54 +915,47 @@ EAPI extern int ECORE_X_LOCK_SCROLL;
 EAPI extern int ECORE_X_LOCK_NUM;
 EAPI extern int ECORE_X_LOCK_CAPS;
 
-typedef enum _Ecore_X_WM_Protocol {
-	/**
-	 * If enabled the window manager will be asked to send a
-	 * delete message instead of just closing (destroying) the window.
-	 */
-	ECORE_X_WM_PROTOCOL_DELETE_REQUEST,
+typedef enum _Ecore_X_WM_Protocol 
+{
+   /* If enabled the window manager will be asked to send a
+    * delete message instead of just closing (destroying) the window. */
+   ECORE_X_WM_PROTOCOL_DELETE_REQUEST,
 
-	/**
-	 * If enabled the window manager will be told that the window
-	 * explicitly sets input focus.
-	 */
-	ECORE_X_WM_PROTOCOL_TAKE_FOCUS,
+   /* If enabled the window manager will be told that the window
+    * explicitly sets input focus. */
+   ECORE_X_WM_PROTOCOL_TAKE_FOCUS,
 
-	/**
-	 * If enabled the window manager can ping the window to check
-	 * if it is alive.
-	 */
-	ECORE_X_NET_WM_PROTOCOL_PING,
+   /* If enabled the window manager can ping the window to check
+    * if it is alive. */
+   ECORE_X_NET_WM_PROTOCOL_PING,
 
-	/**
-	 * If enabled the window manager can sync updating with the
-	 * window (?)
-	 */
-	ECORE_X_NET_WM_PROTOCOL_SYNC_REQUEST,
+   /* If enabled the window manager can sync updating with the
+    * window (?) */
+   ECORE_X_NET_WM_PROTOCOL_SYNC_REQUEST,
 
-	/* Number of defined items */
-	ECORE_X_WM_PROTOCOL_NUM
+   /* Number of defined items */
+   ECORE_X_WM_PROTOCOL_NUM
 } Ecore_X_WM_Protocol;
 
-typedef enum _Ecore_X_Window_Input_Mode {
-	/** The window can never be focused */
-	ECORE_X_WINDOW_INPUT_MODE_NONE,
+typedef enum _Ecore_X_Window_Input_Mode 
+{
+   /* The window can never be focused */
+   ECORE_X_WINDOW_INPUT_MODE_NONE,
 
-	/** The window can be focused by the WM but doesn't focus itself */
-	ECORE_X_WINDOW_INPUT_MODE_PASSIVE,
+   /* The window can be focused by the WM but doesn't focus itself */
+   ECORE_X_WINDOW_INPUT_MODE_PASSIVE,
 
-	/** The window sets the focus itself if one of its sub-windows
-	 * already is focused
-	 */
-	ECORE_X_WINDOW_INPUT_MODE_ACTIVE_LOCAL,
+   /* The window sets the focus itself if one of its sub-windows
+    * already is focused */
+   ECORE_X_WINDOW_INPUT_MODE_ACTIVE_LOCAL,
 
-	/** The window sets the focus itself even if another window
-	 * is currently focused
-	 */
-	ECORE_X_WINDOW_INPUT_MODE_ACTIVE_GLOBAL
+   /* The window sets the focus itself even if another window
+    * is currently focused */
+   ECORE_X_WINDOW_INPUT_MODE_ACTIVE_GLOBAL
 } Ecore_X_Window_Input_Mode;
 
-typedef enum _Ecore_X_Window_State_Hint {
+typedef enum _Ecore_X_Window_State_Hint 
+{
    /** Do not provide any state hint to the window manager */
    ECORE_X_WINDOW_STATE_HINT_NONE = -1,
 
@@ -956,56 +969,86 @@ typedef enum _Ecore_X_Window_State_Hint {
    ECORE_X_WINDOW_STATE_HINT_ICONIC
 } Ecore_X_Window_State_Hint;
 
-typedef enum _Ecore_X_Window_Type {
-    ECORE_X_WINDOW_TYPE_DESKTOP,
-    ECORE_X_WINDOW_TYPE_DOCK,
-    ECORE_X_WINDOW_TYPE_TOOLBAR,
-    ECORE_X_WINDOW_TYPE_MENU,
-    ECORE_X_WINDOW_TYPE_UTILITY,
-    ECORE_X_WINDOW_TYPE_SPLASH,
-    ECORE_X_WINDOW_TYPE_DIALOG,
-    ECORE_X_WINDOW_TYPE_NORMAL,
-    ECORE_X_WINDOW_TYPE_UNKNOWN
+typedef enum _Ecore_X_Window_Type 
+{
+     ECORE_X_WINDOW_TYPE_UNKNOWN = 0,
+     ECORE_X_WINDOW_TYPE_DESKTOP,
+     ECORE_X_WINDOW_TYPE_DOCK,
+     ECORE_X_WINDOW_TYPE_TOOLBAR,
+     ECORE_X_WINDOW_TYPE_MENU,
+     ECORE_X_WINDOW_TYPE_UTILITY,
+     ECORE_X_WINDOW_TYPE_SPLASH,
+     ECORE_X_WINDOW_TYPE_DIALOG,
+     ECORE_X_WINDOW_TYPE_NORMAL,
+     ECORE_X_WINDOW_TYPE_DROPDOWN_MENU,
+     ECORE_X_WINDOW_TYPE_POPUP_MENU,
+     ECORE_X_WINDOW_TYPE_TOOLTIP,
+     ECORE_X_WINDOW_TYPE_NOTIFICATION,
+     ECORE_X_WINDOW_TYPE_COMBO,
+     ECORE_X_WINDOW_TYPE_DND
 } Ecore_X_Window_Type;
 
-typedef enum _Ecore_X_Action {
-    ECORE_X_ACTION_MOVE,
-    ECORE_X_ACTION_RESIZE,
-    ECORE_X_ACTION_MINIMIZE,
-    ECORE_X_ACTION_SHADE,
-    ECORE_X_ACTION_STICK,
-    ECORE_X_ACTION_MAXIMIZE_HORZ,
-    ECORE_X_ACTION_MAXIMIZE_VERT,
-    ECORE_X_ACTION_FULLSCREEN,
-    ECORE_X_ACTION_CHANGE_DESKTOP,
-    ECORE_X_ACTION_CLOSE,
-    ECORE_X_ACTION_ABOVE,
-    ECORE_X_ACTION_BELOW
+typedef enum _Ecore_X_Action 
+{
+   ECORE_X_ACTION_MOVE,
+   ECORE_X_ACTION_RESIZE,
+   ECORE_X_ACTION_MINIMIZE,
+   ECORE_X_ACTION_SHADE,
+   ECORE_X_ACTION_STICK,
+   ECORE_X_ACTION_MAXIMIZE_HORZ,
+   ECORE_X_ACTION_MAXIMIZE_VERT,
+   ECORE_X_ACTION_FULLSCREEN,
+   ECORE_X_ACTION_CHANGE_DESKTOP,
+   ECORE_X_ACTION_CLOSE,
+   ECORE_X_ACTION_ABOVE,
+   ECORE_X_ACTION_BELOW
 } Ecore_X_Action;
 
-typedef enum _Ecore_X_Window_Configure_Mask {
-   ECORE_X_WINDOW_CONFIGURE_MASK_X              = (1 << 0),
-   ECORE_X_WINDOW_CONFIGURE_MASK_Y              = (1 << 1),
-   ECORE_X_WINDOW_CONFIGURE_MASK_W              = (1 << 2),
-   ECORE_X_WINDOW_CONFIGURE_MASK_H              = (1 << 3),
-   ECORE_X_WINDOW_CONFIGURE_MASK_BORDER_WIDTH   = (1 << 4),
-   ECORE_X_WINDOW_CONFIGURE_MASK_SIBLING        = (1 << 5),
-   ECORE_X_WINDOW_CONFIGURE_MASK_STACK_MODE     = (1 << 6)
+typedef enum _Ecore_X_Window_Configure_Mask 
+{
+   ECORE_X_WINDOW_CONFIGURE_MASK_X = (1 << 0),
+   ECORE_X_WINDOW_CONFIGURE_MASK_Y = (1 << 1),
+   ECORE_X_WINDOW_CONFIGURE_MASK_W = (1 << 2),
+   ECORE_X_WINDOW_CONFIGURE_MASK_H = (1 << 3),
+   ECORE_X_WINDOW_CONFIGURE_MASK_BORDER_WIDTH = (1 << 4),
+   ECORE_X_WINDOW_CONFIGURE_MASK_SIBLING = (1 << 5),
+   ECORE_X_WINDOW_CONFIGURE_MASK_STACK_MODE = (1 << 6)
 } Ecore_X_Window_Configure_Mask;
 
-typedef enum _Ecore_X_Virtual_Keyboard_State {
-    ECORE_X_VIRTUAL_KEYBOARD_STATE_UNKNOWN = 0,
-    ECORE_X_VIRTUAL_KEYBOARD_STATE_OFF,
-    ECORE_X_VIRTUAL_KEYBOARD_STATE_ON,
-    ECORE_X_VIRTUAL_KEYBOARD_STATE_ALPHA,
-    ECORE_X_VIRTUAL_KEYBOARD_STATE_NUMERIC,
-    ECORE_X_VIRTUAL_KEYBOARD_STATE_PIN,
-    ECORE_X_VIRTUAL_KEYBOARD_STATE_PHONE_NUMBER,
-    ECORE_X_VIRTUAL_KEYBOARD_STATE_HEX,
-    ECORE_X_VIRTUAL_KEYBOARD_STATE_TERMINAL,
-    ECORE_X_VIRTUAL_KEYBOARD_STATE_PASSWORD
+typedef enum _Ecore_X_Virtual_Keyboard_State 
+{
+   ECORE_X_VIRTUAL_KEYBOARD_STATE_UNKNOWN = 0,
+   ECORE_X_VIRTUAL_KEYBOARD_STATE_OFF,
+   ECORE_X_VIRTUAL_KEYBOARD_STATE_ON,
+   ECORE_X_VIRTUAL_KEYBOARD_STATE_ALPHA,
+   ECORE_X_VIRTUAL_KEYBOARD_STATE_NUMERIC,
+   ECORE_X_VIRTUAL_KEYBOARD_STATE_PIN,
+   ECORE_X_VIRTUAL_KEYBOARD_STATE_PHONE_NUMBER,
+   ECORE_X_VIRTUAL_KEYBOARD_STATE_HEX,
+   ECORE_X_VIRTUAL_KEYBOARD_STATE_TERMINAL,
+   ECORE_X_VIRTUAL_KEYBOARD_STATE_PASSWORD,
+   ECORE_X_VIRTUAL_KEYBOARD_STATE_IP,
+   ECORE_X_VIRTUAL_KEYBOARD_STATE_HOST,
+   ECORE_X_VIRTUAL_KEYBOARD_STATE_FILE,
+   ECORE_X_VIRTUAL_KEYBOARD_STATE_URL,
+   ECORE_X_VIRTUAL_KEYBOARD_STATE_KEYPAD,
+   ECORE_X_VIRTUAL_KEYBOARD_STATE_J2ME
 } Ecore_X_Virtual_Keyboard_State;
 
+typedef enum _Ecore_X_Illume_Mode 
+{
+   ECORE_X_ILLUME_MODE_UNKNOWN = 0, 
+   ECORE_X_ILLUME_MODE_SINGLE, 
+   ECORE_X_ILLUME_MODE_DUAL_TOP, 
+   ECORE_X_ILLUME_MODE_DUAL_LEFT
+} Ecore_X_Illume_Mode;
+
+typedef enum _Ecore_X_Illume_Quickpanel_State 
+{
+   ECORE_X_ILLUME_QUICKPANEL_STATE_UNKNOWN = 0, 
+   ECORE_X_ILLUME_QUICKPANEL_STATE_OFF, 
+   ECORE_X_ILLUME_QUICKPANEL_STATE_ON
+} Ecore_X_Illume_Quickpanel_State;
 
 /* Window layer constants */
 #define ECORE_X_WINDOW_LAYER_BELOW 2
@@ -1013,9 +1056,9 @@ typedef enum _Ecore_X_Virtual_Keyboard_State {
 #define ECORE_X_WINDOW_LAYER_ABOVE 6
 
 /* Property list operations */
-#define ECORE_X_PROP_LIST_REMOVE    0
-#define ECORE_X_PROP_LIST_ADD       1
-#define ECORE_X_PROP_LIST_TOGGLE    2
+#define ECORE_X_PROP_LIST_REMOVE 0
+#define ECORE_X_PROP_LIST_ADD 1
+#define ECORE_X_PROP_LIST_TOGGLE 2
 
 EAPI int              ecore_x_init(const char *name);
 EAPI int              ecore_x_shutdown(void);
@@ -1063,9 +1106,9 @@ EAPI void             ecore_x_selection_primary_request(Ecore_X_Window w, const 
 EAPI void             ecore_x_selection_secondary_request(Ecore_X_Window w, const char *target);
 EAPI void             ecore_x_selection_xdnd_request(Ecore_X_Window w, const char *target);
 EAPI void             ecore_x_selection_clipboard_request(Ecore_X_Window w, const char *target);
-EAPI int              ecore_x_selection_convert(Ecore_X_Atom selection, Ecore_X_Atom target, void **data_ret);
-EAPI void             ecore_x_selection_converter_add(char *target, int (*func)(char *target, void *data, int size, void **data_ret, int *size_ret));
-EAPI void             ecore_x_selection_converter_atom_add(Ecore_X_Atom target, int (*func)(char *target, void *data, int size, void **data_ret, int *size_ret));
+EAPI int              ecore_x_selection_convert(Ecore_X_Atom selection, Ecore_X_Atom target, void **data_ret, int *len, Ecore_X_Atom *targprop, int *targsize);
+EAPI void             ecore_x_selection_converter_add(char *target, int (*func)(char *target, void *data, int size, void **data_ret, int *size_ret, Ecore_X_Atom *, int *));
+EAPI void             ecore_x_selection_converter_atom_add(Ecore_X_Atom target, int (*func)(char *target, void *data, int size, void **data_ret, int *size_ret, Ecore_X_Atom *tprop, int *tsize));
 EAPI void             ecore_x_selection_converter_del(char *target);
 EAPI void             ecore_x_selection_converter_atom_del(Ecore_X_Atom target);
 EAPI void             ecore_x_selection_parser_add(const char *target, void *(*func)(const char *target, void *data, int size, int format));
@@ -1306,7 +1349,6 @@ EAPI void            ecore_x_get_atom_name_fetch(void);
 EAPI char           *ecore_x_atom_name_get(Ecore_X_Atom atom);
 
 
-
 EAPI void            ecore_x_icccm_init(void);
 EAPI void            ecore_x_icccm_state_set(Ecore_X_Window win, Ecore_X_Window_State_Hint state);
 EAPI Ecore_X_Window_State_Hint ecore_x_icccm_state_get(Ecore_X_Window win);
@@ -1350,6 +1392,8 @@ EAPI int   ecore_x_icccm_size_pos_hints_get(Ecore_X_Window win,
 					    double *max_aspect);
 EAPI void  ecore_x_icccm_title_set(Ecore_X_Window win, const char *t);
 EAPI char *ecore_x_icccm_title_get(Ecore_X_Window win);
+EAPI void  ecore_x_icccm_protocol_atoms_set(Ecore_X_Window win,
+                                             Ecore_X_Atom *protos, int num);
 EAPI void  ecore_x_icccm_protocol_set(Ecore_X_Window win,
 				      Ecore_X_WM_Protocol protocol,
 				      int on);
@@ -1518,8 +1562,6 @@ EAPI void                ecore_x_netwm_state_request_send(Ecore_X_Window win, Ec
 EAPI void                ecore_x_netwm_desktop_request_send(Ecore_X_Window win, Ecore_X_Window root, unsigned int desktop);
 
 
-
-
 EAPI void                ecore_x_e_init(void);
 EAPI void                ecore_x_e_frame_size_set(Ecore_X_Window win, int fl, int fr, int ft, int fb);
 EAPI void                ecore_x_e_virtual_keyboard_set(Ecore_X_Window win, unsigned int is_keyboard);
@@ -1527,8 +1569,70 @@ EAPI int                 ecore_x_e_virtual_keyboard_get(Ecore_X_Window win);
 EAPI void                ecore_x_e_virtual_keyboard_state_set(Ecore_X_Window win, Ecore_X_Virtual_Keyboard_State state);
 EAPI Ecore_X_Virtual_Keyboard_State ecore_x_e_virtual_keyboard_state_get(Ecore_X_Window win);
 EAPI void                ecore_x_e_virtual_keyboard_state_send(Ecore_X_Window win, Ecore_X_Virtual_Keyboard_State state);
-       
 
+
+/* Illume functions */
+EAPI void ecore_x_e_illume_zone_set(Ecore_X_Window win, Ecore_X_Window zone);
+EAPI Ecore_X_Window ecore_x_e_illume_zone_get(Ecore_X_Window win);
+EAPI void ecore_x_e_illume_zone_list_set(Ecore_X_Window win, Ecore_X_Window *zones, unsigned int n_zones);
+EAPI void ecore_x_e_illume_conformant_set(Ecore_X_Window win, unsigned int is_conformant);
+EAPI int ecore_x_e_illume_conformant_get(Ecore_X_Window win);
+EAPI void ecore_x_e_illume_mode_set(Ecore_X_Window win, Ecore_X_Illume_Mode mode);
+EAPI Ecore_X_Illume_Mode ecore_x_e_illume_mode_get(Ecore_X_Window win);
+EAPI void ecore_x_e_illume_mode_send(Ecore_X_Window win, Ecore_X_Illume_Mode mode);
+EAPI void ecore_x_e_illume_focus_back_send(Ecore_X_Window win);
+EAPI void ecore_x_e_illume_focus_forward_send(Ecore_X_Window win);
+EAPI void ecore_x_e_illume_focus_home_send(Ecore_X_Window win);
+EAPI void ecore_x_e_illume_close_send(Ecore_X_Window win);
+EAPI void ecore_x_e_illume_home_new_send(Ecore_X_Window win);
+EAPI void ecore_x_e_illume_home_del_send(Ecore_X_Window win);
+EAPI void ecore_x_e_illume_drag_set(Ecore_X_Window win, unsigned int drag);
+EAPI int ecore_x_e_illume_drag_get(Ecore_X_Window win);
+EAPI void ecore_x_e_illume_drag_locked_set(Ecore_X_Window win, unsigned int is_locked);
+EAPI int ecore_x_e_illume_drag_locked_get(Ecore_X_Window win);
+EAPI void ecore_x_e_illume_drag_start_send(Ecore_X_Window win);
+EAPI void ecore_x_e_illume_drag_end_send(Ecore_X_Window win);
+EAPI void ecore_x_e_illume_indicator_geometry_set(Ecore_X_Window win, int x, int y, int w, int h);
+EAPI int ecore_x_e_illume_indicator_geometry_get(Ecore_X_Window win, int *x, int *y, int *w, int *h);
+EAPI void ecore_x_e_illume_softkey_geometry_set(Ecore_X_Window win, int x, int y, int w, int h);
+EAPI int ecore_x_e_illume_softkey_geometry_get(Ecore_X_Window win, int *x, int *y, int *w, int *h);
+EAPI void ecore_x_e_illume_keyboard_geometry_set(Ecore_X_Window win, int x, int y, int w, int h);
+EAPI int ecore_x_e_illume_keyboard_geometry_get(Ecore_X_Window win, int *x, int *y, int *w, int *h);
+EAPI void ecore_x_e_illume_quickpanel_set(Ecore_X_Window win, unsigned int is_quickpanel);
+EAPI int ecore_x_e_illume_quickpanel_get(Ecore_X_Window win);
+EAPI void ecore_x_e_illume_quickpanel_state_set(Ecore_X_Window win, Ecore_X_Illume_Quickpanel_State state);
+EAPI Ecore_X_Illume_Quickpanel_State ecore_x_e_illume_quickpanel_state_get(Ecore_X_Window win);
+EAPI void ecore_x_e_illume_quickpanel_state_send(Ecore_X_Window win, Ecore_X_Illume_Quickpanel_State state);
+EAPI void ecore_x_e_illume_quickpanel_state_toggle(Ecore_X_Window win);
+EAPI void ecore_x_e_illume_quickpanel_priority_major_set(Ecore_X_Window win, unsigned int priority);
+EAPI int ecore_x_e_illume_quickpanel_priority_major_get(Ecore_X_Window win);
+EAPI void ecore_x_e_illume_quickpanel_priority_minor_set(Ecore_X_Window win, unsigned int priority);
+EAPI int ecore_x_e_illume_quickpanel_priority_minor_get(Ecore_X_Window win);
+EAPI void ecore_x_e_illume_quickpanel_zone_set(Ecore_X_Window win, unsigned int zone);
+EAPI int ecore_x_e_illume_quickpanel_zone_get(Ecore_X_Window win);
+EAPI void ecore_x_e_illume_quickpanel_zone_request_send(Ecore_X_Window win);
+EAPI void ecore_x_e_illume_quickpanel_position_update_send(Ecore_X_Window win);
+
+EAPI void                 ecore_x_e_comp_sync_counter_set(Ecore_X_Window win, Ecore_X_Sync_Counter counter);
+EAPI Ecore_X_Sync_Counter ecore_x_e_comp_sync_counter_get(Ecore_X_Window win);
+EAPI void                 ecore_x_e_comp_sync_draw_done_send(Ecore_X_Window root, Ecore_X_Window win);
+EAPI void                 ecore_x_e_comp_sync_supported_set(Ecore_X_Window root, Eina_Bool enabled);
+EAPI Eina_Bool            ecore_x_e_comp_sync_supported_get(Ecore_X_Window root);
+EAPI void                 ecore_x_e_comp_sync_begin_send(Ecore_X_Window win);
+EAPI void                 ecore_x_e_comp_sync_end_send(Ecore_X_Window win);
+EAPI void                 ecore_x_e_comp_sync_cancel_send(Ecore_X_Window win);
+
+EAPI void                 ecore_x_e_comp_flush_send(Ecore_X_Window win);
+EAPI void                 ecore_x_e_comp_dump_send(Ecore_X_Window win);
+       
+EAPI Ecore_X_Sync_Alarm   ecore_x_sync_alarm_new(Ecore_X_Sync_Counter counter);
+EAPI int                  ecore_x_sync_alarm_free(Ecore_X_Sync_Alarm alarm);
+EAPI int                  ecore_x_sync_counter_query(Ecore_X_Sync_Counter counter, unsigned int *val);
+EAPI Ecore_X_Sync_Counter ecore_x_sync_counter_new(int val);
+EAPI void                 ecore_x_sync_counter_free(Ecore_X_Sync_Counter counter);
+EAPI void                 ecore_x_sync_counter_inc(Ecore_X_Sync_Counter counter, int by);
+EAPI void                 ecore_x_sync_counter_val_wait(Ecore_X_Sync_Counter counter, int val);
+       
 EAPI void                ecore_x_xinerama_query_screens_prefetch(void);
 EAPI void                ecore_x_xinerama_query_screens_fetch(void);
 EAPI int                 ecore_x_xinerama_screen_count_get(void);
@@ -1565,9 +1669,9 @@ typedef struct _Ecore_X_Window_Attributes
    unsigned char      input_only : 1;
    unsigned char      save_under : 1;
    struct {
-	Ecore_X_Event_Mask mine;
-	Ecore_X_Event_Mask all;
-	Ecore_X_Event_Mask no_propagate;
+      Ecore_X_Event_Mask mine;
+      Ecore_X_Event_Mask all;
+      Ecore_X_Event_Mask no_propagate;
    } event_mask;
    Ecore_X_Gravity    window_gravity;
    Ecore_X_Gravity    pixel_gravity;
@@ -1578,7 +1682,7 @@ typedef struct _Ecore_X_Window_Attributes
     * Screen *screen;
     */
 } Ecore_X_Window_Attributes;
-
+   
 EAPI void ecore_x_get_window_attributes_prefetch(Ecore_X_Window window);
 EAPI void ecore_x_get_window_attributes_fetch(void);
 EAPI int  ecore_x_window_attributes_get(Ecore_X_Window win, Ecore_X_Window_Attributes *att_ret);
@@ -1602,7 +1706,7 @@ EAPI int  ecore_x_keyboard_grab(Ecore_X_Window win);
 EAPI void ecore_x_keyboard_ungrab(void);
 EAPI void ecore_x_grab(void);
 EAPI void ecore_x_ungrab(void);
-EAPI void ecore_x_passive_grab_replay_func_set(int (*func) (void *data, int event_type, void *event), void *data);
+EAPI void ecore_x_passive_grab_replay_func_set(Eina_Bool (*func) (void *data, int event_type, void *event), void *data);
 EAPI void ecore_x_window_button_grab(Ecore_X_Window win, int button,
 				     Ecore_X_Event_Mask event_mask,
 				     int mod, int any_mod);
@@ -1630,13 +1734,9 @@ EAPI int              ecore_x_xregion_union(Ecore_X_XRegion *dst, Ecore_X_XRegio
 EAPI int              ecore_x_xregion_union_rect(Ecore_X_XRegion *dst, Ecore_X_XRegion *src, Ecore_X_Rectangle *rect);
 EAPI int              ecore_x_xregion_subtract(Ecore_X_XRegion *dst, Ecore_X_XRegion *r1, Ecore_X_XRegion *r2);
 EAPI int              ecore_x_xregion_is_empty(Ecore_X_XRegion *region);
+EAPI int              ecore_x_xregion_is_equal(Ecore_X_XRegion *r1, Ecore_X_XRegion *r2);
 EAPI int              ecore_x_xregion_point_contain(Ecore_X_XRegion *region, int x, int y);
 EAPI int              ecore_x_xregion_rect_contain(Ecore_X_XRegion *region, Ecore_X_Rectangle *rect);
-
-/* ecore_x_sync.c */
-EAPI Ecore_X_Sync_Alarm ecore_x_sync_alarm_new(Ecore_X_Sync_Counter counter);
-EAPI int                ecore_x_sync_alarm_free(Ecore_X_Sync_Alarm alarm);
-EAPI int                ecore_x_sync_counter_query(Ecore_X_Sync_Counter counter, unsigned int *val);
 
 /* ecore_x_randr.c */
 typedef struct _Ecore_X_Screen_Size Ecore_X_Screen_Size;
@@ -1707,7 +1807,9 @@ EAPI void              ecore_x_composite_redirect_subwindows(Ecore_X_Window win,
 EAPI void              ecore_x_composite_unredirect_window(Ecore_X_Window win, Ecore_X_Composite_Update_Type type);
 EAPI void              ecore_x_composite_unredirect_subwindows(Ecore_X_Window win, Ecore_X_Composite_Update_Type type);
 EAPI Ecore_X_Pixmap    ecore_x_composite_name_window_pixmap_get(Ecore_X_Window win);
-
+EAPI Ecore_X_Window    ecore_x_composite_render_window_enable(Ecore_X_Window root);
+EAPI void              ecore_x_composite_render_window_disable(Ecore_X_Window root);
+       
 /* XDamage Extension Support */
 typedef Ecore_X_ID  Ecore_X_Damage;
 
@@ -1736,7 +1838,8 @@ EAPI void              ecore_x_damage_free(Ecore_X_Damage damage);
 EAPI void              ecore_x_damage_subtract(Ecore_X_Damage damage, Ecore_X_Region repair, Ecore_X_Region parts);
 
 EAPI int               ecore_x_screen_is_composited(int screen);
-
+EAPI void              ecore_x_screen_is_composited_set(int screen, Ecore_X_Window win);
+       
 EAPI int               ecore_x_dpms_query(void);
 EAPI void              ecore_x_dpms_capable_get_prefetch(void);
 EAPI void              ecore_x_dpms_capable_get_fetch(void);
@@ -1760,9 +1863,22 @@ EAPI int ecore_x_test_fake_key_down(const char *key);
 EAPI int ecore_x_test_fake_key_up(const char *key);
 EAPI int ecore_x_test_fake_key_press(const char *key);
 EAPI const char *ecore_x_keysym_string_get(int keysym);
-   
+
+typedef struct _Ecore_X_Image Ecore_X_Image;
+
+EAPI Ecore_X_Image    *ecore_x_image_new(int w, int h, Ecore_X_Visual vis, int depth);
+EAPI void              ecore_x_image_free(Ecore_X_Image *im);
+EAPI Eina_Bool         ecore_x_image_get(Ecore_X_Image *im, Ecore_X_Drawable draw, int x, int y, int sx, int sy, int w, int h);
+EAPI void              ecore_x_image_put(Ecore_X_Image *im, Ecore_X_Drawable draw, int x, int y, int sx, int sy, int w, int h);
+EAPI void             *ecore_x_image_data_get(Ecore_X_Image *im, int *bpl, int *rows, int *bpp);
+
+EAPI Eina_Bool         ecore_x_input_multi_select(Ecore_X_Window win);
+       
 #ifdef __cplusplus
 }
 #endif
+
+#include <Ecore_X_Atoms.h>
+#include <Ecore_X_Cursor.h>
 
 #endif

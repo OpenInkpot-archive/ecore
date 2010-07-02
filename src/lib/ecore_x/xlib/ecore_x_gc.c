@@ -6,6 +6,8 @@
 # include <config.h>
 #endif
 
+#include <string.h>
+
 #include "Ecore.h"
 #include "ecore_x_private.h"
 #include "Ecore_X.h"
@@ -28,7 +30,10 @@ ecore_x_gc_new(Ecore_X_Drawable draw, Ecore_X_GC_Value_Mask value_mask, const un
    int       index;
    int       i;
 
+   LOGFN(__FILE__, __LINE__, __FUNCTION__);
    if (!draw) draw = DefaultRootWindow(_ecore_x_disp);
+
+   memset(&gcv, 0, sizeof (gcv));
 
    for (i = 0, index = 0, mask = 1; i <= 22; i++, mask <<= 1)
      {
@@ -139,5 +144,6 @@ ecore_x_gc_new(Ecore_X_Drawable draw, Ecore_X_GC_Value_Mask value_mask, const un
 EAPI void
 ecore_x_gc_free(Ecore_X_GC gc)
 {
+   LOGFN(__FILE__, __LINE__, __FUNCTION__);
    XFreeGC(_ecore_x_disp, gc);
 }

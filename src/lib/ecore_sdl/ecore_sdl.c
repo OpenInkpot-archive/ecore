@@ -10,12 +10,15 @@
 
 #include "Eina.h"
 #include "Ecore_Sdl.h"
-#include "ecore_private.h"
 #include "Ecore_Input.h"
 #include "Ecore.h"
+#include "ecore_sdl_private.h"
+#include "ecore_private.h"
 #include "Ecore_Sdl_Keys.h"
 
 #include <eina_rbtree.h>
+
+int _ecore_sdl_log_dom = -1;
 
 typedef struct _Ecore_SDL_Pressed Ecore_SDL_Pressed;
 struct _Ecore_SDL_Pressed
@@ -68,7 +71,12 @@ ecore_sdl_init(const char *name __UNUSED__)
 {
    if(++_ecore_sdl_init_count != 1)
      return _ecore_sdl_init_count;
-
+   _ecore_sdl_log_dom = eina_log_domain_register("EcoreSdl", ECORE_SDL_DEFAULT_LOG_COLOR);
+   if(_ecore_sdl_log_dom < 0)
+     {
+       EINA_LOG_ERR("Impossible to create a log domain for the Ecore SDL module.");
+       return --_ecore_sdl_init_count;
+     }
    if (!ecore_event_init())
      return --_ecore_sdl_init_count;
 
@@ -95,8 +103,26 @@ ecore_sdl_shutdown(void)
    return _ecore_sdl_init_count;
 
    ecore_event_shutdown();
-
+   eina_log_domain_unregister(_ecore_sdl_log_dom);
+   _ecore_sdl_log_dom = -1;
    return _ecore_sdl_init_count;
+}
+
+static unsigned int
+_ecore_sdl_event_modifiers(int mod)
+{
+   unsigned int        modifiers = 0;
+
+   if(mod & KMOD_LSHIFT) modifiers |= ECORE_EVENT_MODIFIER_SHIFT;
+   if(mod & KMOD_RSHIFT) modifiers |= ECORE_EVENT_MODIFIER_SHIFT;
+   if(mod & KMOD_LCTRL) modifiers |= ECORE_EVENT_MODIFIER_CTRL;
+   if(mod & KMOD_RCTRL) modifiers |= ECORE_EVENT_MODIFIER_CTRL;
+   if(mod & KMOD_LALT) modifiers |= ECORE_EVENT_MODIFIER_ALT;
+   if(mod & KMOD_RALT) modifiers |= ECORE_EVENT_MODIFIER_ALT;
+   if(mod & KMOD_NUM) modifiers |= ECORE_EVENT_LOCK_NUM;
+   if(mod & KMOD_CAPS) modifiers |= ECORE_EVENT_LOCK_CAPS;
+
+   return modifiers;
 }
 
 static Ecore_Event_Key*
@@ -110,7 +136,7 @@ _ecore_sdl_event_key(SDL_Event *event, double time)
 
    ev->timestamp = time;
    ev->window = 0;
-   ev->modifiers = 0; /* FIXME: keep modifier around. */
+   ev->modifiers = _ecore_sdl_event_modifiers(SDL_GetModState());
    ev->key = NULL;
    ev->compose = NULL;
 

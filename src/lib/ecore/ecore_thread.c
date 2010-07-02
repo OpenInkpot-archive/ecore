@@ -10,8 +10,8 @@
 # include <pthread.h>
 #endif
 
-#include "ecore_private.h"
 #include "Ecore.h"
+#include "ecore_private.h"
 
 #ifdef EFL_HAVE_PTHREAD
 typedef struct _Ecore_Pthread_Worker Ecore_Pthread_Worker;
@@ -55,11 +55,11 @@ _ecore_thread_pipe_free(void *data __UNUSED__, void *event)
    ecore_pipe_del(p);
 }
 
-static int
+static Eina_Bool
 _ecore_thread_pipe_del(void *data __UNUSED__, int type __UNUSED__, void *event __UNUSED__)
 {
    /* This is a hack to delay pipe destruction until we are out of it's internal loop. */
-   return 0;
+   return ECORE_CALLBACK_CANCEL;
 }
 
 static void
@@ -226,7 +226,11 @@ ecore_thread_run(void (*func_heavy)(void *data),
    Ecore_Pthread_Data *pth;
 
    work = malloc(sizeof (Ecore_Pthread_Worker));
-   if (!work) return NULL;
+   if (!work)
+     {
+        func_cancel((void*) data);
+	return NULL;
+     }
 
    work->func_heavy = func_heavy;
    work->func_end = func_end;
@@ -268,10 +272,10 @@ ecore_thread_run(void (*func_heavy)(void *data),
      If no thread and as we don't want to break app that rely on this
      facility, we will lock the interface until we are done.
     */
-   func_heavy(data);
-   func_end(data);
+   func_heavy((void *)data);
+   func_end((void *)data);
 
-   return EINA_TRUE;
+   return NULL;
 #endif
 }
 
@@ -299,6 +303,8 @@ ecore_thread_cancel(Ecore_Thread *thread)
        {
 	  _ecore_thread_data = eina_list_remove_list(_ecore_thread_data, l);
 
+	  pthread_mutex_unlock(&_mutex);
+
 	  if (work->func_cancel)
 	    work->func_cancel((void*) work->data);
 	  free(work);
@@ -309,9 +315,9 @@ ecore_thread_cancel(Ecore_Thread *thread)
    pthread_mutex_unlock(&_mutex);
 
    /* Delay the destruction */
-   work->cancel = EINA_TRUE;
+   ((Ecore_Pthread_Worker*)thread)->cancel = EINA_TRUE;
    return EINA_FALSE;
 #else
-   return EINA_FALSE;
+   return EINA_TRUE;
 #endif
 }

@@ -5,7 +5,7 @@
 #ifndef _ECORE_IMF_H
 #define _ECORE_IMF_H
 
-#include <Ecore_Data.h>
+#include <Eina.h>
 
 #ifdef EAPI
 # undef EAPI
@@ -232,7 +232,7 @@ extern "C" {
 
    struct _Ecore_IMF_Event_Key_Down
      {
-	char                        *keyname;   /**< The string name of the key pressed */
+	const char                  *keyname;   /**< The string name of the key pressed */
 	Ecore_IMF_Keyboard_Modifiers modifiers; /**< The keyboard modifiers active when the event has been emitted */
 	Ecore_IMF_Keyboard_Locks     locks;     /**< The keyboard locks active when the event has been emitted */
 	const char                  *key;       /**< The logical key : (eg shift+1 == exclamation) */
@@ -243,7 +243,7 @@ extern "C" {
 
    struct _Ecore_IMF_Event_Key_Up
      {
-	char                        *keyname;   /**< The string name of the key pressed */
+	const char                  *keyname;   /**< The string name of the key pressed */
 	Ecore_IMF_Keyboard_Modifiers modifiers; /**< The keyboard modifiers active when the event has been emitted */
 	Ecore_IMF_Keyboard_Locks     locks;     /**< The keyboard locks active when the event has been emitted */
 	const char                  *key;       /**< The logical key : (eg shift+1 == exclamation) */
@@ -293,6 +293,8 @@ extern "C" {
 
    EAPI int                           ecore_imf_init(void);
    EAPI int                           ecore_imf_shutdown(void);
+
+   EAPI void                          ecore_imf_module_register(const Ecore_IMF_Context_Info *info, Ecore_IMF_Context *(*imf_module_create)(void), Ecore_IMF_Context *(*imf_module_exit)(void));
 
    EAPI Eina_List                    *ecore_imf_context_available_ids_get(void);
    EAPI Eina_List                    *ecore_imf_context_available_ids_by_canvas_type_get(const char *canvas_type);
