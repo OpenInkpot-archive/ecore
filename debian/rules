@@ -19,6 +19,7 @@ DEB_CONFIGURE_EXTRA_FLAGS := --disable-rpath \
 	--disable-openssl \
 	--enable-poll \
 	--enable-inotify \
+	--enable-ecore-config \
 	--enable-ecore-evas-software-buffer \
 	--enable-ecore-evas-software-x11 \
 	--disable-ecore-evas-xrender-x11 \
