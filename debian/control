@@ -95,6 +95,12 @@ Description: Ecore input functions
  .
  This package contains the Ecore Input Library.
 
+Package: libecore-input-evas-svn-06
+Architecture: any
+Depends: ${misc:Depends}, ${shlibs:Depends}
+Description: Ecore input functions
+ This package contains the Ecore Input Evas Library.
+
 Package: libecore-ipc-svn-06
 Architecture: any
 Depends: ${misc:Depends}, ${shlibs:Depends}
@@ -132,6 +138,7 @@ Depends: ${misc:Depends},
          libecore-file-svn-06 (= ${binary:Version}),
          libecore-imf-svn-06 (= ${binary:Version}),
          libecore-input-svn-06 (= ${binary:Version}),
+         libecore-input-evas-svn-06 (= ${binary:Version}),
          libecore-ipc-svn-06 (= ${binary:Version}),
          libecore-x-svn-06 (= ${binary:Version}),
          libeet-dev, libevas-dev (>= 0.9.9.49898), libeina-dev, libglib2.0-dev,
