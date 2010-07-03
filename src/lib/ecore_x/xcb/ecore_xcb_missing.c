@@ -1,5 +1,10 @@
 #include "ecore_xcb_private.h"
 
+EAPI void
+ecore_x_icccm_protocol_atoms_set(Ecore_X_Window win, Ecore_X_Atom *protos, int num)
+{
+}
+
 EAPI Eina_Bool
 ecore_x_input_multi_select(Ecore_X_Window win)
 {
