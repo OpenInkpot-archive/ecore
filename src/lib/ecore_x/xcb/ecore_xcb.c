@@ -1525,7 +1525,7 @@ ecore_x_ungrab(void)
 
 int      _ecore_window_grabs_num = 0;
 Ecore_X_Window  *_ecore_window_grabs = NULL;
-Eina_Bool (*_ecore_window_grab_replay_func) (void *data, int event_type, void *event);
+int (*_ecore_window_grab_replay_func) (void *data, int event_type, void *event);
 void    *_ecore_window_grab_replay_data;
 
 EAPI void

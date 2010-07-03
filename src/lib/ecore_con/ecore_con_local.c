@@ -81,7 +81,7 @@ ecore_con_local_connect(Ecore_Con_Server *svr,
              printf(uidbuf, "%d", getuid());
              user = uidbuf;
           }
-        snprintf(buf, sizeof(buf), "/tmp/.ecore_service-%s/%s/%i", user, name, port);
+        snprintf(buf, sizeof(buf), "/tmp/.ecore_service-%s/%s/%i", user, svr->name, svr->port);
      }
    else if (svr->type == ECORE_CON_LOCAL_SYSTEM)
      {
