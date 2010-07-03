@@ -55,6 +55,7 @@ ecore_xcb_window.c \
 ecore_xcb_window_prop.c \
 ecore_xcb_window_shadow.c \
 ecore_xcb_xinerama.c \
+ecore_xcb_missing.c \
 ecore_xcb.c
 
 libecore_x_xcb_la_LIBADD = \
