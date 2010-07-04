@@ -408,6 +408,7 @@ _ecore_evas_x_render(Ecore_Evas *ee)
           }
      }
  */
+   ecore_x_flush();
    return rend;
 }
 
