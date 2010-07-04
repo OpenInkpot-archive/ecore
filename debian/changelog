@@ -1,3 +1,9 @@
+ecore (0.9.9.49898-4) zelazny; urgency=low
+
+  * Add ecore_x_flush() call to the end of the _ecore_evas_x_render()
+
+ -- Alexander Kerner <lunohod@openinkpot.org>  Sun, 04 Jul 2010 17:05:58 +0200
+
 ecore (0.9.9.49898-3) zelazny; urgency=low
 
   * Add one more missing function stub
