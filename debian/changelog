@@ -1,3 +1,21 @@
+ecore (0.9.9.49898-3) zelazny; urgency=low
+
+  * Add one more missing function stub
+
+ -- Alexander Kerner <lunohod@openinkpot.org>  Sun, 04 Jul 2010 00:24:33 +0200
+
+ecore (0.9.9.49898-2) zelazny; urgency=low
+
+  * Add stubs for missing functions
+
+ -- Alexander Kerner <lunohod@openinkpot.org>  Sat, 03 Jul 2010 23:04:26 +0200
+
+ecore (0.9.9.49898-1+b1) zelazny; urgency=low
+
+  * rebuild to fix host build
+
+ -- Alexander Kerner <lunohod@openinkpot.org>  Sat, 03 Jul 2010 21:24:45 +0200
+
 ecore (0.9.9.49898-1) zelazny; urgency=low
 
   * svn-06 snapshot
