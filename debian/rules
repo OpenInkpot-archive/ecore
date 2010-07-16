@@ -21,9 +21,10 @@ DEB_CONFIGURE_EXTRA_FLAGS := --disable-rpath \
 	--enable-inotify \
 	--enable-ecore-config \
 	--enable-ecore-evas-software-buffer \
-	--enable-ecore-evas-software-x11 \
+	--disable-ecore-evas-software-x11 \
 	--disable-ecore-evas-xrender-x11 \
 	--disable-ecore-evas-opengl-x11 \
+	--enable-ecore-evas-software-8-x11 \
 	--disable-ecore-evas-software-16-x11 \
 	--disable-ecore-evas-xrender-xcb \
 	--disable-ecore-evas-software-gdi \
