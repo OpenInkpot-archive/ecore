@@ -692,6 +692,7 @@ ecore_x_window_hide(Ecore_X_Window window)
                   XCB_EVENT_MASK_SUBSTRUCTURE_NOTIFY | XCB_EVENT_MASK_SUBSTRUCTURE_REDIRECT,
                   (const char *)&ev);
    xcb_unmap_window(_ecore_xcb_conn, window);
+   xcb_flush(_ecore_xcb_conn);
 }
 
 /**
