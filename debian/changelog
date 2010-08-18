@@ -1,3 +1,9 @@
+ecore (0.9.9.49898-5) zelazny; urgency=low
+
+  * Add 8bpp engine, disable 32bpp engine
+
+ -- Alexander Kerner <lunohod@openinkpot.org>  Wed, 18 Aug 2010 21:52:51 +0200
+
 ecore (0.9.9.49898-4) zelazny; urgency=low
 
   * Add ecore_x_flush() call to the end of the _ecore_evas_x_render()
