@@ -286,6 +286,14 @@ char *get_rotated_key(char *r0, char *r90, char *r180, char *r270)
 		   _key_info( \
 				   get_rotated_key("Next", "Next", "Prior", "Next"), \
 				   NULL); \
+	   case 185: \
+		   _key_info( \
+				   get_rotated_key("XF86Forward", "XF86Forward", "XF86Back", "XF86Forward"), \
+				   NULL); \
+	   case 186: \
+		   _key_info( \
+				   get_rotated_key("XF86Back", "XF86Back", "XF86Forward", "XF86Back"), \
+				   NULL); \
 	   case 124: \
 		   _key_info("XF86PowerOff", NULL); \
 	   case 147: \
@@ -296,6 +304,8 @@ char *get_rotated_key(char *r0, char *r90, char *r180, char *r270)
 		   _key_info("XF86AudioPlay", NULL); \
 	   case 225: \
 		   _key_info("XF86Search", NULL); \
+	   case 243: \
+		   _key_info("XF86AddFavorite", NULL); \
 	   default: _ecore_xcb_event_free_key(NULL, e); return; \
    }
 
